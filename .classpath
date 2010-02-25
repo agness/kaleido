@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="app/src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="app/lib/ant-launcher.jar"/>
+	<classpathentry kind="lib" path="app/lib/ant.jar"/>
+	<classpathentry kind="lib" path="app/lib/antlr.jar"/>
+	<classpathentry kind="lib" path="app/lib/apple.jar"/>
+	<classpathentry kind="lib" path="app/lib/ecj.jar"/>
+	<classpathentry kind="lib" path="app/lib/jna.jar"/>
+	<classpathentry kind="lib" path="core/core.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
