@@ -1852,6 +1852,13 @@ public class Base {
     return new File(working, name);
   }
 
+  /**
+   * Get a UI image icon from the theme folder.
+   */
+  static public ImageIcon getImageIcon(String name, Component who) {
+    return new ImageIcon(getLibImage("theme/" + name, who));
+  }
+  
 
   /**
    * Get an image associated with the current color theme.

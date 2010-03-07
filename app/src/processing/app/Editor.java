@@ -41,6 +41,7 @@ import javax.swing.event.*;
 import javax.swing.text.*;
 import javax.swing.undo.*;
 
+import com.mxgraph.model.mxGraphModel;
 
 /**
  * Main editor panel for the Processing Development Environment.
@@ -75,10 +76,12 @@ public class Editor extends JFrame implements RunnerListener {
   PrinterJob printerJob;
 
   // file and sketch menus for re-inserting items
+  EditorToolbar toolbar;
   JMenu fileMenu;
   JMenu sketchMenu;
-
-  EditorToolbar toolbar;
+  JMenuItem exportAppItem;
+  JMenuItem saveMenuItem;
+  JMenuItem saveAsMenuItem;
   // these menus are shared so that they needn't be rebuilt for all windows
   // each time a sketch is created, renamed, or moved.
   static JMenu toolbarMenu;
@@ -86,46 +89,46 @@ public class Editor extends JFrame implements RunnerListener {
   static JMenu examplesMenu;
   static JMenu importMenu;
 
-  EditorHeader header;
+  // other editor UI content components
   EditorStatus status;
   EditorConsole console;
-
-  JSplitPane splitPane;
-  JPanel consolePanel;
-
+  EditorLineStatus lineStatus;
   JLabel lineNumberComponent;
 
-  // currently opened program
-  Sketch sketch;
+  // editor UI layout components
+  JSplitPane editConsoleSplitPane;
+  JSplitPane graphCodeSplitPane;
+  JPanel consolePanel;
 
-  EditorLineStatus lineStatus;
-
-  JEditorPane editorPane;
-
+  // text-side object & swing component
+  Sketch sketch;  // currently opened program
+  EditorTextHeader textHeader;
   JEditTextArea textarea;
-  EditorListener listener;
+
+  // graph-side object & swing component
+  mxGraphModel drawing;
+  EditorDrawingHeader drawingHeader;
+  DrawingArea drawarea;
+  
+  // event handling
+  TextAreaListener listener;
 
   // runtime information and window placement
   Point sketchWindowLocation;
   Runner runtime;
-
-  JMenuItem exportAppItem;
-  JMenuItem saveMenuItem;
-  JMenuItem saveAsMenuItem;
-
-  boolean running;
-  //boolean presenting;
 
   // undo fellers
   JMenuItem undoItem, redoItem;
   protected UndoAction undoAction;
   protected RedoAction redoAction;
   UndoManager undo;
-  // used internally, and only briefly
   CompoundEdit compoundEdit;
 
+  // find replace
   FindReplace find;
 
+  // execution stuff
+  boolean running;
   Runnable runHandler;
   Runnable presentHandler;
   Runnable stopHandler;
@@ -134,7 +137,7 @@ public class Editor extends JFrame implements RunnerListener {
 
 
   public Editor(Base ibase, String path, int[] location) {
-    super("Processing");
+    super("Kaleido");
     this.base = ibase;
 
     Base.setIcon(this);
@@ -178,91 +181,111 @@ public class Editor extends JFrame implements RunnerListener {
     //sketchbook = new Sketchbook(this);
 
     buildMenuBar();
-
-    // For rev 0120, placing things inside a JPanel
-    Container contentPain = getContentPane();
-    contentPain.setLayout(new BorderLayout());
-    JPanel pain = new JPanel();
-    pain.setLayout(new BorderLayout());
-    contentPain.add(pain, BorderLayout.CENTER);
-
-    Box box = Box.createVerticalBox();
-    Box upper = Box.createVerticalBox();
+    
+    
+    // TEXTEDITOR BOX holds code file tabs and code edit area 
+    Box textEditorBox = Box.createVerticalBox();
+    textHeader = new EditorTextHeader(this);
+    textEditorBox.add(textHeader);
+    textarea = new JEditTextArea(new PdeTextAreaDefaults());
+    textarea.setRightClickPopup(new TextAreaPopup()); //TODO popupFocusHandler
+    textarea.setHorizontalOffset(6);
+    textEditorBox.add(textarea);
+    
+    
+    // DRAWEDITOR BOX holds the draw tool bar and draw area
+    Box drawEditorBox = Box.createVerticalBox();
+    drawingHeader = new EditorDrawingHeader(this);
+    drawEditorBox.add(drawingHeader);
+    drawing = new mxGraphModel();
+    //TODO ^--- a plain mxGraphModel... all the codewindow stuff is handled by the DrawingArea
+    //ultimately though, editor might not need access to the graphModel at all
+    drawarea = new DrawingArea(drawing);
+    drawEditorBox.add(drawarea);
+    
+    
+    // GRAPHCODE SPLIT PANE holds the text editor box and the draw editor box
+    graphCodeSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, drawEditorBox, textEditorBox);
+    graphCodeSplitPane.setOneTouchExpandable(true);
+    graphCodeSplitPane.setContinuousLayout(true);
+    graphCodeSplitPane.setResizeWeight(0.5);
+    int dividerSize = Preferences.getInteger("editor.divider.size");
+    if (dividerSize != 0) {
+      graphCodeSplitPane.setDividerSize(dividerSize);
+    }
+    graphCodeSplitPane.setBorder(null);
+    graphCodeSplitPane.setDividerLocation(Preferences.getInteger("default.window.width")/2);
+    
+    
+    // EDITING PANEL as distinguished from the consolePanel
+    // holds the tool bar and the graphCodeSplitPane 
+    JPanel editingPanel = new JPanel(); 
+    editingPanel.setLayout(new BorderLayout());
 
     if (toolbarMenu == null) {
       toolbarMenu = new JMenu();
       base.rebuildToolbarMenu(toolbarMenu);
     }
     toolbar = new EditorToolbar(this, toolbarMenu);
-    upper.add(toolbar);
-
-    header = new EditorHeader(this);
-    upper.add(header);
-
-    textarea = new JEditTextArea(new PdeTextAreaDefaults());
-    textarea.setRightClickPopup(new TextAreaPopup());
-    textarea.setHorizontalOffset(6);
-
-    // assemble console panel, consisting of status area and the console itself
+    editingPanel.add(toolbar, BorderLayout.NORTH);
+    editingPanel.add(graphCodeSplitPane, BorderLayout.CENTER);
+    
+    
+    // CONSOLE PANEL holds status area and the console itself
     consolePanel = new JPanel();
     consolePanel.setLayout(new BorderLayout());
-
     status = new EditorStatus(this);
     consolePanel.add(status, BorderLayout.NORTH);
-
     console = new EditorConsole(this);
-    // windows puts an ugly border on this guy
-    console.setBorder(null);
+    console.setBorder(null);     // windows puts an ugly border on this guy
     consolePanel.add(console, BorderLayout.CENTER);
-
     lineStatus = new EditorLineStatus(textarea);
     consolePanel.add(lineStatus, BorderLayout.SOUTH);
 
-    upper.add(textarea);
-    splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT,
-                               upper, consolePanel);
-
-    splitPane.setOneTouchExpandable(true);
-    // repaint child panes while resizing
-    splitPane.setContinuousLayout(true);
+    
+    // EDIT CONSOLE SPLIT PANE divides between the console outputs
+    // and the editing areas (everything else)
+    editConsoleSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, editingPanel, consolePanel);
+    editConsoleSplitPane.setOneTouchExpandable(true);
+    editConsoleSplitPane.setContinuousLayout(true); // repaint child panes while resizing
     // if window increases in size, give all of increase to
-    // the textarea in the uppper pane
-    splitPane.setResizeWeight(1D);
-
+    // the editPanel in the upper pane
+    editConsoleSplitPane.setResizeWeight(1D);
     // to fix ugliness.. normally macosx java 1.3 puts an
     // ugly white border around this object, so turn it off.
-    splitPane.setBorder(null);
-
+    editConsoleSplitPane.setBorder(null);
     // the default size on windows is too small and kinda ugly
-    int dividerSize = Preferences.getInteger("editor.divider.size");
+    dividerSize = Preferences.getInteger("editor.divider.size");
     if (dividerSize != 0) {
-      splitPane.setDividerSize(dividerSize);
+      editConsoleSplitPane.setDividerSize(dividerSize);
     }
-
-    splitPane.setMinimumSize(new Dimension(600, 400));
-    box.add(splitPane);
-
+    
+    
+    // SET FOCUS LISTENERS
+//    graphComponent.addFocusListener(focusHandler);
+//    textarea.addFocusListener(focusHandler);
     // hopefully these are no longer needed w/ swing
     // (har har har.. that was wishful thinking)
-    listener = new EditorListener(this, textarea);
-    pain.add(box);
+    listener = new TextAreaListener(this, textarea);
 
+    
+    // SET KEY/MOUSE/WHATEVER LISTENERS
     // get shift down/up events so we can show the alt version of toolbar buttons
     textarea.addKeyListener(toolbar);
 
-    pain.setTransferHandler(new FileDropHandler());
+    
+    // SET TRANSFER HANDLERS
+//    pain.setTransferHandler(new FileDropHandler());
 
-//    System.out.println("t1");
 
-    // Finish preparing Editor (formerly found in Base)
+    // ADD TO THIS JFRAME
+//    JPanel contentPane = new JPanel(new BorderLayout());
+//    contentPane.add(editConsoleSplitPane, BorderLayout.CENTER);
+//    setContentPane(contentPane);
+    setContentPane(editConsoleSplitPane);
     pack();
-
-//    System.out.println("t2");
-
     // Set the window bounds and the divider location before setting it visible
     setPlacement(location);
-
-
     // If the window is resized too small this will resize it again to the
     // minimums. Adapted by Chris Lonnen from comments here:
     // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4320050
@@ -276,23 +299,26 @@ public class Editor extends JFrame implements RunnerListener {
         }
       });
 
-//    System.out.println("t3");
-
     // Bring back the general options for the editor
     applyPreferences();
-
-//    System.out.println("t4");
-
-    // Open the document that was passed in
+    
+    // All set, now open the document that was passed in
     boolean loaded = handleOpenInternal(path);
     if (!loaded) sketch = null;
-
-//    System.out.println("t5");
-
-    // All set, now show the window
-    //setVisible(true);
   }
 
+  //TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
+  public Action bind(String name, final Action action, String iconUrl)
+  {
+    return new AbstractAction(name, (iconUrl != null) ? new ImageIcon(
+        Editor.class.getResource(iconUrl)) : null)
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        System.out.println(e.getActionCommand());
+      }
+    };
+  }
 
   /**
    * Handles files dragged & dropped from the desktop and into the editor
@@ -362,7 +388,7 @@ public class Editor extends JFrame implements RunnerListener {
   protected void setPlacement(int[] location) {
     setBounds(location[0], location[1], location[2], location[3]);
     if (location[4] != 0) {
-      splitPane.setDividerLocation(location[4]);
+      editConsoleSplitPane.setDividerLocation(location[4]);
     }
   }
 
@@ -378,7 +404,7 @@ public class Editor extends JFrame implements RunnerListener {
     location[3] = bounds.height;
 
     // Get the current placement of the divider
-    location[4] = splitPane.getDividerLocation();
+    location[4] = editConsoleSplitPane.getDividerLocation();
 
     return location;
   }
@@ -1947,7 +1973,7 @@ public class Editor extends JFrame implements RunnerListener {
       Base.showWarning("Error", "Could not create the sketch.", e);
       return false;
     }
-    header.rebuild();
+    textHeader.rebuild();
     // Set the title of the window to "sketch_070752a - Processing 0126"
     setTitle(sketch.getName() + " | Processing " + Base.VERSION_NAME);
     // Disable untitled setting from previous document, if any

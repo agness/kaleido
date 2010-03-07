@@ -8,8 +8,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.util.Enumeration;
+import java.util.Vector;
 
 import javax.swing.AbstractButton;
+import javax.swing.ButtonGroup;
+import javax.swing.ButtonModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -20,6 +24,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JToggleButton;
 import javax.swing.ListCellRenderer;
 import javax.swing.Timer;
+import javax.swing.event.ChangeListener;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 
 /**
@@ -47,62 +52,115 @@ public class EditorDrawingHeader extends JPanel {
   static final int ACTIVE   = 2;
   static final int BUTTON_WIDTH = 21;
   
+  ToolGroup toolButtons; //TODO toggling one tool should deselect all others
+  ButtonGroup toolButtons2;
   Editor editor; //TODO drawArea instead for event handling / focus stuff?
   
   public EditorDrawingHeader(Editor eddie) {
     
     setBackground(Theme.getColor("header.bgcolor"));
     setBorder(null);
-//    setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-    setLayout(new FlowLayout(FlowLayout.TRAILING, EditorToolbar.BUTTON_GAP, (EditorToolbar.BUTTON_HEIGHT-BUTTON_WIDTH)/2+1));
-    setPreferredSize(new Dimension(500, EditorToolbar.BUTTON_HEIGHT)); //TODO minor: width here should be fluid
-    
+    setLayout(new FlowLayout(FlowLayout.TRAILING, EditorToolbar.BUTTON_GAP,
+                             (EditorToolbar.BUTTON_HEIGHT - BUTTON_WIDTH) / 2 + 1));
+    setPreferredSize(new Dimension(500, EditorToolbar.BUTTON_HEIGHT));
+    //TODO minor: width here ------^ should be fluid
+    toolButtons = new ToolGroup(); 
+    toolButtons2 = new ButtonGroup();
      
-    // CURSOR
+    /*
+     * CURSOR
+     */
     JToggleButton cursorButton = makeToolButton("cursor", "Cursor tool");
     cursorButton.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         System.out.println((String) ((AbstractButton)e.getSource()).getText());
+//        toolButtons.setSelected(((AbstractButton)e.getSource()).getModel(), true);
+        toolButtons2.setSelected(((AbstractButton)e.getSource()).getModel(), true);
+        spitButtonStates();
       }
     });
+    toolButtons.add(cursorButton.getModel());
+    toolButtons2.add(cursorButton);
     
-    // SHAPES drop-down
+    /*
+     * SHAPES drop-down
+     */
     TrayComboBox shapeList = new TrayComboBox(shapes);
     shapeList.setSelectedIndex(0);
-    shapeList.addActionListener(new ActionListener() {
+    shapeList.addActionListener(new ActionListener() {//<<<<< ok so the problem now is that this event is
+      //fired by the combobox? or really the combo box and the arrow fire different events
       public void actionPerformed(ActionEvent e) {
-        System.out.println("shape selected: "+ (String) ((JComboBox)e.getSource()).getSelectedItem());
+//        toolButtons.setSelected(((TrayComboBox)e.getSource()), true);
+        toolButtons2.setSelected(((TrayComboBox)e.getSource()).getDisplayedButton().getModel(), true);
+//        toolButtons2.setSelected(((AbstractButton)e.getSource()).getModel(), true);
+        System.out.println("shape selected: "+ (String) ((JComboBox)e.getSource()).getSelectedItem() +" "+ (String) ((TrayComboBox)e.getSource()).getDisplayedButton().getText());
+        spitButtonStates();
       }
     }); 
+    toolButtons.add(shapeList);
+    toolButtons2.add(shapeList.getDisplayedButton());
     
-    // CONNECTORS drop-down
+    /*
+     * CONNECTORS drop-down
+     */
     TrayComboBox connectorList = new TrayComboBox(connectors);
     connectorList.setSelectedIndex(0);
     connectorList.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
-        System.out.println("connector selected: "+ (String) ((JComboBox)e.getSource()).getSelectedItem());
+//        toolButtons.setSelected(((TrayComboBox)e.getSource()), true);
+//        toolButtons2.setSelected(((AbstractButton)e.getSource()).getModel(), true);
+        toolButtons2.setSelected(((TrayComboBox)e.getSource()).getDisplayedButton().getModel(), true);
+        System.out.println("connector selected: "+ (String) ((JComboBox)e.getSource()).getSelectedItem() +" "+ (String) ((TrayComboBox)e.getSource()).getDisplayedButton().getText());
+        spitButtonStates();
       }
     });
+    toolButtons.add(connectorList);
+    toolButtons2.add(connectorList.getDisplayedButton());
     
-    // TEXT
+    /*
+     * TEXT
+     */
     JToggleButton textButton = makeToolButton("text", "Text tool");
     textButton.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
+        toolButtons2.setSelected(((AbstractButton)e.getSource()).getModel(), true);
+//        toolButtons.setSelected(((AbstractButton)e.getSource()).getModel(), true);
         System.out.println((String) ((AbstractButton)e.getSource()).getText());
+        spitButtonStates();
       }
     });
+    toolButtons.add(textButton.getModel());
+    toolButtons2.add(textButton);
     
-    // COLORS drop-down
+    /*
+     * COLORS drop-down
+     */
     //TODO ohdear what are we going to do about this
     TrayComboBox colorList = new TrayComboBox(colors);
     colorList.setSelectedIndex(0);
     colorList.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
-        System.out.println("color selected: "+ (String) ((JComboBox)e.getSource()).getSelectedItem());
+//        toolButtons.setSelected(((TrayComboBox)e.getSource()), true);
+//        toolButtons2.setSelected(((AbstractButton)e.getSource()).getModel(), true);
+        toolButtons2.setSelected(((TrayComboBox)e.getSource()).getDisplayedButton().getModel(), true);
+        System.out.println("color selected: "+ (String) ((JComboBox)e.getSource()).getSelectedItem() +" "+ (String) ((TrayComboBox)e.getSource()).getDisplayedButton().getText());
+        spitButtonStates();
       }
     });
+    toolButtons.add(colorList);
+    toolButtons2.add(colorList.getDisplayedButton());
+    
+    /*
+     * ---- an empty panel for layout purposes (space divider) ----
+     */
+    JPanel layoutSpacer = new JPanel();
+    layoutSpacer.setBorder(null);
+    layoutSpacer.setSize(EditorToolbar.BUTTON_GAP*2, EditorToolbar.BUTTON_GAP);
+    layoutSpacer.setBackground(this.getBackground());
 
-    // LOCK/UNLOCK: the one and only toggle button
+    /*
+     * LOCK/UNLOCK: the one and only toggle button
+     */
     JToggleButton lockButton = new JToggleButton(Base.getImageIcon("graph-inact-unlock.gif", this));
     lockButton.setRolloverIcon(Base.getImageIcon("graph-rollo-unlock.gif", this));
     lockButton.setRolloverSelectedIcon(Base.getImageIcon("graph-rollo-lock.gif", this));
@@ -117,7 +175,9 @@ public class EditorDrawingHeader extends JPanel {
       }
     });
 
-    // TEXT
+    /*
+     * ZOOMIN
+     */
     JToggleButton zoomInButton = makeToolButton("zoomin", "Zoom out");
     zoomInButton.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
@@ -125,19 +185,16 @@ public class EditorDrawingHeader extends JPanel {
       }
     });
     
-    // ZOOMOUT
+    /*
+     * ZOOMOUT
+     */
     JToggleButton zoomOutButton = makeToolButton("zoomout", "Zoom in");
     zoomOutButton.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         System.out.println((String) ((AbstractButton)e.getSource()).getText());
       }
     });
-    
-    // an empty panel for layout purposes
-    JPanel layoutSpacer = new JPanel();
-    layoutSpacer.setBorder(null);
-    layoutSpacer.setSize(EditorToolbar.BUTTON_GAP*2, EditorToolbar.BUTTON_GAP);
-    layoutSpacer.setBackground(this.getBackground());
+
     
     // add everything
     add(cursorButton);
@@ -149,14 +206,25 @@ public class EditorDrawingHeader extends JPanel {
     add(lockButton);
     add(zoomInButton);
     add(zoomOutButton);
-    //now to add a graphoutline here...
+    //now to add a graphOutline here...
     
     setVisible(true);
   }
   
+  public void spitButtonStates() {
+    Enumeration e = toolButtons2.getElements();
+//    System.out.println(e.getClass());
+    AbstractButton b;
+    while (e.hasMoreElements()) {
+      b = (AbstractButton) e.nextElement();
+      System.out.println(b.getText()+" "+b.isSelected());
+    }
+    System.out.println();
+  }
+  
   /**
-   * Shortcut method to make the uniform type of toggle buttons.
-   * @param name, tooltip
+   * Shortcut method to make our uniform type of toggle buttons.
+   * @param name, tool tip
    * @return
    */
   public JToggleButton makeToolButton(String name, String tooltip) {
@@ -180,9 +248,9 @@ public class EditorDrawingHeader extends JPanel {
    * into one convenience object declaration.
    * @author achang
    */
-  class TrayComboBox extends JComboBox {
+  class TrayComboBox extends JComboBox implements ButtonModel { //it needs to be an AbstractButton...
     
-    /** TODO for efficiency's sake, we should just load all 
+    /* TODO for efficiency's sake, we should just load all 
      * the image icons once and swap between the objects.
      * Error handling will also be easier to deal with then.
      * 
@@ -192,6 +260,9 @@ public class EditorDrawingHeader extends JPanel {
   
     TrayComboBoxUI trayUI = new TrayComboBoxUI();
     
+    /**
+     * Constructor.
+     */
     public TrayComboBox(Object[] items) {
       super(items);
       setRenderer(new ListRenderer());
@@ -199,12 +270,28 @@ public class EditorDrawingHeader extends JPanel {
       setPreferredSize(new Dimension(BUTTON_WIDTH, BUTTON_WIDTH));
     }
     /**
-     * Shortcut to toggle main display button to OFF mode.
+     * Shortcut to set selection of main display 
+     * button (arrowButton) inside the UI.
      */
-    public void deactivate() {
-      trayUI.displayedItemSetSelected(false);
+    public void setSelected(boolean b) {
+      trayUI.displayedItemSetSelected(b); //the UI method calls repaint
+    }
+    /**
+     * Shortcut to get selection mode of the main display 
+     * button (arrowButton) inside the UI.
+     */
+    public boolean isSelected() {
+      return trayUI.getDisplayedItem().isSelected();
+    }
+    
+    public AbstractButton getDisplayedButton() {
+      return trayUI.getDisplayedItem();
     }
 
+    /**
+     * Custom renderer that makes icon-only JComboBox items
+     * @author achang
+     */
     class ListRenderer extends JLabel implements ListCellRenderer {
       
       public ListRenderer() {
@@ -298,6 +385,9 @@ public class EditorDrawingHeader extends JPanel {
           updateDisplayedItem();
         }
       }
+      public AbstractButton getDisplayedItem() {
+        return arrowButton;
+      }
       
       /**
        * Overwrites original arrowButton mouse listener in order to enable 
@@ -311,7 +401,7 @@ public class EditorDrawingHeader extends JPanel {
         public TrayHandler() {
           enterTimer = new Timer(300, new ActionListener() {
               public void actionPerformed(ActionEvent e) {
-                  System.out.println("trayHandler timer triggered");
+//                  System.out.println("trayHandler timer triggered");
                   toggleOpenClose();
               }
           });
@@ -322,13 +412,12 @@ public class EditorDrawingHeader extends JPanel {
         //then the item under the release should be selected,
         //and that item should be active
         
-        
         public void mouseClicked(MouseEvent e) {
-          System.out.println("trayHandler mouseClicked");
+//          System.out.println("trayHandler mouseClicked");
           if (arrowButton.isSelected())
-            arrowButton.setSelected(false);
+            displayedItemSetSelected(false);
           else
-            arrowButton.setSelected(true);
+            displayedItemSetSelected(true);
           if (isPopupVisible(comboBox))
             setPopupVisible(comboBox, false);
         }
@@ -341,17 +430,171 @@ public class EditorDrawingHeader extends JPanel {
         }
   
         public void mousePressed(MouseEvent e) {
-          System.out.println("trayHandler mousePressed");
+//          System.out.println("trayHandler mousePressed");
           enterTimer.start();
         }
   
         public void mouseReleased(MouseEvent e) {
-          System.out.println("trayHandler mouseReleased");
+//          System.out.println("trayHandler mouseReleased");
           enterTimer.restart();
           enterTimer.stop();
         }
         
       }
     }
+
+    /**
+     * Methods from interface ButtonModel that we will never need
+     * to use.  Here basically channeling everything to the UI.arrowButton
+     */
+    public void addChangeListener(ChangeListener l) {
+      trayUI.getDisplayedItem().addChangeListener(l);
+    }
+    public int getMnemonic() {
+      return trayUI.getDisplayedItem().getMnemonic();
+    }
+    public boolean isArmed() {
+      return trayUI.getDisplayedItem().getModel().isArmed();
+    }
+    public boolean isPressed() {
+     return trayUI.getDisplayedItem().getModel().isPressed();
+    }
+    public boolean isRollover() {
+      return trayUI.getDisplayedItem().getModel().isRollover();
+    }
+    public void removeChangeListener(ChangeListener l) {
+      trayUI.getDisplayedItem().removeChangeListener(l);
+    }
+    public void setArmed(boolean b) {
+      trayUI.getDisplayedItem().getModel().setArmed(b);
+    }
+    public void setGroup(ButtonGroup group) {
+      trayUI.getDisplayedItem().getModel().setGroup(group);
+    }
+    public void setMnemonic(int key) {
+      trayUI.getDisplayedItem().setMnemonic(key);
+    }
+    public void setPressed(boolean b) {
+      trayUI.getDisplayedItem().getModel().setPressed(b);
+    }
+    public void setRollover(boolean b) {
+      trayUI.getDisplayedItem().getModel().setRollover(b);
+    }
   }
+
+  /**
+   * Our customization of swing.ButtonGroup to accommodate TrayComboBoxes
+   * which don't subclass AbstractButton. Thus the button Vector type is
+   * changed, but otherwise method implementations are 90% identical.
+   * @see javax.swing.ButtonGroup
+   * @author achang
+   */
+  class ToolGroup {
+
+    /**
+     * The list of buttons participating in this group.
+     */
+    protected Vector<ButtonModel> buttons = new Vector();
+
+    /**
+     * The current selection.
+     */
+    ButtonModel selection = null;
+
+    /**
+     * Constructor (does nothing).
+     */
+    public ToolGroup() {
+    }
+
+    /**
+     * Adds the button to the group.
+     * @param b the button to be added
+     */
+    public void add(ButtonModel b) {
+      if (b == null) {
+        return;
+      }
+      buttons.addElement(b);
+
+      if (b.isSelected()) {
+        if (selection == null) {
+          selection = b;
+        } else {
+          b.setSelected(false);
+        }
+      }
+    }
+
+    /**
+     * Removes the button from the group.
+     * @param b the button to be removed
+     */
+    public void remove(AbstractButton b) {
+      if (b == null) {
+        return;
+      }
+      buttons.removeElement(b);
+      if (b.getModel() == selection) {
+        selection = null;
+      }
+    }
+
+    /**
+     * Returns all the buttons that are participating in this group.
+     * @return an <code>Enumeration</code> of the buttons in this group
+     */
+    public Enumeration<ButtonModel> getElements() {
+      return buttons.elements();
+    }
+
+    /**
+     * Returns the model of the selected button.
+     * @return the selected button model
+     */
+    public ButtonModel getSelection() {
+      return selection;
+    }
+
+    /**
+     * Sets the selected value for the <code>ButtonModel</code>. Only one
+     * button in the group may be selected at a time.
+     * @param m the <code>ButtonModel</code>
+     * @param b <code>true</code> if this button is to be selected, 
+     *          otherwise <code>false</code>
+     */
+    public void setSelected(ButtonModel m, boolean b) {
+      if (b && m != null && m != selection) {
+        ButtonModel oldSelection = selection;
+        selection = m;
+        if (oldSelection != null) {
+          oldSelection.setSelected(false);
+        }
+        m.setSelected(true);
+      }
+    }
+
+    /**
+     * Returns whether a <code>ButtonModel</code> is selected.
+     * @return <code>true</code> if the button is selected, otherwise 
+     *         returns <code>false</code>
+     */
+    public boolean isSelected(ButtonModel m) {
+      return (m == selection);
+    }
+
+    /**
+     * Returns the number of buttons in the group.
+     * @return the button count
+     */
+    public int getButtonCount() {
+      if (buttons == null) {
+        return 0;
+      } else {
+        return buttons.size();
+      }
+    }
+
+  }
+  
 }

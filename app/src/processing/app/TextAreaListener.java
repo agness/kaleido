@@ -42,7 +42,7 @@ import java.awt.event.*;
  * Solving these issues, however, would probably best be done by a
  * smarter parser/formatter, rather than continuing to hack this class.
  */
-public class EditorListener {
+public class TextAreaListener {
   private Editor editor;
   private JEditTextArea textarea;
 
@@ -61,7 +61,7 @@ public class EditorListener {
     Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
 
 
-  public EditorListener(Editor editor, JEditTextArea textarea) {
+  public TextAreaListener(Editor editor, JEditTextArea textarea) {
     this.editor = editor;
     this.textarea = textarea;
 

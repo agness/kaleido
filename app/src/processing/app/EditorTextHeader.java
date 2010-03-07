@@ -30,9 +30,9 @@ import javax.swing.*;
 
 
 /**
- * Sketch tabs at the top of the editor window.
+ * Sketch tabs at the top of the text editor window.
  */
-public class EditorHeader extends JComponent {
+public class EditorTextHeader extends JComponent {
   static Color backgroundColor;
   static Color textColor[] = new Color[2];
 
@@ -74,7 +74,7 @@ public class EditorHeader extends JComponent {
   int imageW, imageH;
 
 
-  public EditorHeader(Editor eddie) {
+  public EditorTextHeader(Editor eddie) {
     this.editor = eddie; // weird name for listener
 
     if (pieces == null) {
@@ -102,7 +102,7 @@ public class EditorHeader extends JComponent {
           int y = e.getY();
 
           if ((x > menuLeft) && (x < menuRight)) {
-            popup.show(EditorHeader.this, x, y);
+            popup.show(EditorTextHeader.this, x, y);
 
           } else {
             Sketch sketch = editor.getSketch();

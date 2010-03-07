@@ -515,7 +515,7 @@ public class Sketch {
     setCurrentCode(newName);
 
     // update the tabs
-    editor.header.rebuild();
+    editor.textHeader.rebuild();
   }
 
 
@@ -581,7 +581,7 @@ public class Sketch {
         setCurrentCode(0);
 
         // update the tabs
-        editor.header.repaint();
+        editor.textHeader.repaint();
       }
     }
   }
@@ -641,7 +641,7 @@ public class Sketch {
         break;
       }
     }
-    editor.header.repaint();
+    editor.textHeader.repaint();
 
     if (Base.isMacOS()) {
       // http://developer.apple.com/qa/qa2001/qa1146.html
@@ -1003,7 +1003,7 @@ public class Sketch {
         sortCode();
       }
       setCurrentCode(filename);
-      editor.header.repaint();
+      editor.textHeader.repaint();
       if (editor.untitled) {  // TODO probably not necessary? problematic?
         // Mark the new code as modified so that the sketch is saved
         current.setModified(true);
@@ -1079,7 +1079,7 @@ public class Sketch {
     currentIndex = which;
 
     editor.setCode(current);
-    editor.header.rebuild();
+    editor.textHeader.rebuild();
   }
 
 
