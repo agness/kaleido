@@ -1,20 +1,23 @@
 package processing.app;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Graphics;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.Enumeration;
-import java.util.Vector;
+import java.util.HashMap;
 
 import javax.swing.AbstractAction;
 import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
-import javax.swing.ButtonModel;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -25,7 +28,6 @@ import javax.swing.JPopupMenu;
 import javax.swing.JToggleButton;
 import javax.swing.ListCellRenderer;
 import javax.swing.Timer;
-import javax.swing.event.ChangeListener;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 
 
@@ -35,18 +37,19 @@ import javax.swing.plaf.basic.BasicComboBoxUI;
 public class EditorDrawingHeader extends JPanel {
 
   /** Rollover titles for each button. */
-  static final String shapes[] = {
+  static final String shapeNames[] = {
     "rect", "circle", "diam", "star", "audio", "keyb", "pers"
   };
   
   /** Rollover titles for each button. */
-  static final String connectors[] = {
+  static final String connectorNames[] = {
     "line", "solid", "dotted"
   };
   
   /** Rollover titles for each button. */
-  static final String colors[] = {
-    "paint", "A", "B", "C", "D", "E"
+  static final String colorNames[] = {
+    "drawing.fillset1.color1", "drawing.fillset1.color2", "drawing.fillset1.color3", 
+    "drawing.fillset1.color4", "drawing.fillset1.color5"
   };
   
   static final int INACTIVE = 0;
@@ -54,8 +57,16 @@ public class EditorDrawingHeader extends JPanel {
   static final int ACTIVE   = 2;
   static final int BUTTON_WIDTH = 21;
   
+  //making all the image objects beforehand for efficiency
+  //a matrix of bags for the different states [3 mouse states] [2 flag states]
+  //each bag containing that variant of every icon
+  static final String[] mouseState = {"rollo", "activ", "inact"};
+  static final String[] flagState = {"flag", "noflag"};
+  final HashMap[][] iconBag = new HashMap[mouseState.length][flagState.length];
+  
   ButtonGroup toolButtons;
   Editor editor; //TODO drawArea instead for event handling / focus stuff?
+                  //we don't really need to access the textArea for anything
   
   public EditorDrawingHeader(Editor eddie) {
     
@@ -66,6 +77,7 @@ public class EditorDrawingHeader extends JPanel {
     setPreferredSize(new Dimension(500, EditorToolbar.BUTTON_HEIGHT));
     //TODO minor: width here ------^ should be fluid
     toolButtons = new ButtonGroup();
+    initializeIconBag();
      
     /*
      * CURSOR
@@ -83,7 +95,7 @@ public class EditorDrawingHeader extends JPanel {
     /*
      * SHAPES drop-down
      */
-    TrayComboBox shapeList = new TrayComboBox(shapes);
+    TrayComboBox shapeList = new TrayComboBox(shapeNames);
     shapeList.setSelectedIndex(0);
     shapeList.getDisplayedButton().addActionListener(new ActionListener() {
       //^--- here the displayedButton is added instead of the list directly
@@ -98,7 +110,7 @@ public class EditorDrawingHeader extends JPanel {
     /*
      * CONNECTORS drop-down
      */
-    TrayComboBox connectorList = new TrayComboBox(connectors);
+    TrayComboBox connectorList = new TrayComboBox(connectorNames);
     connectorList.setSelectedIndex(0);
     connectorList.getDisplayedButton().addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
@@ -124,8 +136,7 @@ public class EditorDrawingHeader extends JPanel {
     /*
      * COLORS drop-down
      */
-    //TODO ohdear what are we going to do about this
-    TrayComboBox colorList = new TrayComboBox(colors);
+    TrayComboBox colorList = new TrayComboBox(colorNames);
     colorList.setSelectedIndex(0);
     colorList.getDisplayedButton().addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
@@ -195,12 +206,46 @@ public class EditorDrawingHeader extends JPanel {
     
     setVisible(true);
   }
+
+  /**
+   * Make all Icon objects and fill the global final arrays.
+   * This makes image access more efficient over repeated use.
+   * 
+   * The toggleButton icons aren't included in this icon bag 
+   * system b/c they were implemented prior and it's faster to
+   * keep them as they are.
+   */
+  private void initializeIconBag() {
+    int i, j, k;
+    String filename;
+
+    for (i=0; i<mouseState.length; i++)
+      for (j=0; j<flagState.length; j++) {
+        //initialize the HashMap
+        iconBag[i][j] = new HashMap(shapeNames.length+connectorNames.length+colorNames.length);
+        //put in all the shape icons
+        for (k=0; k<shapeNames.length; k++) {
+          filename = "graph-"+mouseState[i]+"-"+flagState[j]+"-"+shapeNames[k]+".gif";
+          iconBag[i][j].put(shapeNames[k], Base.getImageIcon(filename, this));
+        }
+        //put in all the connector icons
+        for (k=0; k<connectorNames.length; k++) {
+          filename = "graph-"+mouseState[i]+"-"+flagState[j]+"-"+connectorNames[k]+".gif";
+          iconBag[i][j].put(connectorNames[k], Base.getImageIcon(filename, this));
+        }
+        //put in all the color icons
+        filename = "graph-"+mouseState[i]+"-"+flagState[j]+"-paint.png";
+        for (k=0; k<colorNames.length; k++) {
+          iconBag[i][j].put(colorNames[k], new FillIcon(Theme.getColor(colorNames[k]), Base.getThemeImage(filename, this)));
+        }
+      }
+  }
   
   /**
    * A temporary debugging purpose.
    * TODO kill
    */
-  public void spitButtonStates() {
+  private void spitButtonStates() {
     Enumeration e = toolButtons.getElements();
     AbstractButton b;
     while (e.hasMoreElements()) {
@@ -215,7 +260,7 @@ public class EditorDrawingHeader extends JPanel {
    * @param name, tool tip
    * @return
    */
-  public JToggleButton makeToolButton(String name, String tooltip) {
+  private JToggleButton makeToolButton(String name, String tooltip) {
     JToggleButton bob = new JToggleButton(Base.getImageIcon("graph-inact-"+name+".gif", this));
     bob.setRolloverIcon(Base.getImageIcon("graph-rollo-"+name+".gif", this));
     bob.setRolloverSelectedIcon(Base.getImageIcon("graph-rollo-"+name+".gif", this));
@@ -230,21 +275,37 @@ public class EditorDrawingHeader extends JPanel {
   }
 
   /**
+   * Make an icon with a block of solid color painted inside.
+   * Used to make fill color selection buttons.
+   */
+  private class FillIcon implements Icon {
+    Color fillcolor;
+    Image overlay;
+    public FillIcon (Color c, Image img) {
+      fillcolor = c;
+      overlay = img;
+    }
+    public void paintIcon (Component c, Graphics g, int x, int y) {
+      g.setColor(fillcolor);
+      g.fillRect(x, y, getIconWidth(), getIconHeight());
+      g.drawImage(overlay,0,0,null);
+    }
+    public int getIconWidth() {
+      return BUTTON_WIDTH;
+    }
+    public int getIconHeight() { 
+      return BUTTON_WIDTH;
+    }
+  }
+  
+  /**
    * Makes a drop-down tool tray that activates a tool when just clicked,
    * and opens the tray when the mouse click is held down.
    * This is mostly a wrapper class to package repeated and associated UI stuff
    * into one convenience object declaration.
    * @author achang
    */
-  class TrayComboBox extends JComboBox { //implements ButtonModel {
-    
-    /* TODO for efficiency's sake, we should just load all 
-     * the image icons once and swap between the objects.
-     * Error handling will also be easier to deal with then.
-     * 
-     * Make a matrix of images, make some constants to refer
-     * to the right row/col, yada yada yada...
-     */
+  private class TrayComboBox extends JComboBox { //implements ButtonModel {
   
     TrayComboBoxUI trayUI = new TrayComboBoxUI();
     
@@ -294,17 +355,17 @@ public class EditorDrawingHeader extends JPanel {
       public Component getListCellRendererComponent(JList list, Object value,
                                                     int index, boolean isSelected,
                                                     boolean cellHasFocus) {
-        ImageIcon icon;
-        
+        Icon icon;
+
         if (isSelected)
-          icon = Base.getImageIcon("graph-rollo-noflag-"+value+".gif", list);
+          icon = (Icon) iconBag[0][1].get(value); //rollo-noflag
         else if (cellHasFocus)
-          icon = Base.getImageIcon("graph-activ-noflag-"+value+".gif", list);
+          icon = (Icon) iconBag[1][1].get(value); //activ-noflag
         else
-          icon = Base.getImageIcon("graph-inact-noflag-"+value+".gif", list);
-  
-        if (icon.getIconWidth() == -1) {
-          System.out.println("no "+value+" image at index "+list.getSelectedIndex());
+          icon = (Icon) iconBag[2][1].get(value); //inact-noflag
+
+        if (icon == null || icon.getIconWidth() == -1) {
+          System.err.println("no "+value+" image at index "+list.getSelectedIndex());
         } else {
           setIcon(icon);
         }
@@ -362,13 +423,15 @@ public class EditorDrawingHeader extends JPanel {
        * item changes.
        */
       private void updateDisplayedItem() {
-        if (comboBox.getSelectedItem() != null) {
+        
+        if (comboBox.getSelectedItem() != null) 
+        {
           String value = comboBox.getSelectedItem().toString();
-          arrowButton.setIcon(Base.getImageIcon("graph-inact-flag-"+value+".gif", arrowButton));
-          arrowButton.setRolloverIcon(Base.getImageIcon("graph-rollo-flag-"+value+".gif", arrowButton));
-          arrowButton.setRolloverSelectedIcon(Base.getImageIcon("graph-rollo-flag-"+value+".gif", arrowButton));
-          arrowButton.setSelectedIcon(Base.getImageIcon("graph-activ-flag-"+value+".gif", arrowButton));
-          arrowButton.setPressedIcon(Base.getImageIcon("graph-activ-flag-"+value+".gif", arrowButton));
+          arrowButton.setIcon((Icon) iconBag[2][0].get(value)); //inact-flag
+          arrowButton.setRolloverIcon((Icon) iconBag[0][0].get(value)); //rollo-flag
+          arrowButton.setRolloverSelectedIcon((Icon) iconBag[0][0].get(value)); //rollo-flag
+          arrowButton.setSelectedIcon((Icon) iconBag[1][0].get(value)); //activ-flag
+          arrowButton.setPressedIcon((Icon) iconBag[1][0].get(value)); //activ-flag
           arrowButton.setActionCommand(value);
           arrowButton.doClick(); //perform the newly assigned action
         }
@@ -430,161 +493,6 @@ public class EditorDrawingHeader extends JPanel {
           enterTimer.stop();
         }
         
-      }
-    }
-
-    /**
-     * Methods from interface ButtonModel that we will never need
-     * to use.  Here basically channeling everything to the UI.arrowButton
-     */
-    /*
-    public void addChangeListener(ChangeListener l) {
-      trayUI.getDisplayedItem().addChangeListener(l);
-    }
-    public int getMnemonic() {
-      return trayUI.getDisplayedItem().getMnemonic();
-    }
-    public boolean isArmed() {
-      return trayUI.getDisplayedItem().getModel().isArmed();
-    }
-    public boolean isPressed() {
-     return trayUI.getDisplayedItem().getModel().isPressed();
-    }
-    public boolean isRollover() {
-      return trayUI.getDisplayedItem().getModel().isRollover();
-    }
-    public void removeChangeListener(ChangeListener l) {
-      trayUI.getDisplayedItem().removeChangeListener(l);
-    }
-    public void setArmed(boolean b) {
-      trayUI.getDisplayedItem().getModel().setArmed(b);
-    }
-    public void setGroup(ButtonGroup group) {
-      trayUI.getDisplayedItem().getModel().setGroup(group);
-    }
-    public void setMnemonic(int key) {
-      trayUI.getDisplayedItem().setMnemonic(key);
-    }
-    public void setPressed(boolean b) {
-      trayUI.getDisplayedItem().getModel().setPressed(b);
-    }
-    public void setRollover(boolean b) {
-      trayUI.getDisplayedItem().getModel().setRollover(b);
-    }
-    */
-  }
-  
-
-  /**
-   * Our customization of swing.ButtonGroup to accommodate TrayComboBoxes
-   * which don't subclass AbstractButton. Thus the button Vector type is
-   * changed, but otherwise method implementations are 90% identical.
-   * @see javax.swing.ButtonGroup
-   * @author achang
-   */
-  class ToolGroup {
-
-    /**
-     * The list of buttons participating in this group.
-     */
-    protected Vector<ButtonModel> buttons = new Vector();
-
-    /**
-     * The current selection.
-     */
-    ButtonModel selection = null;
-
-    /**
-     * Constructor (does nothing).
-     */
-    public ToolGroup() {
-    }
-
-    /**
-     * Adds the button to the group.
-     * @param b the button to be added
-     */
-    public void add(ButtonModel b) {
-      if (b == null) {
-        return;
-      }
-      buttons.addElement(b);
-
-      if (b.isSelected()) {
-        if (selection == null) {
-          selection = b;
-        } else {
-          b.setSelected(false);
-        }
-      }
-    }
-
-    /**
-     * Removes the button from the group.
-     * @param b the button to be removed
-     */
-    public void remove(AbstractButton b) {
-      if (b == null) {
-        return;
-      }
-      buttons.removeElement(b);
-      if (b.getModel() == selection) {
-        selection = null;
-      }
-    }
-
-    /**
-     * Returns all the buttons that are participating in this group.
-     * @return an <code>Enumeration</code> of the buttons in this group
-     */
-    public Enumeration<ButtonModel> getElements() {
-      return buttons.elements();
-    }
-
-    /**
-     * Returns the model of the selected button.
-     * @return the selected button model
-     */
-    public ButtonModel getSelection() {
-      return selection;
-    }
-
-    /**
-     * Sets the selected value for the <code>ButtonModel</code>. Only one
-     * button in the group may be selected at a time.
-     * @param m the <code>ButtonModel</code>
-     * @param b <code>true</code> if this button is to be selected, 
-     *          otherwise <code>false</code>
-     */
-    public void setSelected(ButtonModel m, boolean b) {
-      if (b && m != null && m != selection) {
-        ButtonModel oldSelection = selection;
-        selection = m;
-        if (oldSelection != null) {
-          oldSelection.setSelected(false);
-        }
-        m.setSelected(true);
-      }
-    }
-
-    /**
-     * Returns whether a <code>ButtonModel</code> is selected.
-     * @return <code>true</code> if the button is selected, otherwise 
-     *         returns <code>false</code>
-     */
-    public boolean isSelected(ButtonModel m) {
-      return (m == selection);
-    }
-
-    /**
-     * Returns the number of buttons in the group.
-     * @return the button count
-     */
-    public int getButtonCount() {
-      if (buttons == null) {
-        return 0;
-      } else {
-        return buttons.size();
       }
     }
 
