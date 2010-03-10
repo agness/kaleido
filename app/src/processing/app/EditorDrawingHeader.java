@@ -30,6 +30,12 @@ import javax.swing.ListCellRenderer;
 import javax.swing.Timer;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 
+import processing.app.util.kEvent;
+
+import com.mxgraph.util.mxEvent;
+import com.mxgraph.util.mxEventObject;
+import com.mxgraph.util.mxEventSource.mxIEventListener;
+
 
 /**
  * Graph-editing toolbar at the top of the drawing window.
@@ -64,11 +70,23 @@ public class EditorDrawingHeader extends JPanel {
   static final String[] flagState = {"flag", "noflag"};
   final HashMap[][] iconBag = new HashMap[mouseState.length][flagState.length];
   
+  AbstractButton defaultButton;
   ButtonGroup toolButtons;
-  Editor editor; //TODO drawArea instead for event handling / focus stuff?
+//  Editor editor; //TODO drawArea instead for event handling / focus stuff?
                   //we don't really need to access the textArea for anything
+  DrawingArea drawingArea;
   
-  public EditorDrawingHeader(Editor eddie) {
+  public EditorDrawingHeader(DrawingArea dory) {
+    
+    drawingArea = dory;
+    drawingArea.addListener(kEvent.TOOL_END,
+      new mxIEventListener()
+      {
+        public void invoke(Object source, mxEventObject evt)
+        {
+          toolButtons.setSelected(defaultButton.getModel(), true);
+        }
+      });
     
     setBackground(Theme.getColor("header.bgcolor"));
     setBorder(null);
@@ -91,6 +109,7 @@ public class EditorDrawingHeader extends JPanel {
       }
     });
     toolButtons.add(cursorButton);
+    defaultButton = cursorButton;
     
     /*
      * SHAPES drop-down
@@ -101,6 +120,7 @@ public class EditorDrawingHeader extends JPanel {
       //^--- here the displayedButton is added instead of the list directly
       //because we want the button group to toggle the display button
       public void actionPerformed(ActionEvent e) {
+        //TODO first click after button press will actually create the object at that location
         toolButtons.setSelected(((AbstractButton)e.getSource()).getModel(), true);
         spitButtonStates();
       }
@@ -115,9 +135,16 @@ public class EditorDrawingHeader extends JPanel {
     connectorList.getDisplayedButton().addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         toolButtons.setSelected(((AbstractButton)e.getSource()).getModel(), true);
-        spitButtonStates();
+//        spitButtonStates();
+//        System.out.println(((AbstractButton)e.getSource()).getModel().getActionCommand());
+        drawingArea.beginToolMode(((AbstractButton)e.getSource()).getModel().getActionCommand());
       }
     });
+    //the alternative, instead of defining the actionListeners here separately
+    //is to make a bunch of static ones at the beginning and change them in/out
+    //when updating the arrowButton
+    //yet another alternative is to make one static actionListener that works for all tool cases
+    //which we can then just install when we instantiate the arrowButton
     toolButtons.add(connectorList.getDisplayedButton());
     
     /*
@@ -387,11 +414,11 @@ public class EditorDrawingHeader extends JPanel {
       @Override
       protected JButton createArrowButton() {
         JButton arrowButton = new JButton("");
-        arrowButton.setAction(new AbstractAction() {
-          public void actionPerformed(ActionEvent e) {
-            System.out.println("action event-- "+e.getActionCommand());
-          }
-        });
+//        arrowButton.setAction(new AbstractAction() {
+//          public void actionPerformed(ActionEvent e) {
+//            System.out.println("action event-- "+e.getActionCommand());
+//          }
+//        });
         arrowButton.setBounds(0, 0, BUTTON_WIDTH, BUTTON_WIDTH);
         arrowButton.setPreferredSize(new Dimension(BUTTON_WIDTH, BUTTON_WIDTH));
         return arrowButton;

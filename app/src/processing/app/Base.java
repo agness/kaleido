@@ -1854,6 +1854,14 @@ public class Base {
 
   /**
    * Get a UI image icon from the theme folder.
+   * 
+   * TODO According to Sun documentation
+   * <a href="http://java.sun.com/developer/onlineTraining/GUI/Swing1/shortcourse.html">here</a>
+   * we use ImageIcon instead of Images to sidestep the problem
+   * of asynchronous loading and subsequent need of Media Tracker.
+   * So technically we don't need to do this here.
+   * 
+   * @author achang
    */
   static public ImageIcon getImageIcon(String name, Component who) {
     return new ImageIcon(getLibImage("theme/" + name, who));

@@ -184,23 +184,23 @@ public class Editor extends JFrame implements RunnerListener {
     
     
     // TEXTEDITOR BOX holds code file tabs and code edit area 
-    Box textEditorBox = Box.createVerticalBox();
     textHeader = new EditorTextHeader(this);
-    textEditorBox.add(textHeader);
     textarea = new JEditTextArea(new PdeTextAreaDefaults());
     textarea.setRightClickPopup(new TextAreaPopup()); //TODO popupFocusHandler
     textarea.setHorizontalOffset(6);
+    Box textEditorBox = Box.createVerticalBox();
+    textEditorBox.add(textHeader);
     textEditorBox.add(textarea);
     
     
     // DRAWEDITOR BOX holds the draw tool bar and draw area
-    Box drawEditorBox = Box.createVerticalBox();
-    drawingHeader = new EditorDrawingHeader(this);
-    drawEditorBox.add(drawingHeader);
     drawing = new mxGraphModel();
     //TODO ^--- a plain mxGraphModel... all the codewindow stuff is handled by the DrawingArea
     //ultimately though, editor might not need access to the graphModel at all
     drawarea = new DrawingArea(drawing);
+    drawingHeader = new EditorDrawingHeader(drawarea);
+    Box drawEditorBox = Box.createVerticalBox();
+    drawEditorBox.add(drawingHeader);
     drawEditorBox.add(drawarea);
     
     
