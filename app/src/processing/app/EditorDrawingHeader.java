@@ -231,6 +231,8 @@ public class EditorDrawingHeader extends JPanel {
     add(zoomOutButton);
     //now to add a graphOutline here...
     
+    //highlight our default button
+    toolButtons.setSelected(defaultButton.getModel(), true);
     setVisible(true);
   }
 
