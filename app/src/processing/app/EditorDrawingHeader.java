@@ -30,6 +30,7 @@ import javax.swing.ListCellRenderer;
 import javax.swing.Timer;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 
+import processing.app.util.kConstants;
 import processing.app.util.kEvent;
 
 import com.mxgraph.util.mxEvent;
@@ -42,38 +43,29 @@ import com.mxgraph.util.mxEventSource.mxIEventListener;
  */
 public class EditorDrawingHeader extends JPanel {
 
-  /** Rollover titles for each button. */
-  static final String shapeNames[] = {
-    "rect", "circle", "diam", "star", "audio", "keyb", "pers"
-  };
-  
-  /** Rollover titles for each button. */
-  static final String connectorNames[] = {
-    "line", "solid", "dotted"
-  };
-  
-  /** Rollover titles for each button. */
-  static final String colorNames[] = {
-    "drawing.fillset1.color1", "drawing.fillset1.color2", "drawing.fillset1.color3", 
-    "drawing.fillset1.color4", "drawing.fillset1.color5"
-  };
-  
   static final int INACTIVE = 0;
   static final int ROLLOVER = 1;
   static final int ACTIVE   = 2;
   static final int BUTTON_WIDTH = 21;
   
-  //making all the image objects beforehand for efficiency
-  //a matrix of bags for the different states [3 mouse states] [2 flag states]
-  //each bag containing that variant of every icon
   static final String[] mouseState = {"rollo", "activ", "inact"};
   static final String[] flagState = {"flag", "noflag"};
-  final HashMap[][] iconBag = new HashMap[mouseState.length][flagState.length];
   
-  AbstractButton defaultButton;
+  /**  
+   * We make all the image objects beforehand for efficiency
+   * a matrix of bags for the different states [3 mouse states] [2 flag states]
+   * each bag containing that variant of every icon
+   */
+  final HashMap[][] iconBag = new HashMap[mouseState.length][flagState.length];
+
+  /**
+   * This is the shared by all tool buttons.  It activates the appropriate tool
+   * in DrawingArea component.
+   */
+  final ActionListener toolActionListener;
+  
+  AbstractButton defaultButton; //TODO don't need this if we are removing the cursor button
   ButtonGroup toolButtons;
-//  Editor editor; //TODO drawArea instead for event handling / focus stuff?
-                  //we don't really need to access the textArea for anything
   DrawingArea drawingArea;
   
   public EditorDrawingHeader(DrawingArea dory) {
@@ -96,10 +88,20 @@ public class EditorDrawingHeader extends JPanel {
     //TODO minor: width here ------^ should be fluid
     toolButtons = new ButtonGroup();
     initializeIconBag();
+    
+    toolActionListener = new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        toolButtons.setSelected(((AbstractButton)e.getSource()).getModel(), true);
+        //^--- we technically don't need to do this for every tool select event, but it's easier to code
+        drawingArea.beginToolMode(((AbstractButton)e.getSource()).getModel().getActionCommand());
+      }
+    };
      
     /*
      * CURSOR
      */
+    //TODO I dislike having a cursor tool. I know when I'm in cursor mode. Remove the cursor already.
+    //meanwhile, TODO implement grab when I'm grabbing on canvas instead of mouseOverCell
     JToggleButton cursorButton = makeToolButton("cursor", "Cursor tool");
     cursorButton.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
@@ -114,63 +116,35 @@ public class EditorDrawingHeader extends JPanel {
     /*
      * SHAPES drop-down
      */
-    TrayComboBox shapeList = new TrayComboBox(shapeNames);
+    TrayComboBox shapeList = new TrayComboBox(kConstants.SHAPE_NAMES);
     shapeList.setSelectedIndex(0);
-    shapeList.getDisplayedButton().addActionListener(new ActionListener() {
+    shapeList.getDisplayedButton().addActionListener(toolActionListener);
       //^--- here the displayedButton is added instead of the list directly
       //because we want the button group to toggle the display button
-      public void actionPerformed(ActionEvent e) {
-        //TODO first click after button press will actually create the object at that location
-        toolButtons.setSelected(((AbstractButton)e.getSource()).getModel(), true);
-        spitButtonStates();
-      }
-    }); 
     toolButtons.add(shapeList.getDisplayedButton());
     
     /*
      * CONNECTORS drop-down
      */
-    TrayComboBox connectorList = new TrayComboBox(connectorNames);
+    //TODO when the mx-auto-make connectors thing is on, highlight this button
+    TrayComboBox connectorList = new TrayComboBox(kConstants.CONNECTOR_NAMES);
     connectorList.setSelectedIndex(0);
-    connectorList.getDisplayedButton().addActionListener(new ActionListener() {
-      public void actionPerformed(ActionEvent e) {
-        toolButtons.setSelected(((AbstractButton)e.getSource()).getModel(), true);
-//        spitButtonStates();
-//        System.out.println(((AbstractButton)e.getSource()).getModel().getActionCommand());
-        drawingArea.beginToolMode(((AbstractButton)e.getSource()).getModel().getActionCommand());
-      }
-    });
-    //the alternative, instead of defining the actionListeners here separately
-    //is to make a bunch of static ones at the beginning and change them in/out
-    //when updating the arrowButton
-    //yet another alternative is to make one static actionListener that works for all tool cases
-    //which we can then just install when we instantiate the arrowButton
+    connectorList.getDisplayedButton().addActionListener(toolActionListener);
     toolButtons.add(connectorList.getDisplayedButton());
     
     /*
      * TEXT
      */
-    JToggleButton textButton = makeToolButton("text", "Text tool");
-    textButton.addActionListener(new ActionListener() {
-      public void actionPerformed(ActionEvent e) {
-        toolButtons.setSelected(((AbstractButton)e.getSource()).getModel(), true);
-        System.out.println("action event-- text");
-        spitButtonStates();
-      }
-    });
+    JToggleButton textButton = makeToolButton(kConstants.SHAPE_TEXT, "Text tool");
+    textButton.addActionListener(toolActionListener);
     toolButtons.add(textButton);
     
     /*
      * COLORS drop-down
      */
-    TrayComboBox colorList = new TrayComboBox(colorNames);
+    TrayComboBox colorList = new TrayComboBox(kConstants.COLOR_NAMES);
     colorList.setSelectedIndex(0);
-    colorList.getDisplayedButton().addActionListener(new ActionListener() {
-      public void actionPerformed(ActionEvent e) {
-        toolButtons.setSelected(((AbstractButton)e.getSource()).getModel(), true);
-        spitButtonStates();
-      }
-    });
+    colorList.getDisplayedButton().addActionListener(toolActionListener);
     toolButtons.add(colorList.getDisplayedButton());
     
     /*
@@ -251,28 +225,28 @@ public class EditorDrawingHeader extends JPanel {
     for (i=0; i<mouseState.length; i++)
       for (j=0; j<flagState.length; j++) {
         //initialize the HashMap
-        iconBag[i][j] = new HashMap(shapeNames.length+connectorNames.length+colorNames.length);
+        iconBag[i][j] = new HashMap(kConstants.SHAPE_NAMES.length+kConstants.CONNECTOR_NAMES.length+kConstants.COLOR_NAMES.length);
         //put in all the shape icons
-        for (k=0; k<shapeNames.length; k++) {
-          filename = "graph-"+mouseState[i]+"-"+flagState[j]+"-"+shapeNames[k]+".gif";
-          iconBag[i][j].put(shapeNames[k], Base.getImageIcon(filename, this));
+        for (k=0; k<kConstants.SHAPE_NAMES.length; k++) {
+          filename = "graph-"+mouseState[i]+"-"+flagState[j]+"-"+kConstants.SHAPE_NAMES[k]+".gif";
+          iconBag[i][j].put(kConstants.SHAPE_NAMES[k], Base.getImageIcon(filename, this));
         }
         //put in all the connector icons
-        for (k=0; k<connectorNames.length; k++) {
-          filename = "graph-"+mouseState[i]+"-"+flagState[j]+"-"+connectorNames[k]+".gif";
-          iconBag[i][j].put(connectorNames[k], Base.getImageIcon(filename, this));
+        for (k=0; k<kConstants.CONNECTOR_NAMES.length; k++) {
+          filename = "graph-"+mouseState[i]+"-"+flagState[j]+"-"+kConstants.CONNECTOR_NAMES[k]+".gif";
+          iconBag[i][j].put(kConstants.CONNECTOR_NAMES[k], Base.getImageIcon(filename, this));
         }
         //put in all the color icons
         filename = "graph-"+mouseState[i]+"-"+flagState[j]+"-paint.png";
-        for (k=0; k<colorNames.length; k++) {
-          iconBag[i][j].put(colorNames[k], new FillIcon(Theme.getColor(colorNames[k]), Base.getThemeImage(filename, this)));
+        for (k=0; k<kConstants.COLOR_NAMES.length; k++) {
+          iconBag[i][j].put(kConstants.COLOR_NAMES[k], new FillIcon(Theme.getColor(kConstants.COLOR_NAMES[k]), Base.getThemeImage(filename, this)));
         }
       }
   }
   
   /**
-   * A temporary debugging purpose.
-   * TODO kill
+   * Debugging: print out all button selected states in button bag.  
+   * @deprecated
    */
   private void spitButtonStates() {
     Enumeration e = toolButtons.getElements();
@@ -295,6 +269,7 @@ public class EditorDrawingHeader extends JPanel {
     bob.setRolloverSelectedIcon(Base.getImageIcon("graph-rollo-"+name+".gif", this));
     bob.setSelectedIcon(Base.getImageIcon("graph-activ-"+name+".gif", this));
     bob.setToolTipText(tooltip);
+    bob.setActionCommand(name);
     bob.setBorder(null); //need this for proper spacing between buttons (lord knows why)
     bob.setBorderPainted(false); //borderPainted seems the only one necessary for a mac
     bob.setFocusPainted(false); //TODO minor: test these when going cross-platform
