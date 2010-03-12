@@ -20,6 +20,7 @@ import java.util.List;
 import javax.swing.JDesktopPane;
 import javax.swing.JInternalFrame;
 
+import processing.app.graph.kCanvas;
 import processing.app.util.kConstants;
 import processing.app.util.kEvent;
 
@@ -30,6 +31,7 @@ import com.mxgraph.model.mxICell;
 import com.mxgraph.swing.mxGraphComponent;
 import com.mxgraph.swing.handler.mxGraphHandler;
 import com.mxgraph.swing.handler.mxRubberband;
+import com.mxgraph.swing.view.mxInteractiveCanvas;
 import com.mxgraph.util.mxConstants;
 import com.mxgraph.util.mxEvent;
 import com.mxgraph.util.mxEventObject;
@@ -106,7 +108,11 @@ public class DrawingArea extends JDesktopPane {
     }
     // hello world crap -------------<
     
-    graphComponent = new mxGraphComponent(graph);
+    graphComponent = new mxGraphComponent(graph) {
+      public mxInteractiveCanvas createCanvas() {
+        return new kCanvas();        
+      }
+    };
     graphPanel = new JInternalFrame("Graph", false, //resizable
                                     false, //not closable
                                     false, //not maximizable
@@ -166,7 +172,7 @@ public class DrawingArea extends JDesktopPane {
     //change the cursor.  Why?  Dun ask me. @author achang
     setCursor(TOOL_CURSOR);
     toolMode = toolName;
-    System.out.println("index of "+toolName+" in SHAPE_NAMES = "+kConstants.stringLinearSearch(kConstants.SHAPE_NAMES, toolName));
+//    System.out.println("index of "+toolName+" in SHAPE_NAMES = "+kConstants.stringLinearSearch(kConstants.SHAPE_NAMES, toolName));
     if (kConstants.stringLinearSearch(kConstants.SHAPE_NAMES, toolName) >= 0 || toolName.equals(kConstants.SHAPE_TEXT)) 
       shapeToolband.setEnabled(true);
     else if (kConstants.stringLinearSearch(kConstants.CONNECTOR_NAMES, toolName) >= 0)
@@ -288,6 +294,8 @@ public class DrawingArea extends JDesktopPane {
       borderColor = Color.GRAY;
       fillColor = new Color(170,170,170,70); //half-transparent gray
     }
+    //TODO implement shiftkey = square boundary
+    //TODO our lovely cellmarker is pretty forkin' ugly
 
     /**
      * Overriding mouseMoved to ensure we have the right cursor.
@@ -352,11 +360,10 @@ public class DrawingArea extends JDesktopPane {
           //note this also overrides the earlier assignment of colors
           style = kConstants.SHAPE_TEXT; 
         }
-        else
+        else if (!toolMode.equals(kConstants.SHAPE_NAMES[0])) //no style means rectangles
         {
-          System.err.println("Magic! You managed to select a tool that doesn't exist! Please report this bug.");
+          System.err.println("Magic! You managed to select a tool that doesn't exist! Please report this bug: class=ShapeToolband, toolMode="+toolMode);
         }
-        System.out.println("shapeTool mouseReleased: "+style);
         
         //----------------
         mxGraph graph = graphComponent.getGraph();
@@ -364,13 +371,13 @@ public class DrawingArea extends JDesktopPane {
         graph.getModel().beginUpdate();
         try
         {
-          System.out.println("style="+style);
+//          System.out.println("style="+style);
           
           Object cell = graph.insertVertex(parent, null, "tool-made", 
                              rect.x, rect.y, 
                              rect.width, rect.height, style);
           
-          System.out.println("cell.style="+graph.getModel().getStyle(cell));
+//          System.out.println("cell.style="+graph.getModel().getStyle(cell));
         }
         finally
         {
@@ -539,7 +546,7 @@ public class DrawingArea extends JDesktopPane {
         }
         else
         {
-          System.err.println("Magic! You managed to select a tool that doesn't exist! Please report this bug.");
+          System.err.println("Magic! You managed to select a tool that doesn't exist! Please report this bug: class=ConnectorToolband, toolMode="+toolMode);
         }
         
         //----------------
