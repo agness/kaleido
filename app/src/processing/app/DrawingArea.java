@@ -1,42 +1,50 @@
 package processing.app;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
+import java.awt.Shape;
+import java.awt.Stroke;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.JDesktopPane;
 import javax.swing.JInternalFrame;
 
 import processing.app.graph.kCanvas;
+import processing.app.graph.kCellEditor;
+import processing.app.graph.kCellValue;
+import processing.app.graph.kGraph;
 import processing.app.util.kConstants;
 import processing.app.util.kEvent;
+import processing.app.util.kUtils;
 
+import com.mxgraph.canvas.mxGraphics2DCanvas;
+import com.mxgraph.canvas.mxICanvas;
+import com.mxgraph.canvas.mxImageCanvas;
 import com.mxgraph.model.mxCell;
 import com.mxgraph.model.mxGeometry;
 import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
 import com.mxgraph.swing.mxGraphComponent;
-import com.mxgraph.swing.handler.mxGraphHandler;
+import com.mxgraph.swing.handler.mxCellMarker;
 import com.mxgraph.swing.handler.mxRubberband;
 import com.mxgraph.swing.view.mxInteractiveCanvas;
 import com.mxgraph.util.mxConstants;
-import com.mxgraph.util.mxEvent;
 import com.mxgraph.util.mxEventObject;
 import com.mxgraph.util.mxEventSource;
 import com.mxgraph.util.mxPoint;
+import com.mxgraph.util.mxRectangle;
 import com.mxgraph.util.mxUtils;
 import com.mxgraph.util.mxEventSource.mxIEventListener;
 import com.mxgraph.view.mxCellState;
@@ -70,7 +78,7 @@ public class DrawingArea extends JDesktopPane {
    * regardless of whether the color tool is active, but is updated
    * when the color tool is activated.
    */
-  String currentFillColor = kConstants.COLOR_NAMES[0];
+  String currentFillColor = kConstants.COLOR_KEYS[0];
 
   /**
    * @deprecated
@@ -83,36 +91,144 @@ public class DrawingArea extends JDesktopPane {
    */
   protected ArrayList<Object> mideBlockRegistry = new ArrayList<Object>(20);
 
+  /**
+   * Tool and selection handling.
+   */
   mxRubberband rubberband;
   ShapeToolband shapeToolband;
   ConnectorToolband connectorToolband;
   ColorToolband colorToolband;
   
+  boolean codeWindowsEnabled = true;
+  
+  
   public DrawingArea(mxGraphModel x) {
     super();
+    mxGraph graph = new kGraph();
+    
     //<!------------- hello world crap TODO remove
-    mxGraph graph = new mxGraph();
-    Object parent = graph.getDefaultParent();
-    graph.getModel().beginUpdate();
-    try
-    {
-      Object v1 = graph.insertVertex(parent, null, "Hello", 20, 20, 80,
-          30);
-      Object v2 = graph.insertVertex(parent, null, "World!", 240, 150,
-          80, 30);
-      graph.insertEdge(parent, null, "Edge", v1, v2);
-    }
-    finally
-    {
-      graph.getModel().endUpdate();
-    }
+    helloWorld(graph);
     // hello world crap -------------<
     
     graphComponent = new mxGraphComponent(graph) {
       public mxInteractiveCanvas createCanvas() {
         return new kCanvas();        
       }
+      protected mxGraphControl createGraphControl()
+      {
+        return new mxGraphControl() {
+          /**
+           * Overriding the drawCell method here as well as mxGraph.drawCell
+           * because this also only passes the String type label to be painted
+           * but we need to be able to send an Object (viz. a kCellValue).
+           * TODO isn't it rather retarded that I have to make this change twice?
+           * think about refactoring for better organization.
+           * 
+           * Draws the given cell onto the specified canvas. This is a modified
+           * version of mxGraph.drawCell which paints the label only if the
+           * corresponding cell is not being edited and invokes the cellDrawn
+           * hook after all descendants have been painted.
+           * 
+           * @param canvas Canvas onto which the cell should be drawn.
+           * @param cell Cell that should be drawn onto the canvas.
+           */
+          public void drawCell(mxICanvas canvas, Object cell)
+          {
+            
+            System.out.println("graphComponent.graphControl >> drawCell");
+            
+            mxCellState state = graph.getView().getState(cell);
+
+            if (isCellDisplayable(cell))
+            {
+              String label = getDisplayLabelForCell(cell);
+
+              if (((mxICell) cell).getValue() instanceof kCellValue && graph instanceof kGraph) {
+                ((kGraph) graph).drawStateWithNotes(canvas, state, label, ((kGraph) graph).getNotes(cell));
+              } 
+              else
+              {
+                graph.drawStateWithLabel(canvas, state, label);
+              }
+            }
+
+            // Handles special ordering for edges (all in foreground
+            // or background) or draws all children in order
+            boolean edgesFirst = graph.isKeepEdgesInBackground();
+            boolean edgesLast = graph.isKeepEdgesInForeground();
+
+            if (edgesFirst)
+            {
+              drawChildren(cell, true, false);
+            }
+
+            drawChildren(cell, !edgesFirst && !edgesLast, true);
+
+            if (edgesLast)
+            {
+              drawChildren(cell, true, false);
+            }
+
+            if (state != null)
+            {
+              cellDrawn(canvas, state);
+            }
+          }
+        };
+      }
     };
+    graphComponent.setCellEditor(new kCellEditor(graphComponent));
+    graphComponent.getConnectionHandler().setMarker(new mxCellMarker(graphComponent, Color.LIGHT_GRAY) {
+      /**
+       * TODO make a prettier marker with color sourced to theme.text
+       * and make it so that you can't make edges when trying to drag things around
+       * might as well also fix swimlane's ugly border, whereever that is handled
+       * Paints the outline of the markedState with the currentColor.
+       */
+      public void paint(Graphics g)
+      {
+        if (markedState != null && currentColor != null)
+        {
+          ((Graphics2D) g).setStroke(new BasicStroke(2));
+          g.setColor(currentColor);
+
+          if (markedState.getAbsolutePointCount() > 0)
+          {
+            Point last = markedState.getAbsolutePoint(0).getPoint();
+
+            for (int i = 1; i < markedState.getAbsolutePointCount(); i++)
+            {
+              Point current = markedState.getAbsolutePoint(i).getPoint();
+              g.drawLine(last.x - getX(), last.y - getY(), current.x
+                  - getX(), current.y - getY());
+              last = current;
+            }
+          }
+          else
+          {
+            g.drawRect(1, 1, getWidth() - 3, getHeight() - 3);
+          }
+        }
+      }
+    });
+
+//    graphComponent.getGraphControl().addMouseListener(new MouseAdapter()
+//    {
+//      public void mouseReleased(MouseEvent e)
+//      {
+//        if (!e.isConsumed() && isCodeWindowEvent(e))
+//        {
+//          System.out.println("graphComponent >> isCodeWindowEvent");
+//          Object cell = graphComponent.getCellAt(e.getX(), e.getY(), false);
+//
+//          if (cell != null)
+//          {
+//            showCodeWindow((mxICell) cell, e.getX(), e.getY());
+//          }
+//        }
+//      }
+//    });
+    
     graphPanel = new JInternalFrame("Graph", false, //resizable
                                     false, //not closable
                                     false, //not maximizable
@@ -136,6 +252,29 @@ public class DrawingArea extends JDesktopPane {
     colorToolband = new ColorToolband(this);
     colorToolband.setEnabled(false);
   }
+
+  /**
+   * For development purposes only.
+   * @deprecated
+   * @param graph
+   */
+  private void helloWorld(mxGraph graph) {
+    Object parent = graph.getDefaultParent();
+    graph.getModel().beginUpdate();
+    try
+    {
+      Object v1 = graph.insertVertex(parent, null, 
+                                     new kCellValue("superstar","VCR"),
+                                     20, 20, 80, 30);
+      Object v2 = graph.insertVertex(parent, null, "Hello world!", 240, 150,
+                                     80, 30);
+      graph.insertEdge(parent, null, "happy edge", v1, v2);
+    }
+    finally
+    {
+      graph.getModel().endUpdate();
+    }
+  }
   
   public mxGraphComponent getGraphComponent() {
     return graphComponent;
@@ -145,6 +284,7 @@ public class DrawingArea extends JDesktopPane {
     return currentFillColor;
   }
   /**
+   * Never used... can probably kill.
    * @deprecated
    */
   public void setCurrentFillColor(String currentFillColor) {
@@ -156,7 +296,8 @@ public class DrawingArea extends JDesktopPane {
    * mouse drawing instead of rubberband selection.
    * @param toolName
    */
-  public void beginToolMode (final String toolName) {
+  public void beginToolMode (final String toolName) 
+  {
     System.out.println("BEGINtoolmode "+toolName);
     eventSource.fireEvent(new mxEventObject(kEvent.TOOL_BEGIN, "tool", toolName));
     //disable all other graph mouse events for the time being:
@@ -172,10 +313,10 @@ public class DrawingArea extends JDesktopPane {
     //change the cursor.  Why?  Dun ask me. @author achang
     setCursor(TOOL_CURSOR);
     toolMode = toolName;
-//    System.out.println("index of "+toolName+" in SHAPE_NAMES = "+kConstants.stringLinearSearch(kConstants.SHAPE_NAMES, toolName));
-    if (kConstants.stringLinearSearch(kConstants.SHAPE_NAMES, toolName) >= 0 || toolName.equals(kConstants.SHAPE_TEXT)) 
+
+    if (kUtils.stringLinearSearch(kConstants.SHAPE_KEYS, toolName) >= 0 || toolName.equals(kConstants.SHAPE_TEXT)) 
       shapeToolband.setEnabled(true);
-    else if (kConstants.stringLinearSearch(kConstants.CONNECTOR_NAMES, toolName) >= 0)
+    else if (kUtils.stringLinearSearch(kConstants.CONNECTOR_KEYS, toolName) >= 0)
       connectorToolband.setEnabled(true);
     else {
       currentFillColor = toolName;
@@ -212,6 +353,26 @@ public class DrawingArea extends JDesktopPane {
    */
   public String getToolMode() {
     return toolMode;
+  }
+  
+  /**
+   * Enables/disables code windows. 
+   */
+  public void setCodeWindowsEnabled(boolean value)
+  {
+    codeWindowsEnabled = value;
+  }  
+  public boolean isCodeWindowsEnabled() {
+    return codeWindowsEnabled;
+  }
+  /**
+   * Defines the code window mouse event trigger
+   * @param e
+   * @return
+   */
+  private boolean isCodeWindowEvent(MouseEvent e)
+  {
+    return ((e != null) && isCodeWindowsEnabled())  ? (e.getClickCount() == 2) : false;
   }
   
   /*
@@ -341,17 +502,17 @@ public class DrawingArea extends JDesktopPane {
         style = mxUtils.setStyle(style, mxConstants.STYLE_STROKECOLOR, Theme.get(drawingArea.getCurrentFillColor()));
         style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Theme.get(drawingArea.getCurrentFillColor()+".text"));
         
-        if (toolMode.equals(kConstants.SHAPE_NAMES[1])) {
+        if (toolMode.equals(kConstants.SHAPE_KEYS[1])) {
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE, mxConstants.SHAPE_ELLIPSE);
-        } else if (toolMode.equals(kConstants.SHAPE_NAMES[2])) {
+        } else if (toolMode.equals(kConstants.SHAPE_KEYS[2])) {
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE, mxConstants.SHAPE_RHOMBUS);
-        } else if (toolMode.equals(kConstants.SHAPE_NAMES[3])) {
+        } else if (toolMode.equals(kConstants.SHAPE_KEYS[3])) {
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE, kConstants.SHAPE_STAR);
-        } else if (toolMode.equals(kConstants.SHAPE_NAMES[4])) {
+        } else if (toolMode.equals(kConstants.SHAPE_KEYS[4])) {
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE, kConstants.SHAPE_AUDIO);
-        } else if (toolMode.equals(kConstants.SHAPE_NAMES[5])) {
+        } else if (toolMode.equals(kConstants.SHAPE_KEYS[5])) {
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE, kConstants.SHAPE_KEYBOARD);
-        } else if (toolMode.equals(kConstants.SHAPE_NAMES[6])) {
+        } else if (toolMode.equals(kConstants.SHAPE_KEYS[6])) {
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE, kConstants.SHAPE_PERSON);
         }
         else
@@ -360,7 +521,7 @@ public class DrawingArea extends JDesktopPane {
           //note this also overrides the earlier assignment of colors
           style = kConstants.SHAPE_TEXT; 
         }
-        else if (!toolMode.equals(kConstants.SHAPE_NAMES[0])) //no style means rectangles
+        else if (!toolMode.equals(kConstants.SHAPE_KEYS[0])) //no style means rectangles
         {
           System.err.println("Magic! You managed to select a tool that doesn't exist! Please report this bug: class=ShapeToolband, toolMode="+toolMode);
         }
@@ -535,12 +696,12 @@ public class DrawingArea extends JDesktopPane {
         String style = "";
         String toolMode = drawingArea.getToolMode();
         
-        if (toolMode.equals(kConstants.CONNECTOR_NAMES[0])) {
+        if (toolMode.equals(kConstants.CONNECTOR_KEYS[0])) {
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE, mxConstants.SHAPE_CONNECTOR);
           style = mxUtils.setStyle(style, mxConstants.STYLE_ENDARROW, mxConstants.NONE);
-        } else if (toolMode.equals(kConstants.CONNECTOR_NAMES[1])) {
+        } else if (toolMode.equals(kConstants.CONNECTOR_KEYS[1])) {
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE, mxConstants.SHAPE_CONNECTOR);
-        } else if (toolMode.equals(kConstants.CONNECTOR_NAMES[2])) {
+        } else if (toolMode.equals(kConstants.CONNECTOR_KEYS[2])) {
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE, mxConstants.SHAPE_CONNECTOR);
           style = mxUtils.setStyle(style, mxConstants.STYLE_DASHED, "1");
         }
@@ -653,9 +814,9 @@ public class DrawingArea extends JDesktopPane {
           
           mxGraph graph = graphComponent.getGraph();
           String style = cell.getStyle();
-          style = mxUtils.setStyle(style, mxConstants.STYLE_FILLCOLOR, Theme.get(drawingArea.toolMode));
-          style = mxUtils.setStyle(style, mxConstants.STYLE_STROKECOLOR, Theme.get(drawingArea.toolMode));
-          style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Theme.get(drawingArea.toolMode+".text"));
+          style = mxUtils.setStyle(style, mxConstants.STYLE_FILLCOLOR, Integer.toHexString(kUtils.getFillColorFromKey(drawingArea.getToolMode()).getRGB()));
+          style = mxUtils.setStyle(style, mxConstants.STYLE_STROKECOLOR, Integer.toHexString(kUtils.getFillColorFromKey(drawingArea.getToolMode()).getRGB()));
+          style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer.toHexString(kUtils.getFontColorFromKey(drawingArea.getToolMode()).getRGB()));
           graph.setCellStyle(style, new Object[] {cell});
           
         }

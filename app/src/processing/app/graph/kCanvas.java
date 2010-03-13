@@ -1,10 +1,13 @@
 package processing.app.graph;
 
 import java.awt.Color;
+import java.awt.FontMetrics;
 import java.awt.Paint;
 import java.awt.Polygon;
 import java.awt.Rectangle;
+import java.awt.geom.AffineTransform;
 import java.awt.geom.GeneralPath;
+import java.util.Hashtable;
 import java.util.Map;
 
 import processing.app.util.kConstants;
@@ -24,7 +27,7 @@ public class kCanvas extends mxInteractiveCanvas {
   }
   
   /**
-   * Overriding supersuperclass method that dictates which shape to draw.
+   * Overriding superclass method that dictates which shape to draw.
    * @see {@link com.mxgraph.canvas.mxGraphics2DCanvas#drawShape}
    * @author achang
    * 
@@ -262,4 +265,194 @@ public class kCanvas extends mxInteractiveCanvas {
     drawPath(path, fillColor, fillPaint, penColor, shadow);
   }
 
+  /**
+   * Takes the "notes", or description, of the kCell and fits the text within the 
+   * boundaries of the kCell. Takes care of multiple lines scenarios. 
+   * @author susiefu
+   * 
+   * @param text HTML markup to be painted.
+   * @param x X-coordinate of the text.
+   * @param y Y-coordinate of the text.
+   * @param w Width of the text.
+   * @param h Height of the text.
+   * @param style Style to be used for painting the text.
+   */
+  protected void drawPlainTextEllipsis(String text, int x, int y, int w, int h,
+      Hashtable style)
+  {
+    if (g.hitClip(x, y, w, h))
+    {
+      FontMetrics fm = g.getFontMetrics();
+
+      // Stores the original transform
+      AffineTransform at = g.getTransform();
+
+      // Rotates the canvas if required
+      boolean horizontal = mxUtils.isTrue(style,
+          mxConstants.STYLE_HORIZONTAL, true);
+
+      if (!horizontal)
+      {
+        g.rotate(-Math.PI / 2, x + w / 2, y + h / 2);
+        g.translate(w / 2 - h / 2, h / 2 - w / 2);
+      }
+
+      // Shifts the y-coordinate down by the ascent plus a workaround
+      // for the line not starting at the exact vertical location
+
+      y += 2 * fm.getMaxAscent() - fm.getHeight()
+      + mxConstants.LABEL_INSET * scale;
+
+      // Gets the alignment settings
+      Object align = mxUtils.getString(style, mxConstants.STYLE_ALIGN,
+          mxConstants.ALIGN_CENTER);
+
+      if (align.equals(mxConstants.ALIGN_LEFT))
+      {
+        x += mxConstants.LABEL_INSET;
+      }
+      else if (align.equals(mxConstants.ALIGN_RIGHT))
+      {
+        x -= mxConstants.LABEL_INSET;
+      }
+
+      // Sets the color
+      Color fontColor = mxUtils.getColor(style,
+          mxConstants.STYLE_FONTCOLOR, Color.black);
+      g.setColor(fontColor);
+
+      // Draws the text line by line
+      String[] lines = text.split("\n");
+
+      int originaly = y;
+      
+      for (int i = 0; i < lines.length; i++)
+      {
+        int numlines = 1;
+        int dx = 0;
+        
+
+        if (align.equals(mxConstants.ALIGN_CENTER))
+        {
+          int sw = fm.stringWidth(lines[i]);
+
+          if (horizontal)
+          {
+            dx = (w - sw) / 2;
+          }
+          else
+          {
+            dx = (h - sw) / 2;
+          }
+        }
+        else if (align.equals(mxConstants.ALIGN_RIGHT))
+        {
+          int sw = fm.stringWidth(lines[i]);
+          dx = ((horizontal) ? w : h) - sw;
+        }
+        
+        //<!----------begin susie edits
+        
+        //if the width of the string is contained within the block
+        if (fm.stringWidth(lines[i])<w)
+        { 
+          g.drawString(lines[i], x + dx, y);
+        } 
+        else //width of string not contained within the block
+        { 
+          String cuttext = lines[i];
+          String formattedstring = new String(wordwrap((int) Math.round(0.155*w),cuttext));
+          System.out.println(formattedstring);
+          
+          //Draws the formatted string into lines
+          
+          String[] formattedstringlines = formattedstring.split("\n");
+          numlines = formattedstringlines.length;
+          
+          int formaty = y;
+          
+          //checks if any of the lines overflow vertically
+          if (formaty + numlines*fm.getHeight() > originaly + h - 11) 
+          { 
+            for (int z = 0; z < formattedstringlines.length-1; z++) {
+              if (!(formaty + (z+2)*fm.getHeight() > originaly + h - 11)) { 
+                //if the next line does NOT overflow
+                g.drawString(formattedstringlines[z], x+dx, formaty);
+                formaty += fm.getHeight() + mxConstants.LINESPACING;   
+              }
+              else { //if the next line DOES overflow, 
+                //draw a substring of the current line and stop drawing the 
+                //rest of the lines
+                String substring = formattedstringlines[z]
+                    .substring(0, formattedstringlines[z].length() - 3);
+                g.drawString(substring, x + dx, formaty);  
+                g.drawString("...", x+dx+fm.stringWidth(substring), formaty);
+                //formaty += fm.getHeight() + mxConstants.LINESPACING;   
+                break;
+              }
+            }
+          } 
+          else { // none of the lines overflow vertically
+            
+            System.out.println("formaty: " + formaty
+                               + ", numlines*fm.getHeight()" + numlines
+                               * fm.getHeight() + ", originaly" + originaly
+                               + ", h" + h);
+            for (int z = 0; z < formattedstringlines.length; z++) {
+              g.drawString(formattedstringlines[z], x + dx, formaty);  
+              formaty += fm.getHeight() + mxConstants.LINESPACING;   
+            }
+          }
+        }
+        
+        y += numlines*fm.getHeight() + mxConstants.LINESPACING;
+        
+        if (y + fm.getHeight() > originaly + h - 11) {
+          //TODO: FAILED ATTEMPT AT TRYING TO "..." THE LAST LINE IF THERE ARE
+          //MORE LINES AFTERWARDS... THE "..." SEEMS TO OVERLAP THE TEXT! :(
+//          if (i > 0) {
+//            g.drawString("...", x+dx+fm.stringWidth(lines[i-1]), y - numlines*fm.getHeight() - mxConstants.LINESPACING);
+//          } else if (i == 0) {
+//            g.drawString("...", x+dx+fm.stringWidth(lines[i]), y - numlines*fm.getHeight() - mxConstants.LINESPACING);
+//          }
+          break;
+        }
+        
+        //end susie edits---------->
+        
+      }
+
+      // Resets the transformation
+      g.setTransform(at);
+    } 
+  }
+
+  private static String wordwrap(int width,String st) {
+    StringBuffer buf = new StringBuffer(st);
+    int lastspace = -1;
+    int linestart = 0;
+    int i = 0;
+
+    while (i < buf.length()) {
+      if ( buf.charAt(i) == ' ' ) lastspace = i;
+      if ( buf.charAt(i) == '\n' ) {
+        lastspace = -1;
+        linestart = i+1;
+      }
+      if (i > linestart + width - 1 ) {
+        if (lastspace != -1) {
+          buf.setCharAt(lastspace,'\n');
+          linestart = lastspace+1;
+          lastspace = -1;
+        }
+        else {
+          buf.insert(i,'\n');
+          linestart = i+1;
+        }
+      }
+      i++;
+    }
+    return buf.toString();
+
+  }
 }

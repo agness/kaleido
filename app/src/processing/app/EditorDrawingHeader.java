@@ -32,6 +32,7 @@ import javax.swing.plaf.basic.BasicComboBoxUI;
 
 import processing.app.util.kConstants;
 import processing.app.util.kEvent;
+import processing.app.util.kUtils;
 
 import com.mxgraph.util.mxEvent;
 import com.mxgraph.util.mxEventObject;
@@ -64,7 +65,7 @@ public class EditorDrawingHeader extends JPanel {
    */
   final ActionListener toolActionListener;
   
-  AbstractButton defaultButton; //TODO don't need this if we are removing the cursor button
+//  AbstractButton defaultButton; //TODO don't need this if we are removing the cursor button
   ButtonGroup toolButtons;
   DrawingArea drawingArea;
   
@@ -76,7 +77,11 @@ public class EditorDrawingHeader extends JPanel {
       {
         public void invoke(Object source, mxEventObject evt)
         {
-          toolButtons.setSelected(defaultButton.getModel(), true);
+          //deselect all the tool buttons
+          //TODO really don't know why this is not working in the case of "text" tool
+//          System.out.println("resetting on TOOL_END: "+toolButtons.getSelection().getActionCommand());
+          toolButtons.getSelection().setSelected(false);
+//          spitButtonStates();
         }
       });
     
@@ -100,23 +105,23 @@ public class EditorDrawingHeader extends JPanel {
     /*
      * CURSOR
      */
-    //TODO I dislike having a cursor tool. I know when I'm in cursor mode. Remove the cursor already.
-    //meanwhile, TODO implement grab when I'm grabbing on canvas instead of mouseOverCell
-    JToggleButton cursorButton = makeToolButton("cursor", "Cursor tool");
-    cursorButton.addActionListener(new ActionListener() {
-      public void actionPerformed(ActionEvent e) {
-        toolButtons.setSelected(((AbstractButton)e.getSource()).getModel(), true);
-        System.out.println("action event-- cursor");
-        spitButtonStates();
-      }
-    });
-    toolButtons.add(cursorButton);
-    defaultButton = cursorButton;
+//    //TODO I dislike having a cursor tool. I know when I'm in cursor mode. Remove the cursor already.
+//    //meanwhile, TODO implement grab when I'm grabbing on canvas instead of mouseOverCell
+//    JToggleButton cursorButton = makeToolButton("cursor", "Cursor tool");
+//    cursorButton.addActionListener(new ActionListener() {
+//      public void actionPerformed(ActionEvent e) {
+//        toolButtons.setSelected(((AbstractButton)e.getSource()).getModel(), true);
+//        System.out.println("action event-- cursor");
+//        spitButtonStates();
+//      }
+//    });
+//    toolButtons.add(cursorButton);
+//    defaultButton = cursorButton;
     
     /*
      * SHAPES drop-down
      */
-    TrayComboBox shapeList = new TrayComboBox(kConstants.SHAPE_NAMES);
+    TrayComboBox shapeList = new TrayComboBox(kConstants.SHAPE_KEYS);
     shapeList.setSelectedIndex(0);
     shapeList.getDisplayedButton().addActionListener(toolActionListener);
       //^--- here the displayedButton is added instead of the list directly
@@ -127,7 +132,7 @@ public class EditorDrawingHeader extends JPanel {
      * CONNECTORS drop-down
      */
     //TODO when the mx-auto-make connectors thing is on, highlight this button
-    TrayComboBox connectorList = new TrayComboBox(kConstants.CONNECTOR_NAMES);
+    TrayComboBox connectorList = new TrayComboBox(kConstants.CONNECTOR_KEYS);
     connectorList.setSelectedIndex(0);
     connectorList.getDisplayedButton().addActionListener(toolActionListener);
     toolButtons.add(connectorList.getDisplayedButton());
@@ -142,7 +147,7 @@ public class EditorDrawingHeader extends JPanel {
     /*
      * COLORS drop-down
      */
-    TrayComboBox colorList = new TrayComboBox(kConstants.COLOR_NAMES);
+    TrayComboBox colorList = new TrayComboBox(kConstants.COLOR_KEYS);
     colorList.setSelectedIndex(0);
     colorList.getDisplayedButton().addActionListener(toolActionListener);
     toolButtons.add(colorList.getDisplayedButton());
@@ -156,7 +161,24 @@ public class EditorDrawingHeader extends JPanel {
     layoutSpacer.setBackground(this.getBackground());
 
     /*
-     * LOCK/UNLOCK: the one and only toggle button
+     * OPEN/CLOSE CODE WINDOW:
+     */
+    JToggleButton codeWindowButton = new JToggleButton(Base.getImageIcon("graph-inact-opencodew.gif", this));
+    codeWindowButton.setRolloverIcon(Base.getImageIcon("graph-rollo-opencodew.gif", this));
+    codeWindowButton.setRolloverSelectedIcon(Base.getImageIcon("graph-rollo-closecodew.gif", this));
+    codeWindowButton.setSelectedIcon(Base.getImageIcon("graph-inact-closecodew.gif", this));
+    codeWindowButton.setPressedIcon(Base.getImageIcon("graph-activ-closecodew.gif", this));
+    // ^--there isn't a pressedSelectedIcon vs. pressedIcon unfortunately, but most users probably won't notice
+    codeWindowButton.setBorder(null); //this ensures proper spacing between buttons (lord knows why)
+    codeWindowButton.setBorderPainted(false);
+    codeWindowButton.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        System.out.println("togglebutton isSelected "+((AbstractButton) e.getSource()).isSelected());
+      }
+    });
+    
+    /*
+     * LOCK/UNLOCK:
      */
     JToggleButton lockButton = new JToggleButton(Base.getImageIcon("graph-inact-unlock.gif", this));
     lockButton.setRolloverIcon(Base.getImageIcon("graph-rollo-unlock.gif", this));
@@ -194,19 +216,19 @@ public class EditorDrawingHeader extends JPanel {
 
     
     // add everything
-    add(cursorButton);
     add(shapeList);
     add(connectorList);
     add(textButton);
     add(colorList);
-    add(layoutSpacer);  
+    add(layoutSpacer);
+    add(codeWindowButton);
     add(lockButton);
     add(zoomInButton);
     add(zoomOutButton);
     //now to add a graphOutline here...
     
     //highlight our default button
-    toolButtons.setSelected(defaultButton.getModel(), true);
+//    toolButtons.setSelected(defaultButton.getModel(), true);
     setVisible(true);
   }
 
@@ -225,21 +247,21 @@ public class EditorDrawingHeader extends JPanel {
     for (i=0; i<mouseState.length; i++)
       for (j=0; j<flagState.length; j++) {
         //initialize the HashMap
-        iconBag[i][j] = new HashMap(kConstants.SHAPE_NAMES.length+kConstants.CONNECTOR_NAMES.length+kConstants.COLOR_NAMES.length);
+        iconBag[i][j] = new HashMap(kConstants.SHAPE_KEYS.length+kConstants.CONNECTOR_KEYS.length+kConstants.COLOR_KEYS.length);
         //put in all the shape icons
-        for (k=0; k<kConstants.SHAPE_NAMES.length; k++) {
-          filename = "graph-"+mouseState[i]+"-"+flagState[j]+"-"+kConstants.SHAPE_NAMES[k]+".gif";
-          iconBag[i][j].put(kConstants.SHAPE_NAMES[k], Base.getImageIcon(filename, this));
+        for (k=0; k<kConstants.SHAPE_KEYS.length; k++) {
+          filename = "graph-"+mouseState[i]+"-"+flagState[j]+"-"+kConstants.SHAPE_KEYS[k]+".gif";
+          iconBag[i][j].put(kConstants.SHAPE_KEYS[k], Base.getImageIcon(filename, this));
         }
         //put in all the connector icons
-        for (k=0; k<kConstants.CONNECTOR_NAMES.length; k++) {
-          filename = "graph-"+mouseState[i]+"-"+flagState[j]+"-"+kConstants.CONNECTOR_NAMES[k]+".gif";
-          iconBag[i][j].put(kConstants.CONNECTOR_NAMES[k], Base.getImageIcon(filename, this));
+        for (k=0; k<kConstants.CONNECTOR_KEYS.length; k++) {
+          filename = "graph-"+mouseState[i]+"-"+flagState[j]+"-"+kConstants.CONNECTOR_KEYS[k]+".gif";
+          iconBag[i][j].put(kConstants.CONNECTOR_KEYS[k], Base.getImageIcon(filename, this));
         }
         //put in all the color icons
         filename = "graph-"+mouseState[i]+"-"+flagState[j]+"-paint.png";
-        for (k=0; k<kConstants.COLOR_NAMES.length; k++) {
-          iconBag[i][j].put(kConstants.COLOR_NAMES[k], new FillIcon(Theme.getColor(kConstants.COLOR_NAMES[k]), Base.getThemeImage(filename, this)));
+        for (k=0; k<kConstants.COLOR_KEYS.length; k++) {
+          iconBag[i][j].put(kConstants.COLOR_KEYS[k], new FillIcon(kUtils.getFillColorFromKey(kConstants.COLOR_KEYS[k]), Base.getThemeImage(filename, this)));
         }
       }
   }
@@ -279,7 +301,7 @@ public class EditorDrawingHeader extends JPanel {
   }
 
   /**
-   * Make an icon with a block of solid color painted inside.
+   * Make an icon with a block of solid color painted inside/underneath.
    * Used to make fill color selection buttons.
    */
   private class FillIcon implements Icon {
