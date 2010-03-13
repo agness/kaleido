@@ -36,6 +36,10 @@ import com.mxgraph.view.mxCellState;
  * 
  * TODO we're overriding so much already that we might as well just
  * stop extending and implement mxICellEditor
+ * A note on the design: OmniGraffle's approach of WYSIWYG is probably
+ * best and most intuitive; the original mxCellEditor is a little closer
+ * to that, but fails miserably re:dynamic formatting; seeing as we
+ * don't have that might time to implement, we'll go with this compromise:
  * @author achang
  */
 public class kCellEditor extends mxCellEditor {
@@ -183,7 +187,7 @@ public class kCellEditor extends mxCellEditor {
       this.trigger = trigger;
       editingCell = cell;
       JComponent currentEditor = (isKCellValue()) ? kEditPanel : mxEditPanel;
-
+      
       currentEditor.setBounds(getEditorBounds(state, scale));
       currentEditor.setVisible(true);
       
@@ -223,7 +227,7 @@ public class kCellEditor extends mxCellEditor {
         currentField = labelField;
       }
       else
-      {
+      {   
         textArea.setFont(mxUtils.getFont(state.getStyle(), scale));
         textArea.setForeground(fontColor);
         textArea.setText(getInitialValue(state, trigger));
