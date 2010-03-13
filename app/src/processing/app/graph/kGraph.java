@@ -53,7 +53,7 @@ public class kGraph extends mxGraph {
   public void drawCell(mxICanvas canvas, Object cell)
   {
     
-    System.out.println("kGraph >> drawCell");
+//    System.out.println("kGraph >> drawCell");
     
     if (((mxICell) cell).getValue() instanceof kCellValue) {
       drawStateWithNotes(canvas, getView().getState(cell), getLabel(cell), getNotes(cell));
@@ -88,7 +88,7 @@ public class kGraph extends mxGraph {
   {
     Object cell = (state != null) ? state.getCell() : null;
     
-  System.out.println("kGraph >> drawStateWithNotes");
+//  System.out.println("kGraph >> drawStateWithNotes");
   
     if (cell != null && cell != view.getCurrentRoot()
         && cell != model.getRoot())
@@ -205,7 +205,7 @@ public class kGraph extends mxGraph {
           && !mxUtils.isTrue(style, mxConstants.STYLE_NOLABEL, false))
       {
         Object value = ((mxICell) cell).getValue();
-        System.out.println("kGraph >> getLabel");
+
         if (value instanceof kCellValue)
           result = ((kCellValue) value).getLabel();
         else

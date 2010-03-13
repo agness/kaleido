@@ -3,6 +3,8 @@ package processing.app.graph;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Rectangle;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.EventObject;
@@ -17,6 +19,8 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.text.JTextComponent;
 
+import processing.app.util.kConstants;
+
 import com.mxgraph.model.mxICell;
 import com.mxgraph.swing.mxGraphComponent;
 import com.mxgraph.swing.view.mxCellEditor;
@@ -29,10 +33,13 @@ import com.mxgraph.view.mxCellState;
  * an instance of the kCellValue class.  Original mxCellEditor
  * functionality retained to handle generic mxCell editing (e.g. edges),
  * although HTML editing is left out.
+ * 
+ * TODO we're overriding so much already that we might as well just
+ * stop extending and implement mxICellEditor
  * @author achang
  */
 public class kCellEditor extends mxCellEditor {
-  
+   
   /**
    * We'll use a text field for label editing,
    * and save the superclass' text area for note editing
@@ -50,12 +57,19 @@ public class kCellEditor extends mxCellEditor {
   /**
    * A panel to hold the two editing components
    */
-  protected transient JPanel editPanel;
+  protected transient JPanel kEditPanel;
+  /**
+   * A reference to superclass.scrollPane, basically 
+   * renaming it to be distinguishable from kEditPanel
+   */
+  protected transient JScrollPane mxEditPanel = scrollPane;
   /**
    * Used to define the sizes of the text components such 
    * that there is a scalable spacing between them.
    */
-  public static int DEFAULT_SPACING = 2;
+  public static int PADDING = 7;
+  
+  public static int ROUNDRECT_RADIUS = 7;
   
   /*
    * ========CONSTRUCTOR=======
@@ -63,11 +77,15 @@ public class kCellEditor extends mxCellEditor {
   public kCellEditor(mxGraphComponent graphComponent)
   {
     super(graphComponent);
+    
+    //make everything a little bigger TODO tweak values/layout
+    minimumWidth = DEFAULT_MIN_WIDTH * 2;
+    minimumHeight = DEFAULT_MIN_HEIGHT * 2;
+    
     /*
      * Override escape key listener (since the only ESC key listener we have is
-     * in MGraphComponent, which is not listening when this editor is active.
-     * I have no idea what the original keyListener was supposed to do (maybe
-     * it only works for PCs).
+     * in MGraphComponent, which is not listening when this editor is active).
+     * The original keylistener handles stopEditing on ENTER key
      * @param graphComponent
      */
     keyListener = new KeyAdapter()
@@ -80,9 +98,6 @@ public class kCellEditor extends mxCellEditor {
         }
       }
     };
-    //TODO superclass keyhandler that handles enter, shift, control, and alt
-    //should be seriously considered.
-    //Meanwhile we still need escape key activity, so maybe override
     
     // Styles the general-case text editing field created by the superclass
     textArea.setBorder(BorderFactory.createLineBorder(Color.lightGray));
@@ -101,28 +116,50 @@ public class kCellEditor extends mxCellEditor {
     notesScrollPane = new JScrollPane(notesField);
     notesScrollPane.setBorder(BorderFactory.createLineBorder(Color.lightGray));
     notesScrollPane.setVisible(true);
+    notesScrollPane.setOpaque(false);
+    notesScrollPane.getViewport().setOpaque(false); //<--how I love how java requires you to set EVERYTHING transparent
 
     // Creates the panel to hold both label and notes
-    editPanel = new JPanel();
-    editPanel.setLayout(new BoxLayout(editPanel, BoxLayout.PAGE_AXIS));
-    editPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-    editPanel.setOpaque(false);
+    kEditPanel = new JPanel() {
+      public void paintComponent(Graphics g) {
+        //doesn't appear to do anything, but we'll do it anyway:
+        super.paintComponent(g);
 
-    editPanel.add(labelField);
-//    editPanel.add(Box.createVerticalGlue());
-    editPanel.add(Box.createRigidArea(new Dimension(0, 5)));
-    editPanel.add(notesScrollPane);
+        //background is a rounded rectangle in translucent gray.
+        g.setColor(new Color(kConstants.UI_COLOR_BACKGROUND.getRed(),
+            kConstants.UI_COLOR_BACKGROUND.getGreen(),
+            kConstants.UI_COLOR_BACKGROUND.getBlue(), 150));
+        g.fillRoundRect(0, 0, getWidth(), getHeight(), ROUNDRECT_RADIUS,
+                        ROUNDRECT_RADIUS);
+
+        System.out.println("kEditPanel >> paintComponents: bounds="
+                           + getBounds() + ", w=" + getWidth() + ", h="
+                           + getHeight());
+      }
+    };
+    kEditPanel.setLayout(new BoxLayout(kEditPanel, BoxLayout.PAGE_AXIS));
+    kEditPanel.setBorder(BorderFactory.createEmptyBorder(PADDING*2,PADDING*2,PADDING*2,PADDING*2));
+    kEditPanel.setOpaque(false);
+
+    kEditPanel.add(labelField);
+    kEditPanel.add(Box.createRigidArea(new Dimension(0, PADDING)));
+    kEditPanel.add(notesScrollPane);
   }
 
+ 
   /**
-   * 
-   * @param width
-   * @param height
+   * Experimenting with using fixed bounds... (will it crash at
+   * the edge of canvas?)
    */
-  public void resize(int width, int height) {
-    //TODO YO WRITE THIS
-    System.out.println("kCellEditor >> resize");
+  public Rectangle getEditorBounds(mxCellState state, double scale)
+  {
+    Rectangle bounds = state.getRectangle();
+    bounds.setLocation((int) state.getRectangle().getCenterX(), (int) state.getRectangle().getCenterY());  
+    bounds.setSize((int) Math.round(minimumWidth * scale), (int) Math.round(minimumHeight * scale));
+
+    return bounds;
   }
+  
 
   /**
    * Reorganized to accommodate editing of kCellValues
@@ -145,37 +182,45 @@ public class kCellEditor extends mxCellEditor {
       JTextComponent currentField = null;
       this.trigger = trigger;
       editingCell = cell;
-      JComponent currentEditor = (iskCellValue()) ? editPanel : scrollPane;
+      JComponent currentEditor = (isKCellValue()) ? kEditPanel : mxEditPanel;
 
       currentEditor.setBounds(getEditorBounds(state, scale));
       currentEditor.setVisible(true);
       
-      Color fontColor = mxUtils.getColor(state.getStyle(), mxConstants.STYLE_FONTCOLOR, Color.black);
-      
-      if (iskCellValue()) {
-        Object v1 = state.getStyle().put(mxConstants.STYLE_FONTSTYLE, mxConstants.FONT_BOLD);
-        labelField.setFont(mxUtils.getFont(state.getStyle(), scale));
-        labelField.setForeground(fontColor);
-        labelField.setText(((kCellValue) ((mxICell) cell).getValue()).getLabel());
-          labelField.setMaximumSize(new Dimension(editPanel.getBounds().width,state.getLabelBounds().getRectangle().height));
-          labelField.setMinimumSize(new Dimension(editPanel.getBounds().width,state.getLabelBounds().getRectangle().height));
-        
-        Object v2 = state.getStyle().put(mxConstants.STYLE_FONTSTYLE, 0);
-        notesField.setFont(mxUtils.getFont(state.getStyle(), scale));
-        notesField.setForeground(fontColor);
-        notesField.setText(((kCellValue) ((mxICell) cell).getValue()).getNotes());
-        notesField.setMaximumSize(new Dimension(editPanel.getBounds().width, editPanel.getBounds().height-state.getLabelBounds().getRectangle().height-((int) Math.round(DEFAULT_SPACING * scale))));
-          notesField.setMinimumSize(new Dimension(editPanel.getBounds().width, editPanel.getBounds().height-state.getLabelBounds().getRectangle().height-((int) Math.round(DEFAULT_SPACING * scale))));
-          
-        currentField = labelField;
+      //get color of text in cell, use black if none specified
+      Color fontColor = mxUtils.getColor(state.getStyle(),
+                                         mxConstants.STYLE_FONTCOLOR,
+                                         Color.black);
 
-        //TODO clean up this set max/min size mess... isn't there a better way to do this?
-        // can fix it with the resizing thing I suppose
-//        System.out.println("MGraphElementEditor bounds >> "+getEditorBounds(state, scale).toString());
-//        System.out.println("MGraphElementEditor labelField actual size  >> "+labelField.getSize().toString());
-//        System.out.println("MGraphElementEditor labelField max size >> "+labelField.getMaximumSize().toString());
-//        System.out.println("MGraphElementEditor notesField actual size  >> "+notesField.getSize().toString());
-//        System.out.println("MGraphElementEditor notesField max size >> "+notesField.getMaximumSize().toString());
+      if (isKCellValue()) 
+      {
+        state.getStyle()
+            .put(mxConstants.STYLE_FONTSTYLE, mxConstants.FONT_BOLD);
+        labelField.setFont(mxUtils.getFont(state.getStyle(), scale));
+//        labelField.setForeground(fontColor);
+        labelField.setText(((kCellValue) ((mxICell) cell).getValue())
+            .getLabel());
+        labelField.setMaximumSize(new Dimension(kEditPanel.getBounds().width - PADDING*4,
+            state.getLabelBounds().getRectangle().height - PADDING*4));
+        labelField.setMinimumSize(new Dimension(kEditPanel.getBounds().width - PADDING*4,
+            state.getLabelBounds().getRectangle().height - PADDING*4));
+
+        state.getStyle().put(mxConstants.STYLE_FONTSTYLE, 0);
+        notesField.setFont(mxUtils.getFont(state.getStyle(), scale));
+//        notesField.setForeground(fontColor);
+        notesField.setText(((kCellValue) ((mxICell) cell).getValue())
+            .getNotes());
+        //if we want to do any formatting, we've got to do it on the notesScrollPane
+//        notesScrollPane.setMaximumSize(new Dimension(kEditPanel.getBounds().width - PADDING*4,
+//            kEditPanel.getBounds().height - PADDING*4
+//                - state.getLabelBounds().getRectangle().height
+//                - ((int) Math.round(PADDING * scale))));
+//        notesScrollPane.setMinimumSize(new Dimension(kEditPanel.getBounds().width - PADDING*4,
+//            kEditPanel.getBounds().height - PADDING*4
+//                - state.getLabelBounds().getRectangle().height
+//                - ((int) Math.round(PADDING * scale))));
+
+        currentField = labelField;
       }
       else
       {
@@ -183,7 +228,7 @@ public class kCellEditor extends mxCellEditor {
         textArea.setForeground(fontColor);
         textArea.setText(getInitialValue(state, trigger));
 
-        scrollPane.setViewportView(textArea);
+        mxEditPanel.setViewportView(textArea);
         currentField = textArea;
       }
       
@@ -198,6 +243,9 @@ public class kCellEditor extends mxCellEditor {
       //put the cursor in the labelField and highlight all text:
       currentField.requestFocusInWindow();
       currentField.selectAll();
+      //force the graphComponent to paint our editor, otherwise
+      // it will get clipped in various ugggly ways:
+      graphComponent.paintImmediately(currentEditor.getBounds());
     }
   }
 
@@ -211,7 +259,7 @@ public class kCellEditor extends mxCellEditor {
     
     if (editingCell != null)
     {
-      JComponent currentEditor = (iskCellValue()) ? editPanel : scrollPane;
+      JComponent currentEditor = (isKCellValue()) ? kEditPanel : mxEditPanel;
       
       currentEditor.transferFocusUpCycle();
       Object cell = editingCell;
@@ -247,7 +295,7 @@ public class kCellEditor extends mxCellEditor {
    */
   public Object getFieldValues(Object cell)
   {
-    if (iskCellValue()) {
+    if (isKCellValue()) {
       kCellValue val = (kCellValue) ((mxICell) editingCell).getValue();
       val.setLabel(labelField.getText());
       val.setNotes(notesField.getText());
@@ -261,7 +309,7 @@ public class kCellEditor extends mxCellEditor {
   /**
    * A shortcut to know which mode of editor we are currently in.
    */
-  public boolean iskCellValue() {
+  public boolean isKCellValue() {
     return (((mxICell) editingCell).getValue() instanceof kCellValue);
   }
 }

@@ -89,8 +89,7 @@ public class kConstants
   /** Rollover titles for each color-making button. */
   //TODO color sets possible changable in some future version
   public static final String COLOR_KEYS[] = {
-    "drawing.fillset1.color1", "drawing.fillset1.color2", "drawing.fillset1.color3", 
-    "drawing.fillset1.color4", "drawing.fillset1.color5"
+    "color1", "color2", "color3", "color4", "color5"
   };
   
   
@@ -107,6 +106,7 @@ public class kConstants
   public static Color UI_COLOR_ACTIVE = mxUtils.parseColor("#ffcc00");
   public static Color UI_COLOR_ROLLOVER = Color.WHITE;
   public static Color UI_COLOR_INACTIVE = mxUtils.parseColor("#b0b0b0");
+  public static Color UI_COLOR_BACKGROUND = mxUtils.parseColor("#d3d3d3"); //the color of selected text tab
   
   /**
    * Pairs of matched fill and font colors for graph elememnts.

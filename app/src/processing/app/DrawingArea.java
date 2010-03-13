@@ -135,7 +135,7 @@ public class DrawingArea extends JDesktopPane {
           public void drawCell(mxICanvas canvas, Object cell)
           {
             
-            System.out.println("graphComponent.graphControl >> drawCell");
+//            System.out.println("graphComponent.graphControl >> drawCell");
             
             mxCellState state = graph.getView().getState(cell);
 
