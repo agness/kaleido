@@ -62,11 +62,13 @@ public class kCellEditor extends mxCellEditor {
    * A panel to hold the two editing components
    */
   protected transient JPanel kEditPanel;
+  
   /**
-   * A reference to superclass.scrollPane, basically 
-   * renaming it to be distinguishable from kEditPanel
+   * Need to be able to reference the layout gap between
+   * label and notes so that we can set it to invisible
+   * when label is invisible.
    */
-  protected transient JScrollPane mxEditPanel = scrollPane;
+  protected transient Component gap;
   /**
    * Used to define the sizes of the text components such 
    * that there is a scalable spacing between them.
@@ -119,7 +121,6 @@ public class kCellEditor extends mxCellEditor {
     notesField.addKeyListener(keyListener);
     notesScrollPane = new JScrollPane(notesField);
     notesScrollPane.setBorder(BorderFactory.createLineBorder(Color.lightGray));
-    notesScrollPane.setVisible(true);
     notesScrollPane.setOpaque(false);
     notesScrollPane.getViewport().setOpaque(false); //<--how I love how java requires you to set EVERYTHING transparent
 
@@ -135,10 +136,6 @@ public class kCellEditor extends mxCellEditor {
             kConstants.UI_COLOR_BACKGROUND.getBlue(), 150));
         g.fillRoundRect(0, 0, getWidth(), getHeight(), ROUNDRECT_RADIUS,
                         ROUNDRECT_RADIUS);
-
-        System.out.println("kEditPanel >> paintComponents: bounds="
-                           + getBounds() + ", w=" + getWidth() + ", h="
-                           + getHeight());
       }
     };
     kEditPanel.setLayout(new BoxLayout(kEditPanel, BoxLayout.PAGE_AXIS));
@@ -146,7 +143,8 @@ public class kCellEditor extends mxCellEditor {
     kEditPanel.setOpaque(false);
 
     kEditPanel.add(labelField);
-    kEditPanel.add(Box.createRigidArea(new Dimension(0, PADDING)));
+    gap = Box.createRigidArea(new Dimension(0, PADDING));
+    kEditPanel.add(gap);
     kEditPanel.add(notesScrollPane);
   }
 
@@ -186,7 +184,8 @@ public class kCellEditor extends mxCellEditor {
       JTextComponent currentField = null;
       this.trigger = trigger;
       editingCell = cell;
-      JComponent currentEditor = (isKCellValue()) ? kEditPanel : mxEditPanel;
+//      JComponent currentEditor = (isKCellValue()) ? kEditPanel : mxEditPanel;
+      JComponent currentEditor = kEditPanel;
       
       currentEditor.setBounds(getEditorBounds(state, scale));
       currentEditor.setVisible(true);
@@ -198,6 +197,8 @@ public class kCellEditor extends mxCellEditor {
 
       if (isKCellValue()) 
       {
+        labelField.setVisible(true);
+        gap.setVisible(true);
         state.getStyle()
             .put(mxConstants.STYLE_FONTSTYLE, mxConstants.FONT_BOLD);
         labelField.setFont(mxUtils.getFont(state.getStyle(), scale));
@@ -227,13 +228,15 @@ public class kCellEditor extends mxCellEditor {
         currentField = labelField;
       }
       else
-      {   
-        textArea.setFont(mxUtils.getFont(state.getStyle(), scale));
-        textArea.setForeground(fontColor);
-        textArea.setText(getInitialValue(state, trigger));
+      {
+        gap.setVisible(false);
+        labelField.setVisible(false);
+        state.getStyle().put(mxConstants.STYLE_FONTSTYLE, 0);
+        notesField.setFont(mxUtils.getFont(state.getStyle(), scale));
+//        notesField.setForeground(fontColor);
+        notesField.setText(getInitialValue(state, trigger));
 
-        mxEditPanel.setViewportView(textArea);
-        currentField = textArea;
+        currentField = notesField;
       }
       
       graphComponent.getGraphControl().add(currentEditor, 0);
@@ -263,7 +266,8 @@ public class kCellEditor extends mxCellEditor {
     
     if (editingCell != null)
     {
-      JComponent currentEditor = (isKCellValue()) ? kEditPanel : mxEditPanel;
+//      JComponent currentEditor = (isKCellValue()) ? kEditPanel : mxEditPanel;
+      JComponent currentEditor = kEditPanel;
       
       currentEditor.transferFocusUpCycle();
       Object cell = editingCell;
@@ -304,8 +308,8 @@ public class kCellEditor extends mxCellEditor {
       val.setLabel(labelField.getText());
       val.setNotes(notesField.getText());
       return val;
-    } else {//use original mxCellEditor implementation
-      return getCurrentValue();
+    } else {
+      return notesField.getText();
     }
     
   }
