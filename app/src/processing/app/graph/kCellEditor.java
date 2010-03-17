@@ -43,7 +43,30 @@ import com.mxgraph.view.mxCellState;
  * @author achang
  */
 public class kCellEditor extends mxCellEditor {
-   
+  
+  /**
+   * The corner radius of editpanel's background (round rectangle)
+   */
+  public static final int ROUNDRECT_RADIUS = 7;
+  /**
+   * The fill color of edit panel (round rectangle). Half-transparent.
+   */
+  public static final Color EDITPANEL_FILL = Color.white;
+  /**
+   * The color of text in text fields (editable text); set this 
+   * to null to use the cell label's original font color.
+   */
+  public static final Color EDITTEXT_FONTCOLOR = null;
+  /**
+   * Border color of text field and text area
+   */
+  public static final Color FIELD_BORDERS = Color.lightGray;
+  /**
+   * Used to define the sizes of the text components such 
+   * that there is a scalable spacing between them.
+   */
+  public static final int PADDING = 7;
+
   /**
    * We'll use a text field for label editing,
    * and save the superclass' text area for note editing
@@ -62,20 +85,13 @@ public class kCellEditor extends mxCellEditor {
    * A panel to hold the two editing components
    */
   protected transient JPanel kEditPanel;
-  
   /**
    * Need to be able to reference the layout gap between
    * label and notes so that we can set it to invisible
    * when label is invisible.
    */
   protected transient Component gap;
-  /**
-   * Used to define the sizes of the text components such 
-   * that there is a scalable spacing between them.
-   */
-  public static int PADDING = 7;
-  
-  public static int ROUNDRECT_RADIUS = 7;
+
   
   /*
    * ========CONSTRUCTOR=======
@@ -106,11 +122,11 @@ public class kCellEditor extends mxCellEditor {
     };
     
     // Styles the general-case text editing field created by the superclass
-    textArea.setBorder(BorderFactory.createLineBorder(Color.lightGray));
+    textArea.setBorder(BorderFactory.createLineBorder(FIELD_BORDERS));
     
     // Creates the label text editing field
     labelField = new JTextField();
-    labelField.setBorder(BorderFactory.createLineBorder(Color.lightGray));
+    labelField.setBorder(BorderFactory.createLineBorder(FIELD_BORDERS));
     labelField.setOpaque(true);
     labelField.addKeyListener(keyListener);
     
@@ -120,7 +136,7 @@ public class kCellEditor extends mxCellEditor {
     notesField.setOpaque(true);
     notesField.addKeyListener(keyListener);
     notesScrollPane = new JScrollPane(notesField);
-    notesScrollPane.setBorder(BorderFactory.createLineBorder(Color.lightGray));
+    notesScrollPane.setBorder(BorderFactory.createLineBorder(FIELD_BORDERS));
     notesScrollPane.setOpaque(false);
     notesScrollPane.getViewport().setOpaque(false); //<--how I love how java requires you to set EVERYTHING transparent
 
@@ -131,9 +147,8 @@ public class kCellEditor extends mxCellEditor {
         super.paintComponent(g);
 
         //background is a rounded rectangle in translucent gray.
-        g.setColor(new Color(kConstants.UI_COLOR_BACKGROUND.getRed(),
-            kConstants.UI_COLOR_BACKGROUND.getGreen(),
-            kConstants.UI_COLOR_BACKGROUND.getBlue(), 150));
+        g.setColor(new Color(EDITPANEL_FILL.getRed(),
+            EDITPANEL_FILL.getGreen(), EDITPANEL_FILL.getBlue(), 150));
         g.fillRoundRect(0, 0, getWidth(), getHeight(), ROUNDRECT_RADIUS,
                         ROUNDRECT_RADIUS);
       }
@@ -190,7 +205,7 @@ public class kCellEditor extends mxCellEditor {
       currentEditor.setBounds(getEditorBounds(state, scale));
       currentEditor.setVisible(true);
       
-      //get color of text in cell, use black if none specified
+      //get color of text in cell; get black instead if none specified
       Color fontColor = mxUtils.getColor(state.getStyle(),
                                          mxConstants.STYLE_FONTCOLOR,
                                          Color.black);
@@ -202,7 +217,13 @@ public class kCellEditor extends mxCellEditor {
         state.getStyle()
             .put(mxConstants.STYLE_FONTSTYLE, mxConstants.FONT_BOLD);
         labelField.setFont(mxUtils.getFont(state.getStyle(), scale));
-//        labelField.setForeground(fontColor);
+        
+        //set font color if one for editor was specified
+        if (EDITTEXT_FONTCOLOR != null)
+          labelField.setForeground(EDITTEXT_FONTCOLOR);
+        else
+          labelField.setForeground(fontColor);
+        
         labelField.setText(((kCellValue) ((mxICell) cell).getValue())
             .getLabel());
         labelField.setMaximumSize(new Dimension(kEditPanel.getBounds().width - PADDING*4,
@@ -212,7 +233,13 @@ public class kCellEditor extends mxCellEditor {
 
         state.getStyle().put(mxConstants.STYLE_FONTSTYLE, 0);
         notesField.setFont(mxUtils.getFont(state.getStyle(), scale));
-//        notesField.setForeground(fontColor);
+        
+        //set font color if one for editor was specified
+        if (EDITTEXT_FONTCOLOR != null)
+          notesField.setForeground(EDITTEXT_FONTCOLOR);
+        else
+          notesField.setForeground(fontColor);
+        
         notesField.setText(((kCellValue) ((mxICell) cell).getValue())
             .getNotes());
         //if we want to do any formatting, we've got to do it on the notesScrollPane
@@ -233,7 +260,13 @@ public class kCellEditor extends mxCellEditor {
         labelField.setVisible(false);
         state.getStyle().put(mxConstants.STYLE_FONTSTYLE, 0);
         notesField.setFont(mxUtils.getFont(state.getStyle(), scale));
-//        notesField.setForeground(fontColor);
+        
+        //set font color if one for editor was specified
+        if (EDITTEXT_FONTCOLOR != null)
+          notesField.setForeground(EDITTEXT_FONTCOLOR);
+        else
+          notesField.setForeground(fontColor);
+        
         notesField.setText(getInitialValue(state, trigger));
 
         currentField = notesField;
@@ -248,7 +281,7 @@ public class kCellEditor extends mxCellEditor {
 
       currentEditor.revalidate();
       //put the cursor in the labelField and highlight all text:
-      currentField.requestFocusInWindow();
+      currentField.requestFocusInWindow(); //requestFocus();
       currentField.selectAll();
       //force the graphComponent to paint our editor, otherwise
       // it will get clipped in various ugggly ways:

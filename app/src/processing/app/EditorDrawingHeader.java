@@ -80,7 +80,8 @@ public class EditorDrawingHeader extends JPanel {
           //deselect all the tool buttons
           //TODO really don't know why this is not working in the case of "text" tool
 //          System.out.println("resetting on TOOL_END: "+toolButtons.getSelection().getActionCommand());
-          toolButtons.getSelection().setSelected(false);
+          if (toolButtons.getSelection() != null)
+            toolButtons.getSelection().setSelected(false);
 //          spitButtonStates();
         }
       });
