@@ -17,5 +17,10 @@ public class kEvent {
    * 
    */
   public static final String TOOL_END = "toolEnd";
+
+  /**
+   * 
+   */
+  public static final String CODE_WINDOW_VISIBLE = "codeWindowVisible";
   
 }

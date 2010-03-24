@@ -26,10 +26,6 @@ console.error.color = #ff3000
 buttons.bgcolor = #686868
 buttons.status.font = SansSerif,plain,12
 buttons.status.color = #ffffff
-# button colors generally pre-determined in icon files but there are used to make the paint fill icons dynamically
-buttons.active.color = #ffcc00
-buttons.inactive.color = #b0b0b0
-buttons.rollover.color = #ffffff
 
 # GUI - LINESTATUS
 linestatus.color = #ffffff
@@ -103,17 +99,3 @@ editor.comment2.style = #7e7e7e,plain
 # LINE STATUS - editor line number status bar at the bottom of the screen
 linestatus.font	   = SansSerif,plain,10
 linestatus.height  = 20
-
-
-# DRAWING - FILL COLOR SETS
-drawing.fillset1.color1 = #ecd078
-drawing.fillset1.color2 = #d95b43
-drawing.fillset1.color3 = #c02942
-drawing.fillset1.color4 = #542437
-drawing.fillset1.color5 = #53777a
-
-drawing.fillset1.color1.text = #000000
-drawing.fillset1.color2.text = #000000
-drawing.fillset1.color3.text = #000000
-drawing.fillset1.color4.text = #eeeeee
-drawing.fillset1.color5.text = #eeeeee

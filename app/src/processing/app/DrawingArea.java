@@ -1,17 +1,11 @@
 package processing.app;
 
-import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.Shape;
-import java.awt.Stroke;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
@@ -19,52 +13,39 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import javax.swing.JDesktopPane;
 import javax.swing.JInternalFrame;
 
-import processing.app.graph.kCanvas;
-import processing.app.graph.kCellEditor;
 import processing.app.graph.kCellValue;
+import processing.app.graph.kCodeWindow;
 import processing.app.graph.kGraph;
 import processing.app.graph.kGraphComponent;
 import processing.app.util.kConstants;
 import processing.app.util.kEvent;
 import processing.app.util.kUtils;
 
-import com.mxgraph.canvas.mxGraphics2DCanvas;
-import com.mxgraph.canvas.mxICanvas;
-import com.mxgraph.canvas.mxImageCanvas;
 import com.mxgraph.model.mxCell;
 import com.mxgraph.model.mxGeometry;
 import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
 import com.mxgraph.swing.mxGraphComponent;
-import com.mxgraph.swing.handler.mxCellHandler;
-import com.mxgraph.swing.handler.mxCellMarker;
-import com.mxgraph.swing.handler.mxEdgeHandler;
-import com.mxgraph.swing.handler.mxElbowEdgeHandler;
 import com.mxgraph.swing.handler.mxRubberband;
-import com.mxgraph.swing.handler.mxVertexHandler;
-import com.mxgraph.swing.view.mxInteractiveCanvas;
 import com.mxgraph.util.mxConstants;
 import com.mxgraph.util.mxEventObject;
 import com.mxgraph.util.mxEventSource;
 import com.mxgraph.util.mxPoint;
-import com.mxgraph.util.mxRectangle;
 import com.mxgraph.util.mxUtils;
 import com.mxgraph.util.mxEventSource.mxIEventListener;
 import com.mxgraph.view.mxCellState;
-import com.mxgraph.view.mxEdgeStyle;
 import com.mxgraph.view.mxGraph;
-import com.mxgraph.view.mxEdgeStyle.mxEdgeStyleFunction;
 
 
 /**
  * The Kaleido drawing JComponent, which is a desktop pane
  * that contains the graph component, and any number of internal
- * code windows.
+ * code windows.  This class comprises the bulk mechanisms for
+ * the code window system.
  * @author achang
  */
 public class DrawingArea extends JDesktopPane {
@@ -101,6 +82,10 @@ public class DrawingArea extends JDesktopPane {
    */
   protected ArrayList<Object> mideBlockRegistry = new ArrayList<Object>(20);
 
+  protected ArrayList <kCodeWindow> codeWindows;
+  boolean codeWindowsEnabled = true;
+  boolean lockEnabled = true;
+  
   /**
    * Tool and selection handling.
    */
@@ -108,8 +93,7 @@ public class DrawingArea extends JDesktopPane {
   ShapeToolband shapeToolband;
   ConnectorToolband connectorToolband;
   ColorToolband colorToolband;
-  
-  boolean codeWindowsEnabled = true;
+
   
   
   public DrawingArea(mxGraphModel x) {
@@ -122,13 +106,14 @@ public class DrawingArea extends JDesktopPane {
     
     graphComponent = new kGraphComponent(graph);
 
+    //define code window mouse listener
 //    graphComponent.getGraphControl().addMouseListener(new MouseAdapter()
 //    {
 //      public void mouseReleased(MouseEvent e)
 //      {
 //        if (!e.isConsumed() && isCodeWindowEvent(e))
 //        {
-//          System.out.println("graphComponent >> isCodeWindowEvent");
+//          System.out.println("drawingArea >> isCodeWindowEvent");
 //          Object cell = graphComponent.getCellAt(e.getX(), e.getY(), false);
 //
 //          if (cell != null)
@@ -139,6 +124,17 @@ public class DrawingArea extends JDesktopPane {
 //      }
 //    });
     
+    //tool handling
+    rubberband = new mxRubberband(graphComponent);
+    rubberband.setEnabled(true);
+    shapeToolband = new ShapeToolband(this);
+    shapeToolband.setEnabled(false);
+    connectorToolband = new ConnectorToolband(this);
+    connectorToolband.setEnabled(false);
+    colorToolband = new ColorToolband(this);
+    colorToolband.setEnabled(false);
+    
+    //compose the swing components
     graphPanel = new JInternalFrame("Graph", false, //resizable
                                     false, //not closable
                                     false, //not maximizable
@@ -151,16 +147,6 @@ public class DrawingArea extends JDesktopPane {
     graphPanel.setSize(3000, 3000);  //TODO: be able to resize with the rest of them
     add(graphPanel);
     setVisible(true);
-    
-    //event handling
-    rubberband = new mxRubberband(graphComponent);
-    rubberband.setEnabled(true);
-    shapeToolband = new ShapeToolband(this);
-    shapeToolband.setEnabled(false);
-    connectorToolband = new ConnectorToolband(this);
-    connectorToolband.setEnabled(false);
-    colorToolband = new ColorToolband(this);
-    colorToolband.setEnabled(false);
   }
 
   /**
@@ -194,10 +180,9 @@ public class DrawingArea extends JDesktopPane {
     return currentFillColor;
   }
   /**
-   * Never used... can probably kill.
-   * @deprecated
+   * Used only internally, so technically an unnecessary method.
    */
-  public void setCurrentFillColor(String currentFillColor) {
+  protected void setCurrentFillColor(String currentFillColor) {
     this.currentFillColor = currentFillColor;
   }
   
@@ -230,13 +215,14 @@ public class DrawingArea extends JDesktopPane {
       connectorToolband.setEnabled(true);
     else {
       //update the FillColor
-      currentFillColor = toolName;
+      setCurrentFillColor(toolName);
       System.out.println("currentFillColor = "+currentFillColor);
       colorToolband.setEnabled(true);
       graphComponent.getConnectionHandler().setEnabled(true); //put highlights back
     }
     
   }
+
   /**
    * Doesn't need to know which mode we are ending
    * in any case ending means we go back to default mode
@@ -266,24 +252,256 @@ public class DrawingArea extends JDesktopPane {
     return toolMode;
   }
   
+  /*
+   * Code window methods
+   */
+  
   /**
-   * Enables/disables code windows. 
+   * Enables/disables code windows. TODO verify that only public codewindow methods check this
    */
   public void setCodeWindowsEnabled(boolean value)
   {
     codeWindowsEnabled = value;
-  }  
+  }
+  
+  /**
+   * Returns if code windows are enabled. 
+   */
   public boolean isCodeWindowsEnabled() {
     return codeWindowsEnabled;
   }
+  
   /**
-   * Defines the code window mouse event trigger
-   * @param e
+   * Shortcut method to determine if a given cell has valid code marks
+   * and can therefore have a valid code window
+   * @param cell
    * @return
    */
-  private boolean isCodeWindowEvent(MouseEvent e)
+  protected boolean hasValidCodeMarks(Object cell)
   {
+    if ((cell instanceof mxCell) && (((mxCell) cell).getValue() instanceof kCellValue))//TODO && (((kCellValue) ((mxCell)cell).getValue()).hasValidCodeMarks()))
+      return true;
+    else
+      return false;
+  }
+  
+  /**
+   * Defines the code window mouse event trigger.
+   */
+  protected boolean isCodeWindowEvent(MouseEvent e)
+  {
+    System.out.println("drawingArea >> isCodeWindowEvent?");
     return ((e != null) && isCodeWindowsEnabled())  ? (e.getClickCount() == 2) : false;
+  }
+  
+  /**
+   * Returns the code window associated with the given cell
+   * by performing a linear search through the array of codewindows
+   * to match the cell id. Returns null if not found.
+   * @param cell
+   * @return
+   */
+  protected kCodeWindow getCodeWindow(mxICell cell){
+    return getCodeWindow(cell.getId());
+  }
+  
+  /**
+   * Returns the code window associated with the given cell
+   * by performing a linear search through the array of codewindows  
+   * to match the cell id. Returns null if not found.
+   * @param cell
+   * @return
+   */
+  protected kCodeWindow getCodeWindow(String id){
+    if (codeWindows != null) {
+      Iterator it = codeWindows.iterator();
+      while(it. hasNext()) //System.out.println(it.next());
+      {
+        kCodeWindow next = (kCodeWindow) it.next();
+        if (next.getId().equals(id))
+          return next;
+      }
+    }
+    return null; //return null if not found
+  }
+  
+  /**
+   * Shows code window at default (cell center) location. Overridden method
+   * creates a code window if one doesn't already exist.
+   * 
+   * @param cell
+   * @param locX
+   * @param locY
+   */
+  protected void showCodeWindow(mxICell cell) {
+    showCodeWindow(cell, (int) cell.getGeometry().getCenterX(), (int) cell
+        .getGeometry().getCenterY());
+  }
+
+  /**
+   * Creates a code window if one doesn't already exist.
+   * 
+   * @param cell
+   * @param locX
+   * @param locY
+   */
+  protected void showCodeWindow(mxICell cell, int locX, int locY) {
+    System.out.println("drawingArea >> showCodeWindow >> "+cell.getValue());
+    if (hasValidCodeMarks(cell)) {
+//      System.out.println("drawingArea >> showCodeWindow >> hasValidCodeMarks");
+      kCodeWindow codewindow = getCodeWindow(cell.getId());
+      if (codewindow == null)
+        codewindow = addCodeWindow(cell);
+
+      codewindow.setLocation(locX, locY);
+      codewindow.setVisible(true);
+    }
+  }
+  
+  /**
+   * Hide the code window if it exists for the given cell.
+   * 
+   * @param cell
+   */
+  protected void hideCodeWindow(mxICell cell) {
+    System.out.println("drawingArea >> hideCodeWindow >> "+cell.getValue());
+    if (hasValidCodeMarks(cell)) {
+//      System.out.println("drawingArea >> hideCodeWindow >> hasValidCodeMarks");
+      kCodeWindow codewindow = getCodeWindow(cell.getId());
+      if (codewindow != null)
+        codewindow.setVisible(false);
+    }
+  }
+
+
+  /**
+   * Creates a new code window internal frame belonging to the specific cell
+   * @param cell
+   * @return
+   */
+  protected kCodeWindow addCodeWindow(mxICell cell) {
+    System.out.println("drawingArea >> addCodeWindow");
+    kCodeWindow newWindow = new kCodeWindow(cell, this);
+    if (codeWindows == null)
+    {
+      codeWindows = new ArrayList <kCodeWindow> ();
+      System.out.println("drawingArea >> addCodeWindow >> added new code windows ArrayList");
+    }
+    codeWindows.add(newWindow);
+    return newWindow;
+  }
+
+  /**
+   * Returns if a given cell's code window exists and is open
+   * @return if any code window is open
+   */
+  protected boolean isCodeWindowOpen(mxICell cell) {
+    if (hasValidCodeMarks(cell)) {
+      System.out.println("drawingArea >> isCodeWindowOpen >> hasValidCodeMarks");
+      kCodeWindow codewindow = getCodeWindow(cell.getId());
+      if (codewindow != null)
+        return codewindow.isVisible();
+    }
+    return false;
+  }
+  
+  /**
+   * Returns if a given cell's code window exists and is open
+   * @return if any code window is open
+   */
+  public boolean isCodeWindowOpenOnSelected() {
+    if (codeWindowsEnabled) {
+      Object[] selected = graphComponent.getGraph().getSelectionCells();
+      for (int i = 0; i < selected.length; i++)
+        if (isCodeWindowOpen((mxICell) selected[i]))
+          return true;
+    }
+    return false;
+  }
+  
+  /**
+   * Makes visible the associated code window of each selected cell.
+   */
+  public void openCodeWindowOnSelected() {
+    if (codeWindowsEnabled) {
+      Object[] selected = graphComponent.getGraph().getSelectionCells();
+      for (int i = 0; i < selected.length; i++)
+        showCodeWindow((mxICell) selected[i]);
+    }
+  }
+  
+  /**
+   * Makes visible the associated code window of each selected cell.
+   */
+  public void closeCodeWindowOnSelected() {
+    if (codeWindowsEnabled) {
+      Object[] selected = graphComponent.getGraph().getSelectionCells();
+      for (int i = 0; i < selected.length; i++)
+        hideCodeWindow((mxICell) selected[i]);
+    }
+  }
+  
+  /**
+   * Closes all code windows. 
+   */
+  public void closeAllCodeWindows() {
+    if (codeWindowsEnabled && codeWindows != null) {
+      Iterator it = codeWindows.iterator();
+      while (it.hasNext())
+        ((kCodeWindow) it.next()).setVisible(false);
+    }
+  }
+  
+/**
+ * Called by codewindows to trigger an event that drawingHeader can
+ * listen for and thus update the codeWindowButton's status
+ */
+  public void fireCodeWindowEvent() {
+    eventSource.fireEvent(new mxEventObject(kEvent.CODE_WINDOW_VISIBLE));
+  }
+  
+  /*
+   * Lock methods
+   */
+  
+  /**
+   * Returns if a given cell's code window exists and is open
+   * @return if any code window is open
+   */
+  public boolean isLockOnSelected() {
+    if (codeWindowsEnabled) {
+      Object[] selected = graphComponent.getGraph().getSelectionCells();
+      for (int i = 0; i < selected.length; i++)
+        if (graphComponent.getGraph().isCellLocked(selected[i]))
+          return true;
+    }
+    return false;
+  }
+  
+  /**
+   * Locks all of the selected cells.
+   * @see com.mxgraph.view.mxGraph#isCellsLocked()
+   */
+  public void lockSelected() {
+    System.out.println("DrawingArea >> locking selected");
+    if (lockEnabled) {
+      Object[] selected = graphComponent.getGraph().getSelectionCells();
+      for (int i = 0; i < selected.length; i++)
+        ((mxICell) selected[i]).getGeometry().setRelative(false); //TODO this doesn't work
+    }
+  }
+  
+  /**
+   * Unlocks all of the selected cells.
+   * @see com.mxgraph.view.mxGraph#isCellsLocked()
+   */
+  public void unlockSelected() {
+    System.out.println("DrawingArea >> UN-locking selected");
+    if (lockEnabled) {
+      Object[] selected = graphComponent.getGraph().getSelectionCells();
+      for (int i = 0; i < selected.length; i++)
+        ((mxICell) selected[i]).getGeometry().setRelative(true);
+    }
   }
   
   /*
@@ -773,5 +991,6 @@ public class DrawingArea extends JDesktopPane {
     }
     
   }
+
 
 }

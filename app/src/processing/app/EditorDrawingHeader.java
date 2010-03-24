@@ -37,6 +37,7 @@ import processing.app.util.kUtils;
 import com.mxgraph.util.mxEvent;
 import com.mxgraph.util.mxEventObject;
 import com.mxgraph.util.mxEventSource.mxIEventListener;
+import com.mxgraph.view.mxGraphSelectionModel;
 
 
 /**
@@ -65,7 +66,8 @@ public class EditorDrawingHeader extends JPanel {
    */
   final ActionListener toolActionListener;
   
-//  AbstractButton defaultButton; //TODO don't need this if we are removing the cursor button
+  JToggleButton codeWindowButton;
+  JToggleButton lockButton;
   ButtonGroup toolButtons;
   DrawingArea drawingArea;
   
@@ -85,6 +87,27 @@ public class EditorDrawingHeader extends JPanel {
 //          spitButtonStates();
         }
       });
+    drawingArea.getGraphComponent().getGraph().getSelectionModel()
+        .addListener(mxEvent.CHANGE, new mxIEventListener() {
+          public void invoke(Object sender, mxEventObject evt) {
+//            mxGraphSelectionModel model = (mxGraphSelectionModel) sender;
+            System.out.println("EditorDrawingHeader >> selection changed");
+            updateCodeWindowButton();
+            System.out.println("EditorDrawingHeader >> drawingArea.isLockOnSelected()="+drawingArea.isLockOnSelected());
+//            updateLockButton();
+//            System.out.println("iscodewindowopen "+drawingArea.isCodeWindowOpen(model.getCell()));
+//            System.out.println("iscodewindowopen "+drawingArea.getGraphComponent().getGraph().isCellLocked(model.getCell()));
+          }
+        });
+    drawingArea.addListener(kEvent.CODE_WINDOW_VISIBLE,
+                            new mxIEventListener()
+                            {
+                              public void invoke(Object source, mxEventObject evt)
+                              {
+                                System.out.println("EditorDrawingHeader >> kEvent.CODE_WINDOW_VISIBLE heard");
+                                updateCodeWindowButton();
+                              }
+                            });
     
     setBackground(Theme.getColor("header.bgcolor"));
     setBorder(null);
@@ -103,21 +126,7 @@ public class EditorDrawingHeader extends JPanel {
       }
     };
      
-    /*
-     * CURSOR
-     */
-//    //TODO I dislike having a cursor tool. I know when I'm in cursor mode. Remove the cursor already.
-//    //meanwhile, TODO implement grab when I'm grabbing on canvas instead of mouseOverCell
-//    JToggleButton cursorButton = makeToolButton("cursor", "Cursor tool");
-//    cursorButton.addActionListener(new ActionListener() {
-//      public void actionPerformed(ActionEvent e) {
-//        toolButtons.setSelected(((AbstractButton)e.getSource()).getModel(), true);
-//        System.out.println("action event-- cursor");
-//        spitButtonStates();
-//      }
-//    });
-//    toolButtons.add(cursorButton);
-//    defaultButton = cursorButton;
+    //TODO implement grab when I'm grabbing on canvas instead of mouseOverCell
     
     /*
      * SHAPES drop-down
@@ -164,7 +173,7 @@ public class EditorDrawingHeader extends JPanel {
     /*
      * OPEN/CLOSE CODE WINDOW:
      */
-    JToggleButton codeWindowButton = new JToggleButton(Base.getImageIcon("graph-inact-opencodew.gif", this));
+    codeWindowButton = new JToggleButton(Base.getImageIcon("graph-inact-opencodew.gif", this));
     codeWindowButton.setRolloverIcon(Base.getImageIcon("graph-rollo-opencodew.gif", this));
     codeWindowButton.setRolloverSelectedIcon(Base.getImageIcon("graph-rollo-closecodew.gif", this));
     codeWindowButton.setSelectedIcon(Base.getImageIcon("graph-inact-closecodew.gif", this));
@@ -174,14 +183,18 @@ public class EditorDrawingHeader extends JPanel {
     codeWindowButton.setBorderPainted(false);
     codeWindowButton.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
-        System.out.println("togglebutton isSelected "+((AbstractButton) e.getSource()).isSelected());
+        AbstractButton source = (AbstractButton) e.getSource();
+        if (source.isSelected())
+          drawingArea.openCodeWindowOnSelected();
+        else
+          drawingArea.closeCodeWindowOnSelected();
       }
     });
     
     /*
      * LOCK/UNLOCK:
      */
-    JToggleButton lockButton = new JToggleButton(Base.getImageIcon("graph-inact-unlock.gif", this));
+    lockButton = new JToggleButton(Base.getImageIcon("graph-inact-unlock.gif", this));
     lockButton.setRolloverIcon(Base.getImageIcon("graph-rollo-unlock.gif", this));
     lockButton.setRolloverSelectedIcon(Base.getImageIcon("graph-rollo-lock.gif", this));
     lockButton.setSelectedIcon(Base.getImageIcon("graph-inact-lock.gif", this));
@@ -191,7 +204,12 @@ public class EditorDrawingHeader extends JPanel {
     lockButton.setBorderPainted(false);
     lockButton.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
-        System.out.println("togglebutton isSelected "+((AbstractButton) e.getSource()).isSelected());
+        System.out.println("lockButton isSelected "+((AbstractButton) e.getSource()).isSelected());
+        AbstractButton source = (AbstractButton) e.getSource();
+        if (source.isSelected())
+          drawingArea.lockSelected();
+        else
+          drawingArea.unlockSelected();
       }
     });
 
@@ -231,6 +249,11 @@ public class EditorDrawingHeader extends JPanel {
     //highlight our default button
 //    toolButtons.setSelected(defaultButton.getModel(), true);
     setVisible(true);
+  }
+
+  private void updateCodeWindowButton() {
+    System.out.println("drawingArea.isCodeWindowOpenOnSelected()"+drawingArea.isCodeWindowOpenOnSelected());
+      codeWindowButton.setSelected(drawingArea.isCodeWindowOpenOnSelected());
   }
 
   /**

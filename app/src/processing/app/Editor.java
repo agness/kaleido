@@ -48,6 +48,8 @@ import com.mxgraph.model.mxGraphModel;
  */
 public class Editor extends JFrame implements RunnerListener {
 
+
+
   Base base;
 
   // otherwise, if the window is resized with the message label
@@ -104,6 +106,10 @@ public class Editor extends JFrame implements RunnerListener {
   Sketch sketch;  // currently opened program
   EditorTextHeader textHeader;
   JEditTextArea textarea;
+  
+  // syntax default settings shared by all code editors (i.e. code windows + text area)
+  public static final TextAreaDefaults pdeTextAreaDefaults = new PdeTextAreaDefaults();
+  public static final PdeKeywords pdeTokenMarker = new PdeKeywords();
 
   // graph-side object & swing component
   mxGraphModel drawing;
@@ -185,7 +191,7 @@ public class Editor extends JFrame implements RunnerListener {
     
     // TEXTEDITOR BOX holds code file tabs and code edit area 
     textHeader = new EditorTextHeader(this);
-    textarea = new JEditTextArea(new PdeTextAreaDefaults());
+    textarea = new JEditTextArea(pdeTextAreaDefaults);
     textarea.setRightClickPopup(new TextAreaPopup()); //TODO popupFocusHandler
     textarea.setHorizontalOffset(6);
     Box textEditorBox = Box.createVerticalBox();
@@ -1447,7 +1453,7 @@ public class Editor extends JFrame implements RunnerListener {
       code.setDocument(document);
 
       // turn on syntax highlighting
-      document.setTokenMarker(new PdeKeywords());
+      document.setTokenMarker(pdeTokenMarker);
 
       // insert the program text into the document object
       try {
