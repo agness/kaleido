@@ -7,6 +7,8 @@ import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Point;
 import java.awt.Polygon;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
@@ -25,6 +27,7 @@ import javax.swing.JDesktopPane;
 import javax.swing.JInternalFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.TransferHandler;
 import javax.swing.WindowConstants;
 import javax.swing.event.InternalFrameAdapter;
 import javax.swing.event.InternalFrameEvent;
@@ -182,12 +185,12 @@ public class kCodeWindow {
         System.out.println("kCodeWindow >> moveButton FocusGained");
         moveButton.setEnabled(true);
         closeButton.setEnabled(true);
-         textarea.requestFocus(); //put the cursor in the textarea
+//         textarea.requestFocus(); //put the cursor in the textarea
       }
       public void focusLost(FocusEvent e) {
         System.out.println("kCodeWindow >> moveButton focusLost");
-        moveButton.setEnabled(false); //redundant probably
-        closeButton.setEnabled(false);
+//        moveButton.setEnabled(false); //redundant probably
+//        closeButton.setEnabled(false);
       }
     });
     closeButton.addFocusListener(new FocusListener() { //need to do this or else closeButton action won't work
@@ -195,12 +198,12 @@ public class kCodeWindow {
         System.out.println("kCodeWindow >> closeButton FocusGained");
         moveButton.setEnabled(true);
         closeButton.setEnabled(true);
-         textarea.requestFocus(); //put the cursor in the textarea
+//         textarea.requestFocus(); //put the cursor in the textarea
       }
       public void focusLost(FocusEvent e) {
         System.out.println("kCodeWindow >> closeButton focusLost");
-        moveButton.setEnabled(false);
-        closeButton.setEnabled(false);
+//        moveButton.setEnabled(false);
+//        closeButton.setEnabled(false);
       }
     });
     // hide code window when close button is clicked
@@ -662,6 +665,27 @@ public class kCodeWindow {
     };
   }
 
+  /**
+   * To support drag-drop of strings, and cut-copy-paste actions in the code window text editor.
+   */
+//  protected TransferHandler createTransferHandler() {
+//    return new TransferHandler() {
+//      
+//      public boolean canImport(JComponent dest, DataFlavor[] flavors) {
+//        return true;
+//      }
+//      
+//      public boolean importData(JComponent src, Transferable transferable) {
+//        //variables used to write proper status messages
+//        int successful = 0;
+//        String type = "";
+//        try {
+//          DataFlavor uriListFlavor = new DataFlavor("text/uri-list;class=java.lang.String");
+//
+//        }
+//    };
+//  }
+  
   /**
    * Move internal frames to front so it isn't covered by other code windows.
    * 
