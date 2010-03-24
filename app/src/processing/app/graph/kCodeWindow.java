@@ -7,6 +7,7 @@ import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Point;
 import java.awt.Polygon;
+import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
@@ -21,12 +22,17 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 
+import javax.swing.AbstractAction;
+import javax.swing.Action;
+import javax.swing.ActionMap;
+import javax.swing.InputMap;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JDesktopPane;
 import javax.swing.JInternalFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.KeyStroke;
 import javax.swing.TransferHandler;
 import javax.swing.WindowConstants;
 import javax.swing.event.InternalFrameAdapter;
@@ -36,6 +42,7 @@ import javax.swing.event.InternalFrameListener;
 import processing.app.Base;
 import processing.app.DrawingArea;
 import processing.app.Editor;
+import processing.app.Preferences;
 import processing.app.syntax.JEditTextArea;
 import processing.app.syntax.TextAreaDefaults;
 
@@ -110,6 +117,7 @@ public class kCodeWindow {
     textarea.setEditable(true);
     textarea.setHorizontalOffset(TEXTAREA_HORIZ_OFFSET);
     textarea.getPainter().setLineHighlightEnabled(false); // else looks funny
+    setShortcutKeystrokes();
     JScrollPane scrollPane = new JScrollPane(textarea);
     scrollPane.setBorder(null);
     scrollPane.setOpaque(true);
@@ -217,8 +225,10 @@ public class kCodeWindow {
       public void keyPressed(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
           setVisible(false);
-        if (e.getKeyCode() == KeyEvent.VK_ENTER)
+        if (e.getKeyCode() == KeyEvent.VK_ENTER) { //HACK force enter key to work (cause i dunno why it doesn't) TODO dun hack.
           System.out.println("TEXT AREA HEARS ENTER KEY PRESSED");
+          textarea.setSelectedText("\n");
+        }
       }
     });
     // add dragging function of the move button,
@@ -668,23 +678,176 @@ public class kCodeWindow {
   /**
    * To support drag-drop of strings, and cut-copy-paste actions in the code window text editor.
    */
-//  protected TransferHandler createTransferHandler() {
-//    return new TransferHandler() {
-//      
-//      public boolean canImport(JComponent dest, DataFlavor[] flavors) {
-//        return true;
-//      }
-//      
-//      public boolean importData(JComponent src, Transferable transferable) {
-//        //variables used to write proper status messages
-//        int successful = 0;
-//        String type = "";
-//        try {
-//          DataFlavor uriListFlavor = new DataFlavor("text/uri-list;class=java.lang.String");
-//
-//        }
-//    };
-//  }
+  protected void setShortcutKeystrokes() {
+    final int SHORTCUT_KEY_MASK = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
+    
+    InputMap imap = textarea.getInputMap();
+    imap.put(KeyStroke.getKeyStroke('X', SHORTCUT_KEY_MASK),
+        TransferHandler.getCutAction().getValue(Action.NAME));
+    imap.put(KeyStroke.getKeyStroke('C', SHORTCUT_KEY_MASK),
+        TransferHandler.getCopyAction().getValue(Action.NAME));
+    imap.put(KeyStroke.getKeyStroke('V', SHORTCUT_KEY_MASK),
+        TransferHandler.getPasteAction().getValue(Action.NAME));
+    imap.put(KeyStroke.getKeyStroke('A', SHORTCUT_KEY_MASK), "selectAll");
+    imap.put(KeyStroke.getKeyStroke('/', SHORTCUT_KEY_MASK), "commentUncomment");
+    imap.put(KeyStroke.getKeyStroke(']', SHORTCUT_KEY_MASK), "increaseIndent");
+    imap.put(KeyStroke.getKeyStroke('[', SHORTCUT_KEY_MASK), "decreaseIndent");
+    
+    ActionMap amap = textarea.getActionMap();
+    amap.put(TransferHandler.getCutAction().getValue(Action.NAME), new AbstractAction() {
+      public void actionPerformed(ActionEvent e) {
+        System.out.println("cut"+e.getSource());
+        ((JEditTextArea) e.getSource()).cut();
+      }
+    });
+    amap.put(TransferHandler.getCopyAction().getValue(Action.NAME), new AbstractAction() {
+      public void actionPerformed(ActionEvent e) {
+        System.out.println("copy"+e.getSource());
+        ((JEditTextArea) e.getSource()).copy();
+      }
+    });
+    amap.put(TransferHandler.getPasteAction().getValue(Action.NAME), new AbstractAction() {
+      public void actionPerformed(ActionEvent e) {
+        System.out.println("paste"+e.getSource());
+        ((JEditTextArea) e.getSource()).paste();
+      }
+    });
+    amap.put("selectAll", new AbstractAction() {
+      public void actionPerformed(ActionEvent e) {
+        System.out.println("select all"+e.getSource());
+        ((JEditTextArea) e.getSource()).selectAll();
+      }
+    });
+    amap.put("commentUncomment", new AbstractAction() {
+      public void actionPerformed(ActionEvent e) {
+        System.out.println("comment uncomment"+e.getSource());
+        handleCommentUncomment();
+      }
+    });
+    amap.put("increaseIndent", new AbstractAction() {
+      public void actionPerformed(ActionEvent e) {
+        System.out.println("increaseIndent"+e.getSource());
+        handleIndentOutdent(true);
+      }
+    });
+    amap.put("decreaseIndent", new AbstractAction() {
+      public void actionPerformed(ActionEvent e) {
+        System.out.println("decreaseIndent"+e.getSource());
+        handleIndentOutdent(false);
+      }
+    });
+  }
+  
+  /**
+   * @see processing.app.Editor#handleCommentUncomment
+   * @author fry
+   */
+  private void handleCommentUncomment() {
+    //TODO startCompoundEdit();
+
+    int startLine = textarea.getSelectionStartLine();
+    int stopLine = textarea.getSelectionStopLine();
+
+    int lastLineStart = textarea.getLineStartOffset(stopLine);
+    int selectionStop = textarea.getSelectionStop();
+    // If the selection ends at the beginning of the last line,
+    // then don't (un)comment that line.
+    if (selectionStop == lastLineStart) {
+      // Though if there's no selection, don't do that
+      if (textarea.isSelectionActive()) {
+        stopLine--;
+      }
+    }
+
+    // If the text is empty, ignore the user.
+    // Also ensure that all lines are commented (not just the first)
+    // when determining whether to comment or uncomment.
+    int length = textarea.getDocumentLength();
+    boolean commented = true;
+    for (int i = startLine; commented && (i <= stopLine); i++) {
+      int pos = textarea.getLineStartOffset(i);
+      if (pos + 2 > length) {
+        commented = false;
+      } else {
+        // Check the first two characters to see if it's already a comment.
+        String begin = textarea.getText(pos, 2);
+        //System.out.println("begin is '" + begin + "'");
+        commented = begin.equals("//");
+      }
+    }
+
+    for (int line = startLine; line <= stopLine; line++) {
+      int location = textarea.getLineStartOffset(line);
+      if (commented) {
+        // remove a comment
+        textarea.select(location, location+2);
+        if (textarea.getSelectedText().equals("//")) {
+          textarea.setSelectedText("");
+          //pseudo-code:
+          //find open code windows
+          //find localLocation
+          //insert/remove
+          //update all codeblocks after
+        }
+      } else {
+        // add a comment
+        textarea.select(location, location);
+        textarea.setSelectedText("//");
+      }
+    }
+    // Subtract one from the end, otherwise selects past the current line.
+    // (Which causes subsequent calls to keep expanding the selection)
+    textarea.select(textarea.getLineStartOffset(startLine),
+                    textarea.getLineStopOffset(stopLine) - 1);
+    
+//    stopCompoundEdit();
+  }
+  
+  /**
+   * @see processing.app.Editor#handleIndentOutdent
+   * @author fry
+   */
+  protected void handleIndentOutdent(boolean indent) {
+    int tabSize = Preferences.getInteger("editor.tabs.size");
+    String tabString = "                        ".substring(0, tabSize);
+
+//    TODO startCompoundEdit();
+
+    int startLine = textarea.getSelectionStartLine();
+    int stopLine = textarea.getSelectionStopLine();
+
+    // If the selection ends at the beginning of the last line,
+    // then don't (un)comment that line.
+    int lastLineStart = textarea.getLineStartOffset(stopLine);
+    int selectionStop = textarea.getSelectionStop();
+    if (selectionStop == lastLineStart) {
+      // Though if there's no selection, don't do that
+      if (textarea.isSelectionActive()) {
+        stopLine--;
+      }
+    }
+
+    for (int line = startLine; line <= stopLine; line++) {
+      int location = textarea.getLineStartOffset(line);
+
+      if (indent) {
+        textarea.select(location, location);
+        textarea.setSelectedText(tabString);
+
+      } else {  // outdent
+        textarea.select(location, location + tabSize);
+        // Don't eat code if it's not indented
+        if (textarea.getSelectedText().equals(tabString)) {
+          textarea.setSelectedText("");
+        }
+      }
+    }
+    // Subtract one from the end, otherwise selects past the current line.
+    // (Which causes subsequent calls to keep expanding the selection)
+    textarea.select(textarea.getLineStartOffset(startLine),
+                    textarea.getLineStopOffset(stopLine) - 1);
+//    stopCompoundEdit();
+  }
   
   /**
    * Move internal frames to front so it isn't covered by other code windows.
