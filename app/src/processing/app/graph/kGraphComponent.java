@@ -15,6 +15,7 @@ import javax.swing.TransferHandler;
 import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
 
+import processing.app.Theme;
 import processing.app.util.kConstants;
 
 import com.mxgraph.canvas.mxICanvas;
@@ -48,6 +49,8 @@ public class kGraphComponent extends mxGraphComponent {
    * TODO the alternative to all the gibberish color setting on this page
    * is to subclass each of the handlers and redefine the members in the constructors
    */
+  
+  //TODO put all of these colors in kConstants, or make them all reference colors in kConstants
   protected static final Color CANVAS_COLOR = kConstants.UI_COLOR_INACTIVE;
  
   protected static final Color CELL_MARKER_COLOR = kConstants.UI_COLOR_ROLLOVER;
@@ -112,6 +115,10 @@ public class kGraphComponent extends mxGraphComponent {
     //Set the background (must first clear viewport)
     getViewport().setOpaque(false);
     setBackground(kConstants.UI_COLOR_BACKGROUND);
+    // the following setting doesn't affect the graphComponent, but affects the
+    // graphOutline background color; we're using the same color as the
+    // background color of inactive buttons
+    setPageBackgroundColor(kConstants.UI_COLOR_INACTIVE); 
     
     //Override this so draw better cell markers 
     //(which occur onMouseOver not select)
@@ -412,6 +419,7 @@ public class kGraphComponent extends mxGraphComponent {
    * Overriding to override all color settings of all color-accessing 
    * methods in the the various cell handlers.
    * @see com.mxgraph.swing.mxGraphComponent#createHandler(mxCellState)
+   * TODO change cursor on hotspots to be hands
    * 
    * @param state Cell state for which a handler should be created.
    * @return Returns the handler to be used for the given cell state.

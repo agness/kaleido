@@ -1,12 +1,15 @@
 package processing.app;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.Stroke;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
@@ -273,19 +276,40 @@ public class EditorDrawingHeader extends JPanel {
     buttonPanel.add(lockButton);
     buttonPanel.add(zoomInButton);
     buttonPanel.add(zoomOutButton);
-    buttonPanel.add(layoutSpacerJr);
     buttonPanel.add(linkButton);
+    buttonPanel.add(layoutSpacerJr);
 
     /*
      * GRAPH OUTLINE
      */
-    graphOutline = new mxGraphOutline(drawingArea.getGraphComponent());
-    /*
-     * graphOutline customization TODO:
-     * - make frame prettier
-     * - change background color to a dark gray
-     * - fit size of graph instead of size of graphComponent
-     */
+    // note that the graphOutline background color is determined by the
+    // graphComponent.pageBackgroundColor (which we have set in kGraphComponent)
+    graphOutline = new mxGraphOutline(drawingArea.getGraphComponent()) {
+      /**
+       * @see com.mxgraph.swing.mxGraphOutline#paintForeground
+       */
+      protected void paintForeground(Graphics g)
+      {
+        if (graphComponent != null)
+        {
+          Graphics2D g2 = (Graphics2D) g;
+
+          Stroke stroke = g2.getStroke();
+          g.setColor(Color.WHITE);
+          g2.setStroke(new BasicStroke(1));
+          g.drawRect(finderBounds.x, finderBounds.y, finderBounds.width,
+              finderBounds.height);
+
+          g2.setStroke(stroke);
+//          g.setColor(kConstants.UI_COLOR_ACTIVE);
+          g.setColor(Color.white);
+          g.fillRect(finderBounds.x + finderBounds.width - 2, finderBounds.y
+              + finderBounds.height - 2, 5, 5);
+        }
+      }
+    };
+    System.out.println("grpahComponent.getSize="+drawingArea.getGraphComponent().getGraphControl().getSize());
+    //TODO fit graphOutline to size of graph instead of size of graphComponent
     
     /*
      * SPLIT PANE:
