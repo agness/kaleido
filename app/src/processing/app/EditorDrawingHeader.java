@@ -14,11 +14,9 @@ import java.awt.event.MouseListener;
 import java.util.Enumeration;
 import java.util.HashMap;
 
-import javax.swing.AbstractAction;
 import javax.swing.AbstractButton;
 import javax.swing.ButtonGroup;
 import javax.swing.Icon;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -28,23 +26,25 @@ import javax.swing.JPopupMenu;
 import javax.swing.JToggleButton;
 import javax.swing.ListCellRenderer;
 import javax.swing.Timer;
+import javax.swing.border.LineBorder;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 
 import processing.app.util.kConstants;
 import processing.app.util.kEvent;
 import processing.app.util.kUtils;
 
+import com.mxgraph.swing.mxGraphComponent;
+import com.mxgraph.swing.mxGraphOutline;
 import com.mxgraph.util.mxEvent;
 import com.mxgraph.util.mxEventObject;
 import com.mxgraph.util.mxEventSource.mxIEventListener;
-import com.mxgraph.view.mxGraphSelectionModel;
 
 
 /**
  * Graph-editing toolbar at the top of the drawing window.
  */
 public class EditorDrawingHeader extends JPanel {
-
+  
   static final int INACTIVE = 0;
   static final int ROLLOVER = 1;
   static final int ACTIVE   = 2;
@@ -52,6 +52,7 @@ public class EditorDrawingHeader extends JPanel {
   
   static final String[] mouseState = {"rollo", "activ", "inact"};
   static final String[] flagState = {"flag", "noflag"};
+  private static final int GRAPH_OUTLINE_WIDTH = 100;
   
   /**  
    * We make all the image objects beforehand for efficiency
@@ -68,6 +69,8 @@ public class EditorDrawingHeader extends JPanel {
   
   JToggleButton codeWindowButton;
   JToggleButton lockButton;
+  JToggleButton linkButton;
+  mxGraphOutline graphOutline;
   ButtonGroup toolButtons;
   DrawingArea drawingArea;
   
@@ -232,8 +235,38 @@ public class EditorDrawingHeader extends JPanel {
         System.out.println((String) ((AbstractButton)e.getSource()).getText());
       }
     });
-
     
+    /*
+     * ---- an empty panel for layout purposes (space divider) ----
+     */
+    JPanel layoutSpacerJr = new JPanel();
+    layoutSpacerJr.setBorder(null);
+    layoutSpacerJr.setSize(EditorToolbar.BUTTON_GAP*2, EditorToolbar.BUTTON_GAP);
+    layoutSpacerJr.setBackground(this.getBackground());
+    
+    /*
+     * LINK (partially responsible as a status indicator, partially responsible as a button)
+     */
+    linkButton = makeToolButton("link", "Link");
+    linkButton.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        System.out.println((String) ((AbstractButton)e.getSource()).getText());
+        //call editor methods to link
+      }
+    });
+    
+    /*
+     * GRAPH OUTLINE
+     */
+    graphOutline = new mxGraphOutline(drawingArea.getGraphComponent());
+    System.out.println("drawingHeader >> graphOutline >> "+ graphOutline.getBackground());
+//    JPanel outlinePane = new JPanel();
+//    outlinePane.setSize(GRAPH_OUTLINE_WIDTH, EditorToolbar.BUTTON_HEIGHT-2);
+//    outlinePane.setSize(100, 30);
+//    outlinePane.setBorder(new LineBorder(Color.CYAN, 1));
+//    outlinePane.add(graphOutline);
+//    outlinePane.add(new JLabel("blaeeee"));
+
     // add everything
     add(shapeList);
     add(connectorList);
@@ -244,7 +277,11 @@ public class EditorDrawingHeader extends JPanel {
     add(lockButton);
     add(zoomInButton);
     add(zoomOutButton);
-    //now to add a graphOutline here...
+    add(layoutSpacerJr);
+    add(linkButton);
+    //TODO will need to put all the buttons on one pane and graphoutline as a separate component
+//    add(outlinePane);
+//    add(graphOutline);
     
     //highlight our default button
 //    toolButtons.setSelected(defaultButton.getModel(), true);
