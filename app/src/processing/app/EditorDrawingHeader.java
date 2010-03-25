@@ -15,6 +15,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 
 import javax.swing.AbstractButton;
+import javax.swing.Box;
 import javax.swing.ButtonGroup;
 import javax.swing.Icon;
 import javax.swing.JButton;
@@ -23,6 +24,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JSplitPane;
 import javax.swing.JToggleButton;
 import javax.swing.ListCellRenderer;
 import javax.swing.Timer;
@@ -113,11 +115,8 @@ public class EditorDrawingHeader extends JPanel {
                             });
     
     setBackground(Theme.getColor("header.bgcolor"));
+    setLayout(new FlowLayout(FlowLayout.RIGHT, 0, 0));
     setBorder(null);
-    setLayout(new FlowLayout(FlowLayout.TRAILING, EditorToolbar.BUTTON_GAP,
-                             (EditorToolbar.BUTTON_HEIGHT - BUTTON_WIDTH) / 2 + 1));
-    setPreferredSize(new Dimension(500, EditorToolbar.BUTTON_HEIGHT));
-    //TODO minor: width here ------^ should be fluid
     toolButtons = new ButtonGroup();
     initializeIconBag();
     
@@ -254,38 +253,55 @@ public class EditorDrawingHeader extends JPanel {
         //call editor methods to link
       }
     });
-    
+
+    /*
+     * BUTTON PANEL add everything
+     */
+    JPanel buttonPanel = new JPanel();
+    buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING, EditorToolbar.BUTTON_GAP,
+                             (EditorToolbar.BUTTON_HEIGHT - BUTTON_WIDTH) / 2 + 1));
+    buttonPanel.setPreferredSize(new Dimension(500, EditorToolbar.BUTTON_HEIGHT));
+                  //TODO minor: width here ------^ should be fluid
+    buttonPanel.setOpaque(false);
+    buttonPanel.setBorder(null);
+    buttonPanel.add(shapeList);
+    buttonPanel.add(connectorList);
+    buttonPanel.add(textButton);
+    buttonPanel.add(colorList);
+    buttonPanel.add(layoutSpacer);
+    buttonPanel.add(codeWindowButton);
+    buttonPanel.add(lockButton);
+    buttonPanel.add(zoomInButton);
+    buttonPanel.add(zoomOutButton);
+    buttonPanel.add(layoutSpacerJr);
+    buttonPanel.add(linkButton);
+
     /*
      * GRAPH OUTLINE
      */
     graphOutline = new mxGraphOutline(drawingArea.getGraphComponent());
-    System.out.println("drawingHeader >> graphOutline >> "+ graphOutline.getBackground());
-//    JPanel outlinePane = new JPanel();
-//    outlinePane.setSize(GRAPH_OUTLINE_WIDTH, EditorToolbar.BUTTON_HEIGHT-2);
-//    outlinePane.setSize(100, 30);
-//    outlinePane.setBorder(new LineBorder(Color.CYAN, 1));
-//    outlinePane.add(graphOutline);
-//    outlinePane.add(new JLabel("blaeeee"));
-
-    // add everything
-    add(shapeList);
-    add(connectorList);
-    add(textButton);
-    add(colorList);
-    add(layoutSpacer);
-    add(codeWindowButton);
-    add(lockButton);
-    add(zoomInButton);
-    add(zoomOutButton);
-    add(layoutSpacerJr);
-    add(linkButton);
-    //TODO will need to put all the buttons on one pane and graphoutline as a separate component
-//    add(outlinePane);
-//    add(graphOutline);
+    /*
+     * graphOutline customization TODO:
+     * - make frame prettier
+     * - change background color to a dark gray
+     * - fit size of graph instead of size of graphComponent
+     */
     
-    //highlight our default button
-//    toolButtons.setSelected(defaultButton.getModel(), true);
-    setVisible(true);
+    /*
+     * SPLIT PANE:
+     * no clue why, but graphOutline only shows in JInternalFrames and
+     * JSplitPanes and the like, but not in JPanels so we are stuck with a
+     * JSplitPane that we've customized to look like it neither exists nor
+     * functions
+     */    
+    JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
+        buttonPanel, graphOutline);
+    splitPane.setDividerSize(0);
+    splitPane.setBorder(null);
+    splitPane.setOpaque(false);
+    splitPane.setOneTouchExpandable(false);
+    splitPane.setDividerLocation(460); //TODO fix this # to be something meaningful in relation to width
+    add(splitPane);
   }
 
   private void updateCodeWindowButton() {
