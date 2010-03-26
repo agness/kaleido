@@ -13,6 +13,7 @@ package processing.app.syntax;
 
 import processing.app.*;
 import processing.app.syntax.im.CompositionTextPainter;
+import processing.app.util.kConstants;
 
 import javax.swing.ToolTipManager;
 import javax.swing.text.*;
@@ -682,13 +683,20 @@ implements TabExpander, Printable
     int selectionStart = textArea.getSelectionStart();
     int selectionEnd = textArea.getSelectionStop();
 
+    //by achang for Kaleido
+    if (textArea.isFocusOwner()) {
+      gfx.setColor(selectionColor);
+    } else {
+      gfx.setColor(kConstants.UI_COLOR_INACTIVE);
+    }
+    
     if (selectionStart == selectionEnd) {
       if (lineHighlight) {
-        gfx.setColor(lineHighlightColor);
+//        gfx.setColor(lineHighlightColor);
         gfx.fillRect(0,y,getWidth(),height);
       }
     } else {
-      gfx.setColor(selectionColor);
+//      gfx.setColor(selectionColor);
 
       int selectionStartLine = textArea.getSelectionStartLine();
       int selectionEndLine = textArea.getSelectionStopLine();
