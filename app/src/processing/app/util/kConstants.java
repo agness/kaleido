@@ -12,6 +12,11 @@ import com.mxgraph.util.mxUtils;
  */
 public class kConstants 
 {
+  /**
+   * This version of Kaleido
+   */
+  public static final String VERSION_NAME = "001";
+  
   /*
    * Private library of color palettes that can be used in the settings.
    */
@@ -107,6 +112,7 @@ public class kConstants
   public static Color UI_COLOR_ROLLOVER = Color.WHITE;
   public static Color UI_COLOR_INACTIVE = mxUtils.parseColor("#b0b0b0");
   public static Color UI_COLOR_BACKGROUND = mxUtils.parseColor("#d3d3d3"); //the color of selected text tab
+  public static Color UI_HANDLE_FILL = UI_COLOR_BACKGROUND;
   
   /**
    * Pairs of matched fill and font colors for graph elememnts.

@@ -43,6 +43,7 @@ import com.mxgraph.swing.mxGraphOutline;
 import com.mxgraph.util.mxEvent;
 import com.mxgraph.util.mxEventObject;
 import com.mxgraph.util.mxEventSource.mxIEventListener;
+import com.mxgraph.view.mxGraphSelectionModel;
 
 
 /**
@@ -74,7 +75,7 @@ public class EditorDrawingHeader extends JPanel {
   
   JToggleButton codeWindowButton;
   JToggleButton lockButton;
-  JToggleButton linkButton;
+  LinkButton linkButton;
   mxGraphOutline graphOutline;
   ButtonGroup toolButtons;
   DrawingArea drawingArea;
@@ -82,6 +83,8 @@ public class EditorDrawingHeader extends JPanel {
   public EditorDrawingHeader(DrawingArea dory) {
     
     drawingArea = dory;
+    
+    //drawarea tool end listener
     drawingArea.addListener(kEvent.TOOL_END,
       new mxIEventListener()
       {
@@ -95,24 +98,43 @@ public class EditorDrawingHeader extends JPanel {
 //          spitButtonStates();
         }
       });
+    
+    //graph selection change listener
     drawingArea.getGraphComponent().getGraph().getSelectionModel()
         .addListener(mxEvent.CHANGE, new mxIEventListener() {
           public void invoke(Object sender, mxEventObject evt) {
-//            mxGraphSelectionModel model = (mxGraphSelectionModel) sender;
-            System.out.println("EditorDrawingHeader >> selection changed");
+            mxGraphSelectionModel model = (mxGraphSelectionModel) sender;
+            if (model.isEmpty()) {
+              codeWindowButton.setEnabled(false);
+              lockButton.setEnabled(false);
+              if (drawingArea.editor.getSelectedText() == null) //TODO probably refactor this into editor
+                linkButton.setEnabled(false); //there should be a chunk of editor that handles all the link stuff
+              //and pretends that the link button actually lives in editor
+            } else {
+              codeWindowButton.setEnabled(true);
+              lockButton.setEnabled(true);
+              linkButton.setEnabled(true);
+//              if (hasLink(model.getCell()))
+//                linkButton.setSelected(false); //selected=link
+//              else
+//                linkButton.setSelected(true);
+            }
+            
+//            System.out.println("EditorDrawingHeader >> selection changed");
             updateCodeWindowButton();
-            System.out.println("EditorDrawingHeader >> drawingArea.isLockOnSelected()="+drawingArea.isLockOnSelected());
+//            System.out.println("EditorDrawingHeader >> drawingArea.isLockOnSelected()="+drawingArea.isLockOnSelected());
 //            updateLockButton();
-//            System.out.println("iscodewindowopen "+drawingArea.isCodeWindowOpen(model.getCell()));
-//            System.out.println("iscodewindowopen "+drawingArea.getGraphComponent().getGraph().isCellLocked(model.getCell()));
+//            updateLinkButton();
           }
         });
+    
+    //code window change listener
     drawingArea.addListener(kEvent.CODE_WINDOW_VISIBLE,
                             new mxIEventListener()
                             {
                               public void invoke(Object source, mxEventObject evt)
                               {
-                                System.out.println("EditorDrawingHeader >> kEvent.CODE_WINDOW_VISIBLE heard");
+//                                System.out.println("EditorDrawingHeader >> kEvent.CODE_WINDOW_VISIBLE heard");
                                 updateCodeWindowButton();
                               }
                             });
@@ -122,7 +144,6 @@ public class EditorDrawingHeader extends JPanel {
     setBorder(null);
     toolButtons = new ButtonGroup();
     initializeIconBag();
-    
     toolActionListener = new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         toolButtons.setSelected(((AbstractButton)e.getSource()).getModel(), true);
@@ -249,13 +270,7 @@ public class EditorDrawingHeader extends JPanel {
     /*
      * LINK (partially responsible as a status indicator, partially responsible as a button)
      */
-    linkButton = makeToolButton("link", "Link");
-    linkButton.addActionListener(new ActionListener() {
-      public void actionPerformed(ActionEvent e) {
-        System.out.println((String) ((AbstractButton)e.getSource()).getText());
-        //call editor methods to link
-      }
-    });
+    linkButton = new LinkButton();
 
     /*
      * BUTTON PANEL add everything
@@ -274,8 +289,8 @@ public class EditorDrawingHeader extends JPanel {
     buttonPanel.add(layoutSpacer);
     buttonPanel.add(codeWindowButton);
     buttonPanel.add(lockButton);
-    buttonPanel.add(zoomInButton);
-    buttonPanel.add(zoomOutButton);
+//    buttonPanel.add(zoomInButton); //temporarily removing these because it feels less important
+//    buttonPanel.add(zoomOutButton); //and our toolbar is getting too long
     buttonPanel.add(linkButton);
     buttonPanel.add(layoutSpacerJr);
 
@@ -329,8 +344,12 @@ public class EditorDrawingHeader extends JPanel {
   }
 
   private void updateCodeWindowButton() {
-    System.out.println("drawingArea.isCodeWindowOpenOnSelected()"+drawingArea.isCodeWindowOpenOnSelected());
+//    System.out.println("editorDrawingHeader >> isCodeWindowOpenOnSelected() "+drawingArea.isCodeWindowOpenOnSelected());
       codeWindowButton.setSelected(drawingArea.isCodeWindowOpenOnSelected());
+  }
+  
+  public LinkButton getLinkButton() {
+    return linkButton;
   }
 
   /**
@@ -382,7 +401,8 @@ public class EditorDrawingHeader extends JPanel {
   }
   
   /**
-   * Shortcut method to make our uniform type of toggle buttons.
+   * Shortcut method to make our uniform type of toggle buttons,
+   * used for TEXT, ZOOM_IN, and ZOOM_OUT buttons.
    * @param name, tool tip
    * @return
    */
@@ -399,6 +419,78 @@ public class EditorDrawingHeader extends JPanel {
     bob.setMargin(new Insets(0,0,0,0));
     bob.setContentAreaFilled(false);
     return bob;
+  }
+  
+  protected class LinkButton extends JButton {
+    
+    private Icon[][] icons = {
+        {Base.getImageIcon("graph-inact-link.gif", this), Base.getImageIcon("graph-inact-unlink.gif", this)},
+        {Base.getImageIcon("graph-rollo-link.gif", this), Base.getImageIcon("graph-rollo-unlink.gif", this)},
+        {Base.getImageIcon("graph-activ-link.gif", this), Base.getImageIcon("graph-activ-unlink.gif", this)}
+    };
+    
+    public LinkButton() {
+      super();
+      setLinkMode();
+      setBorder(null); //this ensures proper spacing between buttons (lord knows why)
+//      setBorder(new LineBorder(Color.cyan, 1));
+      setBorderPainted(false);
+      addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          System.out.println("link >> "+((AbstractButton)e.getSource()).getModel().getActionCommand()+" button pressed");
+          String command = ((AbstractButton)e.getSource()).getModel().getActionCommand();
+          if (command.equals("link")) {
+            drawingArea.editor.linkAction();
+          }
+          else if (command.equals("unlink")) {
+            drawingArea.editor.disconnectAction();
+          }
+    }});
+    }
+    
+    public boolean isLinkActiveMode() {
+      return (getActionCommand()).equals("linkActive");
+    }
+    
+    /**
+     * Switches to regular Link button
+     */
+    public void setLinkMode() {
+      setIcon(icons[0][0]);
+      setRolloverIcon(icons[1][0]);
+      setPressedIcon(icons[2][0]);
+      setActionCommand("link");
+      setEnabled(true);
+    }
+    
+    /**
+     * Switches to regular Disconnect
+     */
+    public void setUnlinkMode() {
+      setIcon(icons[0][1]);
+      setRolloverIcon(icons[1][1]);
+      setPressedIcon(icons[2][1]);
+      setActionCommand("unlink");
+      setEnabled(true);
+    }
+    
+    /**
+     * Switches to a non-clickable "linking..." status indicator
+     */
+    public void setLinkActiveMode() {
+     setDisabledIcon(icons[2][0]);
+     setActionCommand("linkActive");
+     setEnabled(false);
+    }
+    
+    /**
+     * Switches to a non-clickable "disconnecting..." status indicator
+     */
+    public void setUnlinkActiveMode() {
+     setDisabledIcon(icons[2][1]);
+     setActionCommand("unlinkActive");
+     setEnabled(false);
+    }
   }
 
   /**

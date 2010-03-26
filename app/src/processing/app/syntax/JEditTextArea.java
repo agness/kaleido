@@ -17,6 +17,11 @@ import javax.swing.event.*;
 import javax.swing.text.*;
 import javax.swing.undo.*;
 import javax.swing.*;
+
+import com.mxgraph.util.mxEventObject;
+import com.mxgraph.util.mxEventSource;
+import com.mxgraph.util.mxEventSource.mxIEventListener;
+
 import java.awt.datatransfer.*;
 import java.awt.event.*;
 import java.awt.*;
@@ -25,6 +30,7 @@ import java.util.Vector;
 import java.awt.im.InputMethodRequests;
 
 import processing.app.syntax.im.InputMethodSupport;
+import processing.app.util.kEvent;
 
 /**
  * jEdit's text area component. It is more suited for editing program
@@ -66,14 +72,10 @@ public class JEditTextArea extends JComponent
   public static String LEFT_OF_SCROLLBAR = "los";
 
   /**
-   * Creates a new JEditTextArea with the default settings.
+   * Implement mxEvent system so textarea can fire events as well.
+   * @author achang
    */
-  /*
-  public JEditTextArea()
-  {
-    this(TextAreaDefaults.getDefaults());
-  }
-  */
+  mxEventSource eventSource = new mxEventSource(this);
 
   /**
    * Creates a new JEditTextArea with the specified settings.
@@ -1149,34 +1151,32 @@ public class JEditTextArea extends JComponent
     // If the new position is the same as the old, we don't
     // do all this crap, however we still do the stuff at
     // the end (clearing magic position, scrolling)
-    if(newStart != selectionStart || newEnd != selectionEnd
-       || newBias != biasLeft)
-      {
-        int newStartLine = getLineOfOffset(newStart);
-        int newEndLine = getLineOfOffset(newEnd);
+    if (newStart != selectionStart || newEnd != selectionEnd
+        || newBias != biasLeft) {
+      int newStartLine = getLineOfOffset(newStart);
+      int newEndLine = getLineOfOffset(newEnd);
 
-        if(painter.isBracketHighlightEnabled())
-          {
-            if(bracketLine != -1)
-              painter.invalidateLine(bracketLine);
-            updateBracketHighlight(end);
-            if(bracketLine != -1)
-              painter.invalidateLine(bracketLine);
-          }
-
-        painter.invalidateLineRange(selectionStartLine,selectionEndLine);
-        painter.invalidateLineRange(newStartLine,newEndLine);
-
-        document.addUndoableEdit(new CaretUndo(selectionStart,selectionEnd));
-
-        selectionStart = newStart;
-        selectionEnd = newEnd;
-        selectionStartLine = newStartLine;
-        selectionEndLine = newEndLine;
-        biasLeft = newBias;
-
-        fireCaretEvent();
+      if (painter.isBracketHighlightEnabled()) {
+        if (bracketLine != -1)
+          painter.invalidateLine(bracketLine);
+        updateBracketHighlight(end);
+        if (bracketLine != -1)
+          painter.invalidateLine(bracketLine);
       }
+
+      painter.invalidateLineRange(selectionStartLine, selectionEndLine);
+      painter.invalidateLineRange(newStartLine, newEndLine);
+
+      document.addUndoableEdit(new CaretUndo(selectionStart, selectionEnd));
+
+      selectionStart = newStart;
+      selectionEnd = newEnd;
+      selectionStartLine = newStartLine;
+      selectionEndLine = newEndLine;
+      biasLeft = newBias;
+
+      fireCaretEvent();
+    }
 
     // When the user is typing, etc, we don't want the caret
     // to blink
@@ -1601,19 +1601,6 @@ public class JEditTextArea extends JComponent
       focusedComponent = null;
   }
 
-  /**
-   * Forwards key events directly to the input handler.
-   * This is slightly faster than using a KeyListener
-   * because some Swing overhead is avoided.
-   */
-  public TextAreaListener editorListener;
-
-  /**
-   * The component that tracks the current line number.
-   */
-  public EditorLineStatus editorLineStatus;
-
-
   public void processKeyEvent(KeyEvent evt) {
     // this had to be added in Processing 007X, because the menu key
     // events weren't making it up to the frame.
@@ -1639,7 +1626,69 @@ public class JEditTextArea extends JComponent
       break;
     }
   }
+  
+  /*
+   * Redirected to event source
+   * @author achang
+   */
 
+  /**
+   * @return Returns true if event dispatching is enabled in the event source.
+   * @see com.mxgraph.util.mxEventSource#isEventsEnabled()
+   */
+  public boolean isEventsEnabled() {
+    return eventSource.isEventsEnabled();
+  }
+
+  /**
+   * @param eventsEnabled
+   * @see com.mxgraph.util.mxEventSource#setEventsEnabled(boolean)
+   */
+  public void setEventsEnabled(boolean eventsEnabled) {
+    eventSource.setEventsEnabled(eventsEnabled);
+  }
+
+  /**
+   * @param eventName
+   * @param listener
+   * @see com.mxgraph.util.mxEventSource#addListener(java.lang.String,
+   *      com.mxgraph.util.mxEventSource.mxIEventListener)
+   */
+  public void addListener(String eventName, mxIEventListener listener) {
+    eventSource.addListener(eventName, listener);
+  }
+
+  /**
+   * @param listener
+   *          Listener instance.
+   */
+  public void removeListener(mxIEventListener listener) {
+    eventSource.removeListener(listener);
+  }
+
+  /**
+   * @param eventName
+   *          Name of the event.
+   * @param listener
+   *          Listener instance.
+   */
+  public void removeListener(mxIEventListener listener, String eventName) {
+    eventSource.removeListener(listener, eventName);
+  }
+
+
+  /**
+   * Forwards key events directly to the input handler.
+   * This is slightly faster than using a KeyListener
+   * because some Swing overhead is avoided.
+   */
+  public TextAreaListener editorListener;
+
+  /**
+   * The component that tracks the current line number.
+   */
+  public EditorLineStatus editorLineStatus;
+  
   // protected members
   protected static String CENTER = "center";
   protected static String RIGHT = "right";
@@ -2047,6 +2096,18 @@ public class JEditTextArea extends JComponent
 
   class MouseHandler extends MouseAdapter
   {
+    /**
+     * For Kaleido, to detect when selections finish
+     * @author achang
+     */
+    public void mouseReleased(MouseEvent evt) {
+      int newStart = getMarkPosition();
+      int newEnd = xyToOffset(evt.getX(),evt.getY()); //using implementation from mouseDragged
+      System.out.println("JEditTextArea >> mouseReleased >> fire kEvent.TEXT_SELECTED newStart="+newStart+" newEnd="+newEnd);
+      eventSource.fireEvent(new mxEventObject(kEvent.TEXT_SELECTED,
+                                              "newStart", newStart, "newEnd", newEnd));
+    }
+    
     public void mousePressed(MouseEvent evt)
     {
       requestFocus();

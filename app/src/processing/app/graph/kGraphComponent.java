@@ -122,7 +122,7 @@ public class kGraphComponent extends mxGraphComponent {
     
     //Override this so draw better cell markers 
     //(which occur onMouseOver not select)
-    System.out.println("kGComp >> setMarker new CellMarker");
+//    System.out.println("kGComp >> setMarker new CellMarker");
     getConnectionHandler().setMarker(new mxCellMarker(this, DEFAULT_VALID_COLOR, DEFAULT_INVALID_COLOR) {
       /**
        * TODO make a prettier marker with color sourced to theme.text
@@ -136,7 +136,7 @@ public class kGraphComponent extends mxGraphComponent {
         {
           ((Graphics2D) g).setStroke(new BasicStroke(2));
           g.setColor(currentColor);
-          System.out.println("cellMarker >> paint.currentColor = "+currentColor);
+//          System.out.println("cellMarker >> paint.currentColor = "+currentColor);
 
           if (markedState.getAbsolutePointCount() > 0)
           {
@@ -296,7 +296,7 @@ public class kGraphComponent extends mxGraphComponent {
    */
   protected mxConnectionHandler createConnectionHandler()
   {
-    System.out.println("kGComp >> new mxConnectionHandler");
+//    System.out.println("kGComp >> new mxConnectionHandler");
     mxConnectionHandler c = new mxConnectionHandler(this) {
       /**
        * PREVIEW is the component that draws the dotted line that 
@@ -426,11 +426,11 @@ public class kGraphComponent extends mxGraphComponent {
    */
   public mxCellHandler createHandler(mxCellState state)
   {
-    System.out.println("kGComp >> createHandler");
+//    System.out.println("kGComp >> createHandler");
     
     if (graph.getModel().isVertex(state.getCell()))
     {
-      System.out.println("kGComp >> new mxVertexHandler");
+//      System.out.println("kGComp >> new mxVertexHandler");
       return new mxVertexHandler(this, state) {
         protected Color getSelectionColor()
         {
@@ -463,7 +463,7 @@ public class kGraphComponent extends mxGraphComponent {
           || style == mxEdgeStyle.SideToSide
           || style == mxEdgeStyle.TopToBottom)
       {
-        System.out.println("kGcomp >> new mxElbowEdgeHandler");
+//        System.out.println("kGcomp >> new mxElbowEdgeHandler");
         return new mxElbowEdgeHandler(this, state) {
           protected Color getSelectionColor()
           {
@@ -499,25 +499,25 @@ public class kGraphComponent extends mxGraphComponent {
         };
       }
 
-      System.out.println("kGcomp >> new mxEdgeHandler");
+//      System.out.println("kGcomp >> new mxEdgeHandler");
       return new mxEdgeHandler(this, state) {
         protected Color getSelectionColor()
         {
-          System.out.println("mxEdgeHandler >> getSelectioColor");
+//          System.out.println("mxEdgeHandler >> getSelectioColor");
           return EDGE_SELECTION_COLOR;
         }
         protected Stroke getSelectionStroke()
         {
-          System.out.println("mxEdgeHandler >> getSelectionStroke");
+//          System.out.println("mxEdgeHandler >> getSelectionStroke");
           return EDGE_SELECTION_STROKE;
         }
         protected Color getHandleBorderColor(int index)
         {
-          System.out.println("mxEdgeHandler >> getHandleBorderColor");
+//          System.out.println("mxEdgeHandler >> getHandleBorderColor");
           return HANDLE_BORDERCOLOR;
         }
         protected Color getHandleFillColor(int index) {
-          System.out.println("mxEdgeHandler >> getHandleFillColor");
+//          System.out.println("mxEdgeHandler >> getHandleFillColor");
           
           boolean source = isSource(index);
 
@@ -544,7 +544,7 @@ public class kGraphComponent extends mxGraphComponent {
          */
         protected JComponent createPreview()
         {
-          System.out.println("kGcomp >> mxEdgeHandler >> createPreview");
+//          System.out.println("kGcomp >> mxEdgeHandler >> createPreview");
           JPanel preview = new JPanel()
           {
             private static final long serialVersionUID = -894546588972313020L;
@@ -552,7 +552,7 @@ public class kGraphComponent extends mxGraphComponent {
             {
               super.paint(g);
 
-              System.out.println("mxEdgeHandler >> preview.paint");
+//              System.out.println("mxEdgeHandler >> preview.paint");
               
               if (!isLabel(index) && p != null)
               {
@@ -564,12 +564,12 @@ public class kGraphComponent extends mxGraphComponent {
                       || graphComponent.getGraph()
                           .isAllowDanglingEdges())
                   {
-                    System.out.println("mxEdgeHandler >> preview.paint >> marker.hasValidState");
+//                    System.out.println("mxEdgeHandler >> preview.paint >> marker.hasValidState");
                     g.setColor(DEFAULT_VALID_COLOR);
                   }
                   else
                   {
-                    System.out.println("mxEdgeHandler >> preview.paint >> marker.hasINVALIDState");
+//                    System.out.println("mxEdgeHandler >> preview.paint >> marker.hasINVALIDState");
                     g.setColor(DEFAULT_INVALID_COLOR);
                   }
                 }
@@ -604,7 +604,7 @@ public class kGraphComponent extends mxGraphComponent {
       };
     }
 
-    System.out.println("kGComp >> new mxCellHandler");
+//    System.out.println("kGComp >> new mxCellHandler");
     return new mxCellHandler(this, state) {
       protected Color getHandleFillColor(int index)
       {

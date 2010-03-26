@@ -98,15 +98,19 @@ public class kCellValue implements Serializable {
     startMark = startMark + offset;
     stopMark = stopMark + offset;
   }
-  public void setCodeMark(int start, int stop) {
+  public void setCodeMark(int start, int stop, int ind) {
     setStartMark(start);
     setStopMark(stop);
+    setCodeIndex(ind);
   }
   public boolean hasValidCodeMarks() {
     return (isValidCodeIndex() && (startMark != -1) && (stopMark != -1));
   }
   public boolean isValidCodeIndex() {
     return (codeIndex >= 0);
+  }
+  public void invalidateCodeMarks() {
+    setCodeMark(-1,-1,-1);
   }
   public String toPrettyString() {
     String s = "['"+label+"', '"+notes+"', "+codeIndex+", "+startMark+", "+stopMark+"]";

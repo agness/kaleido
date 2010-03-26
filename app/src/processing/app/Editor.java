@@ -23,8 +23,12 @@
 package processing.app;
 
 import processing.app.debug.*;
+import processing.app.graph.kCellValue;
 import processing.app.syntax.*;
 import processing.app.tools.*;
+import processing.app.util.kConstants;
+import processing.app.util.kEvent;
+import processing.app.util.kUtils;
 import processing.core.*;
 
 import java.awt.*;
@@ -41,7 +45,18 @@ import javax.swing.event.*;
 import javax.swing.text.*;
 import javax.swing.undo.*;
 
+import org.w3c.dom.Document;
+
+import com.mxgraph.io.mxCodec;
+import com.mxgraph.model.mxCell;
 import com.mxgraph.model.mxGraphModel;
+import com.mxgraph.model.mxICell;
+import com.mxgraph.util.mxEvent;
+import com.mxgraph.util.mxEventObject;
+import com.mxgraph.util.mxUtils;
+import com.mxgraph.util.mxEventSource.mxIEventListener;
+import com.mxgraph.view.mxGraph;
+import com.mxgraph.view.mxGraphSelectionModel;
 
 /**
  * Main editor panel for the Processing Development Environment.
@@ -112,13 +127,12 @@ public class Editor extends JFrame implements RunnerListener {
   public static final PdeKeywords pdeTokenMarker = new PdeKeywords();
 
   // graph-side object & swing component
-  mxGraphModel drawing;
   EditorDrawingHeader drawingHeader;
   DrawingArea drawarea;
   
   // event handling
   TextAreaListener listener;
-
+  
   // runtime information and window placement
   Point sketchWindowLocation;
   Runner runtime;
@@ -200,10 +214,7 @@ public class Editor extends JFrame implements RunnerListener {
     
     
     // DRAWEDITOR BOX holds the draw tool bar and draw area
-    drawing = new mxGraphModel();
-    //TODO ^--- a plain mxGraphModel... all the codewindow stuff is handled by the DrawingArea
-    //ultimately though, editor might not need access to the graphModel at all
-    drawarea = new DrawingArea(drawing);
+    drawarea = new DrawingArea(this);
     drawingHeader = new EditorDrawingHeader(drawarea);
     Box drawEditorBox = Box.createVerticalBox();
     drawEditorBox.add(drawingHeader);
@@ -273,6 +284,7 @@ public class Editor extends JFrame implements RunnerListener {
     // hopefully these are no longer needed w/ swing
     // (har har har.. that was wishful thinking)
     listener = new TextAreaListener(this, textarea);
+    setupCodeDrawLinkListeners();
 
     
     // SET KEY/MOUSE/WHATEVER LISTENERS
@@ -1979,9 +1991,42 @@ public class Editor extends JFrame implements RunnerListener {
       Base.showWarning("Error", "Could not create the sketch.", e);
       return false;
     }
+    
+    // Once sketch is made, if a graph file exists in the sketch folder, try to open it
+    if (new File(sketch.getFolder() + "/" + getGraphFileName()).exists()) {
+      try {
+        String filepath = sketch.getFolder() + "/" + getGraphFileName();
+        Document document = mxUtils.parse(mxUtils.readFile(filepath));
+        mxCodec codec = new mxCodec(document);
+        mxGraph graph = drawarea.getGraphComponent().getGraph();//just a shorthand
+        codec.decode(document.getDocumentElement(), graph.getModel());
+        
+        //TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST
+        //Once graph is loaded, traverse graph model and file mide blocks into mideBlockRegistry
+        //but probably don't need to do this if we make mideBlockRegistry obselete
+        Object[] cells = mxGraphModel.getDescendants(graph.getModel(), graph.getDefaultParent()).toArray();
+        System.out.println("Editor >> loading graph elements >> "+cells.length);
+//        for (int i=0; i < cells.length; i++)
+//        {
+//          if ((cells[i] instanceof mxCell) 
+//              && (((mxCell) cells[i]).getValue() instanceof kCellValue) 
+//              && (((kCellValue) ((mxCell) cells[i]).getValue()).hasValidCodeMarks()))
+//          {
+//              drawarea.kCellRegistry.add(cells[i]);
+////            System.out.println(((MGraphElementValue) ((mxCell) cells[i]).getValue()).toPrettyString());
+//          }
+//        }
+        //TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST
+        
+      } catch (IOException e) {
+        Base.showWarning("Error", "Could not create the graph.", e);
+        // Don't return false in this case, because it's okay to open Processing projects that don't have a graph yet.
+      }
+    }
+    
+    // Repaint the UI stuff
     textHeader.rebuild();
-    // Set the title of the window to "sketch_070752a - Processing 0126"
-    setTitle(sketch.getName() + " | Processing " + Base.VERSION_NAME);
+    updateTitle();
     // Disable untitled setting from previous document, if any
     untitled = false;
 
@@ -2000,6 +2045,27 @@ public class Editor extends JFrame implements RunnerListener {
 //    }
   }
 
+  /**
+   * Updates the file name in the title bar.  If file has been modified, show
+   * asterisk (and on mac show dot in the window's close button).
+   * Sets the title of the window to "sketch_070752a | Processing 0126 | Kaleido 001"
+   * @author achang
+   */
+  public void updateTitle() {
+    String name = " | Processing " + Base.VERSION_NAME + " | Kaleido " + kConstants.VERSION_NAME;
+    if (drawarea.isModified() || sketch.isModified()) 
+    {
+      setTitle(sketch.getName() + "*" + name);
+      if (Base.isMacOS()) // http://developer.apple.com/qa/qa2001/qa1146.html
+        getRootPane().putClientProperty("windowModified", Boolean.TRUE);
+    } 
+    else
+    {
+      setTitle(sketch.getName() + name);
+      if (Base.isMacOS()) // http://developer.apple.com/qa/qa2001/qa1146.html
+        getRootPane().putClientProperty("windowModified", Boolean.FALSE);
+    }
+  }
 
   /**
    * Actually handle the save command. If 'immediately' is set to false,
@@ -2037,6 +2103,9 @@ public class Editor extends JFrame implements RunnerListener {
     statusNotice("Saving...");
     try {
       if (sketch.save()) {
+        // If sketch saved successfully, then get the pde folderpath and save the graph file inside.
+        writeGraphToFile();
+//        undoManager.resetCounter();//TODO
         statusNotice("Done Saving.");
       } else {
         statusEmpty();
@@ -2073,6 +2142,9 @@ public class Editor extends JFrame implements RunnerListener {
     statusNotice("Saving...");
     try {
       if (sketch.saveAs()) {
+        // If sketch saved successfully, then get the pde folderpath and save the graph file inside.
+        writeGraphToFile();
+//        undoManager.resetCounter();TODO
         statusNotice("Done Saving.");
         // Disabling this for 0125, instead rebuild the menu inside
         // the Save As method of the Sketch object, since that's the
@@ -2094,7 +2166,30 @@ public class Editor extends JFrame implements RunnerListener {
     return true;
   }
 
+  
+  /**
+   * Returns the expected name of the graph file in a Processing project folder
+   * @author achang
+   */
+  private String getGraphFileName()
+  {
+    return sketch.getName()+"_graph.xml";
+  }
 
+  /**
+   * Saves the graph as an XML file with the file name specified in
+   * getGraphFileName();
+   * @author achang
+   */
+  private void writeGraphToFile() throws IOException {
+    String filepath = sketch.getFolder() + "/" + getGraphFileName();
+    mxCodec codec = new mxCodec();
+    String xml = mxUtils.getXml(codec.encode(drawarea.getGraphComponent().getGraph().getModel()));
+    mxUtils.writeFile(xml, filepath);
+    System.out.println("Editor >> wrote graph to file");
+  }
+  
+  
   /**
    * Called by Sketch &rarr; Export.
    * Handles calling the export() function on sketch, and
@@ -2448,5 +2543,148 @@ public class Editor extends JFrame implements RunnerListener {
       }
       super.show(component, x, y);
     }
+  }
+  
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+  public void setupCodeDrawLinkListeners() {
+    // CASE 1
+    drawarea.addListener(kEvent.TOOL_END, new mxIEventListener() {
+      public void invoke(Object source, mxEventObject evt) {
+        if (drawingHeader.getLinkButton().isLinkActiveMode() && (Boolean) evt.getProperty("success")) {
+          System.out.println("link >> link active and shape successful, so connect them");
+          codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
+        }
+        // if linkButton.isSelected&&vertexTool was successful, then
+        // connect(text.sel, graph.sel) this works b/c newly created
+        // vertex is always the graph current selection
+      }
+    });
+    // CASE 1
+    drawarea.addListener(kEvent.TOOL_BEGIN, new mxIEventListener() {
+      public void invoke(Object source, mxEventObject evt) {
+        String toolMode = (String) evt.getProperty("tool");
+        if (kUtils.stringLinearSearch(kConstants.SHAPE_KEYS, toolMode) >= 0
+            && textarea.getSelectedText() != null) {
+          //user select some text and clicks to create a new shape
+          System.out.println("link >> user selected text and now to create new shape so set link button active");
+          drawingHeader.getLinkButton().setLinkActiveMode();
+          // beginCompoundEdit();
+        }
+      }
+    });
+    // CASE 2 & 4
+    drawarea.getGraphComponent().getGraph().getSelectionModel()
+        .addListener(mxEvent.CHANGE, new mxIEventListener() {
+          public void invoke(Object sender, mxEventObject evt) {
+            
+            // CASE 2
+            if (drawingHeader.getLinkButton().isLinkActiveMode() && textarea.getSelectedText() != null) {
+              //user has selected some text and clicked the link button, and now selected the cells
+              System.out.println("link >> link active, text selected, now graph selected");
+              codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
+              
+            // CASE 4  
+            } else if (drawarea.selectionHasLink()) {
+              System.out.println("link >> graph selection has link, changing buttons");
+              drawingHeader.getLinkButton().setUnlinkMode();
+            } else //includes cases where selection is null
+            {
+              System.out.println("link >> graph selection doesn't have link");
+              drawingHeader.getLinkButton().setLinkMode();
+            }
+          }
+        });
+    // CASE 3
+    textarea.addListener(kEvent.TEXT_SELECTED, new mxIEventListener() {
+      public void invoke(Object sender, mxEventObject evt) {
+
+        if (drawingHeader.getLinkButton().isLinkActiveMode() && drawarea.getGraphComponent().getGraph().getSelectionCount() > 0) {
+          //user has selected some cells and clicked the link button, and now selected text
+          System.out.println("link >> link active, cells selected, now text selected");
+          //if user only clicked somewhere and didn't select an area of text, reset the link tool
+          if (((Integer) evt.getProperty("newStart")).equals((Integer) evt.getProperty("newEnd")))
+          {
+            System.out.println("link >> didn't properly select body of text");
+            statusNotice("Code-visual link canceled.");
+            drawingHeader.getLinkButton().setLinkMode();
+          }
+          else
+            codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
+        }
+      }
+    });
+    // CASE 2 & 3
+    addKeyListener(new KeyAdapter() {
+      public void keyPressed(KeyEvent e) {
+        // if while in linking mode user hits escape, cancel out of it
+        if (drawingHeader.getLinkButton().isLinkActiveMode() && e.getKeyCode() == KeyEvent.VK_ESCAPE)
+          System.out.println("link >> user hit escape, cancelling link active mode");
+          drawingHeader.getLinkButton().setLinkMode();
+      }
+    });
+  }
+  
+  //CASE 2 & 3
+  /**
+   * Called directly by the linkButton on click in connect mode
+   */
+  public void linkAction() {
+    System.out.println("link >> linkAction >> isFocusOwner textarea=" + textarea.isFocusOwner()
+                       + " drawarea=" + drawarea.isFocusOwner() + " drawingheader="+ drawingHeader.isFocusOwner());
+    //actually textarea would be the previous focus owner, the current focus owner would be drawingHeader
+    if (textarea.getSelectedText() != null) {
+      // since I can't enable/disable the listeners, i'll jsut ahve them act
+      // only when linkbutton is in some sort of active mode
+      System.out.println("link >> only text is selected and link button clicked, so set active mode");
+      drawingHeader.getLinkButton().setLinkActiveMode();
+    } else if (drawarea.getGraphComponent().getGraph().getSelectionCount() > 0) {
+      // enable graphSelection change listener on action performed codeDrawLink
+      drawingHeader.getLinkButton().setLinkActiveMode();
+      System.out.println("link >> only cell is selected and link button clicked, so set active mode");
+    }
+  }
+  
+  //CASE 4
+  /**
+   * Called directly by the linkButton on click in disconnect mode
+   */
+  public void disconnectAction() {
+    System.out.println("link >> disconnect action (disconnecting directly)");
+    //since we only have one case to handle we can just call the disconnector...
+    codeDrawDisconnect(drawarea.getGraphComponent().getGraph().getSelectionCells());
+  }
+
+  /**
+   * Makes actual model level changes by saving given codemarks into all
+   * selected codemark-bearing cells
+   */
+  private void codeDrawLink(Object[] cells, int start, int stop) {
+    System.out.println("editor >> codeDrawLink start=" + start + " stop="
+                       + stop);
+    for (int i = 0; i < cells.length; i++)
+      if (cells[i] instanceof mxICell
+          && ((mxICell) cells[i]).getValue() instanceof kCellValue)
+        ((kCellValue) ((mxICell) cells[i]).getValue()).setCodeMark(start, stop, sketch.getCurrentCodeIndex());
+    drawingHeader.getLinkButton().setLinkMode();
+    drawarea.getGraphComponent().repaint();
+    statusNotice("Code-visual link established."); //TODO figure out when to empty the status
+  }
+  
+  /**
+   * Makes actual model level disconnection by invalidating codemarks of all
+   * selected cells that have codemarks
+   */
+  private void codeDrawDisconnect(Object[] cells) {
+    System.out.println("editor >> codeDrawDisconnect cells.length="
+                       + cells.length);
+    for (int i = 0; i < cells.length; i++)
+      if (cells[i] instanceof mxICell
+          && ((mxICell) cells[i]).getValue() instanceof kCellValue)
+        ((kCellValue) ((mxICell) cells[i]).getValue()).invalidateCodeMarks();
+    drawingHeader.getLinkButton().setLinkMode();
+    drawarea.getGraphComponent().repaint();
+    statusNotice("Code-visual link disconnected.");
   }
 }

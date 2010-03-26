@@ -642,6 +642,7 @@ public class Sketch {
       }
     }
     editor.textHeader.repaint();
+    editor.updateTitle(); //by achang for Kaleido
 
     if (Base.isMacOS()) {
       // http://developer.apple.com/qa/qa2001/qa1146.html
@@ -3004,6 +3005,15 @@ public class Sketch {
 
   public SketchCode getCurrentCode() {
     return current;
+  }
+  
+  
+  /**
+   * Shortcut method equivalent to sketch.getCodeIndex(getCurrentCode())
+   * @author achang
+   */
+  public int getCurrentCodeIndex() {
+    return getCodeIndex(getCurrentCode());
   }
 
 

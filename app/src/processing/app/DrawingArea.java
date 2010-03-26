@@ -40,6 +40,7 @@ import com.mxgraph.util.mxUtils;
 import com.mxgraph.util.mxEventSource.mxIEventListener;
 import com.mxgraph.view.mxCellState;
 import com.mxgraph.view.mxGraph;
+import com.mxgraph.view.mxGraphSelectionModel;
 
 /**
  * The Kaleido drawing JComponent, which is a desktop pane that contains the
@@ -165,14 +166,24 @@ public class DrawingArea extends JDesktopPane {
     try {
       Object v1 = graph.insertVertex(parent, null, new kCellValue("superstar",
           "VCR"), 20, 20, 80, 30);
-      Object v2 = graph.insertVertex(parent, null, "Hello world!", 240, 150,
+      Object v2 = graph.insertVertex(parent, null, new kCellValue("hello",
+      ""), 240, 150,
                                      80, 30);
       graph.insertEdge(parent, null, "happy edge", v1, v2);
     } finally {
       graph.getModel().endUpdate();
     }
+    
+    graph.getSelectionModel().addListener(mxEvent.CHANGE, new mxIEventListener() {
+      public void invoke(Object sender, mxEventObject evt) {
+        Object[] cells = ((mxGraphSelectionModel) sender).getCells();
+        for (int i = 0; i < cells.length; i++)
+          if (cells[i] instanceof mxICell
+              && ((mxICell) cells[i]).getValue() instanceof kCellValue)
+            System.out.println("drawingArea >> graph selection changed: "+((kCellValue) ((mxICell) cells[i]).getValue()).toPrettyString());
+      }
+    });
   }
-
   /**
    * @deprecated
    */
@@ -265,7 +276,7 @@ public class DrawingArea extends JDesktopPane {
     graphComponent.getGraphHandler().setSelectEnabled(true);
     graphComponent.getConnectionHandler().setEnabled(true);
     setCursor(null); // clean up
-    eventSource.fireEvent(new mxEventObject(kEvent.TOOL_END, "tool", toolMode, "success", success));
+    eventSource.fireEvent(new mxEventObject(kEvent.TOOL_END, "tool", toolMode, "success", (success ? Boolean.TRUE : Boolean.FALSE)));
     toolMode = null;
     System.out.println("ENDtoolmode "+toolMode+" >> success="+success);
   }
@@ -322,9 +333,8 @@ public class DrawingArea extends JDesktopPane {
    */
   protected boolean hasValidCodeMarks(Object cell) {
     if ((cell instanceof mxCell)
-        && (((mxCell) cell).getValue() instanceof kCellValue))// TODO &&
-                                                              // (((kCellValue)
-                                                              // ((mxCell)cell).getValue()).hasValidCodeMarks()))
+        && (((mxCell) cell).getValue() instanceof kCellValue)
+        && (((kCellValue) ((mxCell)cell).getValue()).hasValidCodeMarks()))
       return true;
     else
       return false;
@@ -445,8 +455,7 @@ public class DrawingArea extends JDesktopPane {
    */
   protected boolean isCodeWindowOpen(mxICell cell) {
     if (hasValidCodeMarks(cell)) {
-      System.out
-          .println("drawingArea >> isCodeWindowOpen >> hasValidCodeMarks");
+//      System.out.println("drawingArea >> isCodeWindowOpen >> hasValidCodeMarks");
       kCodeWindow codewindow = getCodeWindow(cell.getId());
       if (codewindow != null)
         return codewindow.isVisible();
@@ -557,6 +566,34 @@ public class DrawingArea extends JDesktopPane {
       for (int i = 0; i < selected.length; i++)
         ((mxICell) selected[i]).getGeometry().setRelative(true);
     }
+  }
+  
+  /*
+   * Linking business
+   */
+  
+  /**
+   * Returns whether or not any of the selected cells is connected to code
+   */
+  public boolean selectionHasLink() {
+    Object[] selected = graphComponent.getGraph().getSelectionCells();
+    for (int i = 0; i < selected.length; i++)
+      if (hasValidCodeMarks((mxICell) selected[i]))
+        return true;
+    return false;
+  }
+  
+  /**
+   * Disconnects by invalidating codemarks of all selected cells that have codemarks
+   * @deprecated
+   */
+  public void disconnectOnSelected() {
+    System.out.println("DrawingArea >> disconnect selected");
+    Object[] selected = graphComponent.getGraph().getSelectionCells();
+    for (int i = 0; i < selected.length; i++)
+      if (selected[i] instanceof mxICell
+          && ((mxICell) selected[i]).getValue() instanceof kCellValue)
+        ((kCellValue) ((mxICell) selected[i]).getValue()).invalidateCodeMarks();
   }
 
   /*
@@ -734,7 +771,7 @@ public class DrawingArea extends JDesktopPane {
         try {
           // System.out.println("style="+style);
 
-          Object cell = graph.insertVertex(parent, null, "tool-made", rect.x,
+          Object cell = graph.insertVertex(parent, null, new kCellValue(), rect.x,
                                            rect.y, rect.width, rect.height,
                                            style);
 
@@ -921,6 +958,7 @@ public class DrawingArea extends JDesktopPane {
               rect.y + rect.height), false);
           geometry.setRelative(true);
           // TODO this geometry gets bad if I drag from right to left
+          // TODO also implement constricted dragging with shift-key
 
           mxCell cell = new mxCell(value, geometry, style);
           cell.setEdge(true);
