@@ -16,6 +16,7 @@ import java.util.List;
 
 import javax.swing.JDesktopPane;
 import javax.swing.JInternalFrame;
+import javax.swing.text.BadLocationException;
 
 import processing.app.graph.kCellValue;
 import processing.app.graph.kCodeWindow;
@@ -27,6 +28,7 @@ import processing.app.util.kUtils;
 
 import com.mxgraph.model.mxCell;
 import com.mxgraph.model.mxGeometry;
+import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
 import com.mxgraph.swing.mxGraphComponent;
 import com.mxgraph.swing.mxGraphOutline;
@@ -173,7 +175,7 @@ public class DrawingArea extends JDesktopPane {
     } finally {
       graph.getModel().endUpdate();
     }
-    
+
     graph.getSelectionModel().addListener(mxEvent.CHANGE, new mxIEventListener() {
       public void invoke(Object sender, mxEventObject evt) {
         Object[] cells = ((mxGraphSelectionModel) sender).getCells();
@@ -584,16 +586,30 @@ public class DrawingArea extends JDesktopPane {
   }
   
   /**
-   * Disconnects by invalidating codemarks of all selected cells that have codemarks
-   * @deprecated
+   * Selects all cells that have codemarks that intersect with the specified
+   * code range of the given code index.
    */
-  public void disconnectOnSelected() {
-    System.out.println("DrawingArea >> disconnect selected");
-    Object[] selected = graphComponent.getGraph().getSelectionCells();
-    for (int i = 0; i < selected.length; i++)
-      if (selected[i] instanceof mxICell
-          && ((mxICell) selected[i]).getValue() instanceof kCellValue)
-        ((kCellValue) ((mxICell) selected[i]).getValue()).invalidateCodeMarks();
+  public void selectCodeIntersection(int start, int stop, int ind) {
+    graphComponent.getGraph().getSelectionModel().clear();
+    Object[] cells = mxGraphModel.getChildren(graphComponent.getGraph()
+        .getModel(), graphComponent.getGraph().getDefaultParent());
+    System.out.println("drawArea >> selectCodeIntersection allCells.length="
+                       + cells.length + " start=" + start + " stop=" + stop);
+    for (int i = 0; i < cells.length; i++)
+      if (cells[i] instanceof mxICell
+          && ((mxICell) cells[i]).getValue() instanceof kCellValue) {
+        kCellValue val = ((kCellValue) ((mxICell) cells[i]).getValue());
+        System.out.println("drawArea >> selectCodeIntersection val="
+                           + val.toPrettyString());
+        if (val.hasValidCodeMarks()
+            && val.getCodeIndex() == ind
+            && ((start > val.getStartMark() && start < val.getStopMark()) || (stop > val
+                .getStartMark() && stop < val.getStopMark())))
+          graphComponent.getGraph().getSelectionModel().addCell(cells[i]);
+      }
+    System.out
+        .println("drawArea >> selectCodeIntersection selectionCells.length="
+                 + graphComponent.getGraph().getSelectionCount());
   }
 
   /*

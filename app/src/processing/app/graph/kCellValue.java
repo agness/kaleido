@@ -28,12 +28,12 @@ public class kCellValue implements Serializable {
   private int codeIndex;
   /**
    * The document character index that marks the beginning of the code section
-   * that this cell refers to.
+   * that this cell refers to.  This number is always less than stopMark.
    */
   private int startMark;
   /**
    * The document character index that marks the end of the code section
-   * that this cell refers to.
+   * that this cell refers to.  This number is always greater than or equal to stopMark.
    */
   private int stopMark;
   
@@ -85,10 +85,18 @@ public class kCellValue implements Serializable {
     return stopMark;
   }
   public void setStartMark(int start) {
-    startMark = start;
+    if (startMark != -1 && start > stopMark) { //then turn it around
+      startMark = stopMark;
+      stopMark = start;
+    } else //like normal
+      startMark = start;
   }
   public void setStopMark(int stop) {
-    stopMark = stop;
+    if (stopMark != -1 && stop < startMark) { //then turn it around
+      stopMark = startMark;   
+      startMark = stop;   
+    } else //like normal
+      stopMark = stop;  
   }
   
    /*

@@ -107,9 +107,10 @@ public class EditorDrawingHeader extends JPanel {
             if (model.isEmpty()) {
               codeWindowButton.setEnabled(false);
               lockButton.setEnabled(false);
-              if (drawingArea.editor.getSelectedText() == null) //TODO probably refactor this into editor
-                linkButton.setEnabled(false); //there should be a chunk of editor that handles all the link stuff
-              //and pretends that the link button actually lives in editor
+              if (drawingArea.editor.getSelectedText() == null) {
+                System.out.println("DrawingHeader >> selected text == null so disabling linkbutton");
+                linkButton.setEnabled(false); //TODO something else is reenabling it right after we disable it
+              }
             } else {
               codeWindowButton.setEnabled(true);
               lockButton.setEnabled(true);
@@ -459,6 +460,7 @@ public class EditorDrawingHeader extends JPanel {
       setIcon(icons[0][0]);
       setRolloverIcon(icons[1][0]);
       setPressedIcon(icons[2][0]);
+      setDisabledIcon(null); //attempt at reset
       setActionCommand("link");
       setEnabled(true);
     }
@@ -470,6 +472,7 @@ public class EditorDrawingHeader extends JPanel {
       setIcon(icons[0][1]);
       setRolloverIcon(icons[1][1]);
       setPressedIcon(icons[2][1]);
+      setDisabledIcon(null); //attempt at reset
       setActionCommand("unlink");
       setEnabled(true);
     }

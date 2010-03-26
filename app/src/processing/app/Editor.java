@@ -284,7 +284,8 @@ public class Editor extends JFrame implements RunnerListener {
     // hopefully these are no longer needed w/ swing
     // (har har har.. that was wishful thinking)
     listener = new TextAreaListener(this, textarea);
-    setupCodeDrawLinkListeners();
+    installCodeDrawLinkListeners();
+    installSelectionSyncListeners();
 
     
     // SET KEY/MOUSE/WHATEVER LISTENERS
@@ -293,13 +294,10 @@ public class Editor extends JFrame implements RunnerListener {
 
     
     // SET TRANSFER HANDLERS
-//    pain.setTransferHandler(new FileDropHandler());
+//    textarea.setTransferHandler(new FileDropHandler()); //TODO needs testing
 
 
     // ADD TO THIS JFRAME
-//    JPanel contentPane = new JPanel(new BorderLayout());
-//    contentPane.add(editConsoleSplitPane, BorderLayout.CENTER);
-//    setContentPane(contentPane);
     setContentPane(editConsoleSplitPane);
     pack();
     // Set the window bounds and the divider location before setting it visible
@@ -1987,6 +1985,7 @@ public class Editor extends JFrame implements RunnerListener {
 
     try {
       sketch = new Sketch(this, path);
+      helloWorld();
     } catch (IOException e) {
       Base.showWarning("Error", "Could not create the sketch.", e);
       return false;
@@ -2000,23 +1999,6 @@ public class Editor extends JFrame implements RunnerListener {
         mxCodec codec = new mxCodec(document);
         mxGraph graph = drawarea.getGraphComponent().getGraph();//just a shorthand
         codec.decode(document.getDocumentElement(), graph.getModel());
-        
-        //TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST
-        //Once graph is loaded, traverse graph model and file mide blocks into mideBlockRegistry
-        //but probably don't need to do this if we make mideBlockRegistry obselete
-        Object[] cells = mxGraphModel.getDescendants(graph.getModel(), graph.getDefaultParent()).toArray();
-        System.out.println("Editor >> loading graph elements >> "+cells.length);
-//        for (int i=0; i < cells.length; i++)
-//        {
-//          if ((cells[i] instanceof mxCell) 
-//              && (((mxCell) cells[i]).getValue() instanceof kCellValue) 
-//              && (((kCellValue) ((mxCell) cells[i]).getValue()).hasValidCodeMarks()))
-//          {
-//              drawarea.kCellRegistry.add(cells[i]);
-////            System.out.println(((MGraphElementValue) ((mxCell) cells[i]).getValue()).toPrettyString());
-//          }
-//        }
-        //TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST
         
       } catch (IOException e) {
         Base.showWarning("Error", "Could not create the graph.", e);
@@ -2043,6 +2025,25 @@ public class Editor extends JFrame implements RunnerListener {
 //      statusError(e);
 //      return false;
 //    }
+  }
+
+  /**
+   * For development purposes only: inserts initial bunch of text
+   * @author achang
+   * @deprecated
+   */
+  private void helloWorld() {
+    
+    String initialString = "aaaaaaaaaaaaaaaa\n" + "bbbbbbbbbbbbbbbb\n"
+                           + "cccccccccccccccc\n" + "dddddddddddddddd\n"
+                           + "eeeeeeeeeeeeeeee\n" + "ffffffffffffffff\n"
+                           + "gggggggggggggggg\n" + "\n" + "hhhhhhhhhhhhhhhh\n"
+                           + "iiiiiiiiiiiiiiii";
+    try {
+      getSketch().getCurrentCode().getDocument().insertString(getTextArea().getCaretPosition(), initialString, null);
+    } catch (BadLocationException e) {
+      e.printStackTrace();
+    }
   }
 
   /**
@@ -2105,7 +2106,7 @@ public class Editor extends JFrame implements RunnerListener {
       if (sketch.save()) {
         // If sketch saved successfully, then get the pde folderpath and save the graph file inside.
         writeGraphToFile();
-//        undoManager.resetCounter();//TODO
+//        undoManager.resetCounter(); //TODO asdf
         statusNotice("Done Saving.");
       } else {
         statusEmpty();
@@ -2548,7 +2549,53 @@ public class Editor extends JFrame implements RunnerListener {
 
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
-  public void setupCodeDrawLinkListeners() {
+  /**
+   * Declares and installs graph listeners for:
+   * synchronizing selection with textarea
+   * graph popup
+   */
+  public void installSelectionSyncListeners() {
+    drawarea.getGraphComponent().getGraph().getSelectionModel()
+        .addListener(mxEvent.CHANGE, new mxIEventListener() {
+          public void invoke(Object sender, mxEventObject evt) {
+            System.out.println("editor >> graph listener selection sync, graphComponent.focusowner="+drawarea.getGraphComponent().isFocusOwner());
+            if (drawarea.getGraphComponent().isFocusOwner()) { //then force text selection to sync with us
+              Object cell = ((mxGraphSelectionModel) sender).getCell();
+              if (cell instanceof mxICell
+                  && ((mxICell) cell).getValue() instanceof kCellValue
+                  && ((kCellValue) ((mxICell) cell).getValue())
+                      .hasValidCodeMarks())
+              {
+                kCellValue val = (kCellValue) ((mxICell) cell).getValue();
+                sketch.setCurrentCode(val.getCodeIndex());
+                setSelection(val.getStartMark(), val.getStopMark());
+                // textarea.repaint();//might not need this
+                System.out.println("editor >> graph listener selection sync "
+                                   + ((kCellValue) ((mxICell) cell).getValue())
+                                       .toPrettyString());
+              }
+              else
+                textarea.selectNone();
+            }
+          }
+        });
+    textarea.addListener(kEvent.TEXT_SELECTED, new mxIEventListener() {
+      public void invoke(Object sender, mxEventObject evt) {
+
+        System.out.println("editor >> text listener selection sync, textarea.focusowner="+textarea.isFocusOwner());
+        if (textarea.isFocusOwner()) // then force graph selection to sync with us
+          drawarea.selectCodeIntersection(textarea.getSelectionStart(),
+                                          textarea.getSelectionStop(), sketch
+                                              .getCurrentCodeIndex());
+      }
+    });
+  }
+  
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+  
+  public void installCodeDrawLinkListeners() {
     // CASE 1
     drawarea.addListener(kEvent.TOOL_END, new mxIEventListener() {
       public void invoke(Object source, mxEventObject evt) {
@@ -2586,7 +2633,7 @@ public class Editor extends JFrame implements RunnerListener {
               codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
               
             // CASE 4  
-            } else if (drawarea.selectionHasLink()) {
+            } else if (drawarea.getGraphComponent().isFocusOwner() && drawarea.selectionHasLink()) {
               System.out.println("link >> graph selection has link, changing buttons");
               drawingHeader.getLinkButton().setUnlinkMode();
             } else //includes cases where selection is null
@@ -2616,7 +2663,7 @@ public class Editor extends JFrame implements RunnerListener {
       }
     });
     // CASE 2 & 3
-    addKeyListener(new KeyAdapter() {
+    addKeyListener(new KeyAdapter() { //TODO I do believe that this doesn't work AT ALL
       public void keyPressed(KeyEvent e) {
         // if while in linking mode user hits escape, cancel out of it
         if (drawingHeader.getLinkButton().isLinkActiveMode() && e.getKeyCode() == KeyEvent.VK_ESCAPE)
