@@ -85,7 +85,8 @@ public class kGraphComponent extends mxGraphComponent {
       {
         mxCellMarker marker = super.createMarker();
         marker.setValidColor(kConstants.SWIMLANE_MARKER_COLOR);
-        marker.setHotspotEnabled(false);
+//        marker.setHotspot(1);
+//        marker.setHotspotEnabled(true); //neither of these seem to do anything
         return marker;
       }
     };
@@ -161,18 +162,14 @@ public class kGraphComponent extends mxGraphComponent {
    * graphComponent does not remove the object)
    */
   protected mxConnectionHandler createConnectionHandler() {
-    System.out.println("kGComp >> createConnectionHandler (null)");
     return null;
   }
 
   /**
    * Allows creation of connectionHandler by drawingArea, and then retro-fitted
    * to graphComponent...
-   * 
-   * @param ch
    */
   public void setConnectionHandler(mxConnectionHandler ch) {
-    System.out.println("kGComp >> SET kConnectionHandler");
     connectionHandler = ch;
   }
 
@@ -450,6 +447,19 @@ public class kGraphComponent extends mxGraphComponent {
     }
 
     return null;
+  }
+  
+  /**
+   * Overriding to ensure that all Kaleido cells can be found
+   * (all Kaleido cells are swimlanes)
+   * @param x
+   * @param y
+   * @param hitSwimlaneContent
+   * @return Returns the cell at the given location.
+   */
+  public Object getCellAt(int x, int y, boolean hitSwimlaneContent)
+  {
+    return getCellAt(x, y, true, null);
   }
 
 }

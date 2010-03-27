@@ -35,6 +35,7 @@ import com.mxgraph.model.mxCell;
 import com.mxgraph.model.mxGeometry;
 import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
+import com.mxgraph.model.mxIGraphModel;
 import com.mxgraph.swing.mxGraphComponent;
 import com.mxgraph.swing.mxGraphOutline;
 import com.mxgraph.swing.handler.mxConnectionHandler;
@@ -194,7 +195,7 @@ public class DrawingArea extends JDesktopPane {
           if (cells[i] instanceof mxICell
               && ((mxICell) cells[i]).getValue() instanceof kCellValue) {
             System.out.println("drawingArea >> graph selection changed: "+((kCellValue) ((mxICell) cells[i]).getValue()).toPrettyString());
-            System.out.println("drawingArea >> graph selection bounsd: "+graphComponent.getGraph().getCellBounds(cells[i]).getRectangle());
+//            System.out.println("drawingArea >> graph selection bounsd: "+graphComponent.getGraph().getCellBounds(cells[i]).getRectangle());
           }
       }
     });
@@ -205,8 +206,8 @@ public class DrawingArea extends JDesktopPane {
   private void helloWorld2() {
 
     mxGraphOutline graphOutline = new mxGraphOutline(graphComponent);
-    System.out.println("drawingArea >> graphOutline is fit page >> "
-                       + graphOutline.isFitPage());
+//    System.out.println("drawingArea >> graphOutline is fit page >> "
+//                       + graphOutline.isFitPage());
     graphOutline.setFitPage(false);
     graphOutline.setFinderVisible(false);
     JInternalFrame newFrame = new JInternalFrame("tester", true, false, false,
@@ -397,8 +398,8 @@ public class DrawingArea extends JDesktopPane {
    * Sets the modified value for the drawarea
    */
   public void setModified(boolean state) {
-    System.out.println("drawingArea >> setModified >> oldVal = " + modified
-                       + ", newVal = " + state);
+//    System.out.println("drawArea >> setModified >> oldVal = " + modified
+//                       + ", newVal = " + state);
     modified = state;
     editor.updateTitle();
   }
@@ -878,7 +879,7 @@ public class DrawingArea extends JDesktopPane {
                                                                // rectangles
         {
           System.err
-              .println("Magic! You managed to select a tool that doesn't exist! Please report this bug: class=ShapeToolband, toolMode="
+              .println("Ut oh! You managed to select a tool that doesn't exist! Please report this bug: class=ShapeToolband, toolMode="
                        + toolMode);
         }
 
@@ -1204,25 +1205,11 @@ public class DrawingArea extends JDesktopPane {
         style = mxUtils.setStyle(style, mxConstants.STYLE_DASHED, "1");
       } else {
         System.err
-            .println("Magic! You managed to select a tool that doesn't exist! Please report this bug: class=ConnectorToolband, toolMode="
+            .println("Ut oh! You managed to select a tool that doesn't exist! Please report this bug: class=ConnectorToolband, toolMode="
                      + toolMode);
       }
       return graphComponent.getGraph().insertEdge(parent, id, value, source,
                                                   target, style);
-    }
-    
-    /**
-     * 
-     * @param source
-     * @param target
-     * @param e
-     */
-    protected void connect(Object source, Object target, MouseEvent e)
-    {
-      super.connect(source,target,e);
-      System.out.println("drawArea >> kConnectionHandler >> connect >> success declared");
-      // end tool when success done
-      drawingArea.endToolMode(true);
     }
     
     /**
@@ -1232,18 +1219,167 @@ public class DrawingArea extends JDesktopPane {
     {
       super.reset();
       graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
-      if (drawingArea.getToolMode() != null) //if success didn't already reset earlier
+      //if success didn't already reset the toolmode first
+      if (drawingArea.getToolMode() != null)
         drawingArea.endToolMode(false);
     }
-    
     /**
-     * TEMP test
+     * Override to be able to create edges that start with a dangling point
+     * rather than a source cell, by adding the store start point as source
+     * point in the new edge's geometry (same way a dangling target point is
+     * added as edge end). After everything is done reset drawArea.toolMode.
+     */
+    protected void connect(Object source, Object target, MouseEvent e)
+    {
+      mxGraph graph = graphComponent.getGraph();
+      mxIGraphModel model = graph.getModel();
+
+      Object newTarget = null;
+      Object edge = null;
+
+      if (target == null && createTarget)
+      {
+        newTarget = createTargetVertex(e, source);
+        target = newTarget;
+      }
+
+      if (target != null || graph.isAllowDanglingEdges())
+      {
+        model.beginUpdate();
+        try
+        {
+          Object dropTarget = graph.getDropTarget(
+              new Object[] { newTarget }, e.getPoint(),
+              graphComponent.getCellAt(e.getX(), e.getY()));
+
+          if (newTarget != null)
+          {
+            // Disables edges as drop targets if the target cell was created
+            if (dropTarget == null
+                || !graph.getModel().isEdge(dropTarget))
+            {
+              mxCellState pstate = graph.getView().getState(
+                  dropTarget);
+
+              if (pstate != null)
+              {
+                mxGeometry geo = model.getGeometry(newTarget);
+
+                mxPoint origin = pstate.getOrigin();
+                geo.setX(geo.getX() - origin.getX());
+                geo.setY(geo.getY() - origin.getY());
+              }
+            }
+            else
+            {
+              dropTarget = graph.getDefaultParent();
+            }
+
+            graph.addCells(new Object[] { newTarget }, dropTarget);
+          }
+
+          Object parent = graph.getDefaultParent();
+
+          if (model.getParent(source) == model.getParent(target))
+          {
+            parent = model.getParent(source);
+          }
+
+          edge = insertEdge(parent, null, "", source, target);
+
+          if (edge != null)
+          {
+            // Makes sure the edge has a non-null, relative geometry
+            mxGeometry geo = model.getGeometry(edge);
+
+            if (geo == null)
+            {
+              geo = new mxGeometry();
+              geo.setRelative(true);
+
+              model.setGeometry(edge, geo);
+            }
+            
+            if (source == null)
+            {
+              mxPoint pt = new mxPoint(start);
+              geo.setSourcePoint(pt);
+            }
+            
+            if (target == null)
+            {
+              mxPoint pt = graphComponent.getPointForEvent(e);
+              geo.setTerminalPoint(pt, false);
+            }
+          }
+
+        }
+        finally
+        {
+          model.endUpdate();
+        }
+      }
+
+      if (select)
+      {
+        graph.setSelectionCell(edge);
+      }
+      
+      // end tool when success done
+      drawingArea.endToolMode(true);
+    }
+    /**
+     * Overriding just to make sure that the cursor is in tool mode (i.e. crosshair)
+     */
+    public void mouseMoved(MouseEvent e)
+    {
+      if (!e.isConsumed() && graphComponent.isEnabled() && isEnabled())
+      {
+        graphComponent.getGraphControl().setCursor(TOOL_CURSOR);
+      }
+      super.mouseMoved(e);
+    }
+    /**
+     * Override to allow making edges from dangling points as well as source cells
+     */
+    public void mousePressed(MouseEvent e)
+    {
+      if (!graphComponent.isForceMarqueeEvent(e) &&
+        !graphComponent.isPanningEvent(e))
+      {
+        if (!e.isConsumed() && !e.isPopupTrigger()) //&& source != null 
+        {
+            /* 
+             * the following is the original mxgraph implementation
+             * I don't know what it was trying to constrain
+             * but in the event removing it causes bugs later, we'll
+             * keep it here for reference
+             */
+//          if ((isHighlighting() && marker.hasValidState())
+//              || (!isHighlighting() && getBounds().contains(
+//                  e.getPoint())))
+          {
+            start = e.getPoint();
+            preview.setOpaque(false);
+            preview.setVisible(false);
+            graphComponent.getGraphControl().add(preview, 0);
+            getParent().setComponentZOrder(this, 0);
+            graphComponent.getGraphControl().setCursor(TOOL_CURSOR); //crosshair
+            marker.reset();
+            e.consume();
+          }
+        }
+      }
+    }
+    /**
+     * Override to allow making edges from dangling points. If source==null it
+     * is still sent to the connect method anyway, and then the bounds are
+     * set the same way the dangling end (i.e. target==null) is set.
      */
     public void mouseReleased(MouseEvent e)
     {
       if (!e.isConsumed() && isConnecting())
       {
-        System.out.println("drawArea >> kConnectionHandler still trying to connect");
         // Does not connect if there is an error
         if (error != null)
         {
@@ -1252,9 +1388,9 @@ public class DrawingArea extends JDesktopPane {
             JOptionPane.showMessageDialog(graphComponent, error);
           }
         }
-        else if (source != null)
+        else //if (source != null)
         {
-          Object src = source.getCell();
+          Object src = (source != null) ? source.getCell() : null;
           Object trg = (marker.hasValidState()) ? marker.getValidState()
               .getCell() : null;
           connect(src, trg, e);
@@ -1269,14 +1405,16 @@ public class DrawingArea extends JDesktopPane {
 
       reset();
     }
+
     /**
-     * TEMP TEST
+     * Override to accept current mousePoint for updating preview even if
+     * source==null SourcePerimeter point calculations are only performed if
+     * source==null and ignored if source is a dangling point
      */
     public void mouseDragged(MouseEvent e)
     {
-      if (!e.isConsumed() && source != null && start != null)
+      if (!e.isConsumed() && start != null) //&& source != null 
       {
-        System.out.println("drawArea >> kConnectionHandler still trying to connect");
         int dx = e.getX() - start.x;
         int dy = e.getY() - start.y;
 
@@ -1299,54 +1437,57 @@ public class DrawingArea extends JDesktopPane {
             - trans.getY()) + trans.getY())
             * scale);
 
-        marker.process(e);
+        if (source != null) {
 
-        // Checks if a color was used to highlight the state
-        mxCellState state = marker.getValidState();
-
-        if (state != null)
-        {
-          current.x = (int) state.getCenterX();
-          current.y = (int) state.getCenterY();
-
-          // Computes the target perimeter point
-          mxPerimeterFunction targetPerimeter = view
-              .getPerimeterFunction(state);
-
-          if (targetPerimeter != null)
+          marker.process(e);
+  
+          // Checks if a color was used to highlight the state
+          mxCellState state = marker.getValidState();
+  
+          if (state != null)
           {
-            mxPoint next = new mxPoint(source.getCenterX(), source
-                .getCenterY());
-            mxPoint tmp = targetPerimeter.apply(view
-                .getPerimeterBounds(state, null, false), null,
-                state, false, next);
-
-            if (tmp != null)
+            current.x = (int) state.getCenterX();
+            current.y = (int) state.getCenterY();
+  
+            // Computes the target perimeter point
+            mxPerimeterFunction targetPerimeter = view
+                .getPerimeterFunction(state);
+  
+            if (targetPerimeter != null)
             {
-              current = tmp.getPoint();
+              mxPoint next = new mxPoint(source.getCenterX(), source
+                  .getCenterY());
+              mxPoint tmp = targetPerimeter.apply(view
+                  .getPerimeterBounds(state, null, false), null,
+                  state, false, next);
+  
+              if (tmp != null)
+              {
+                current = tmp.getPoint();
+              }
             }
           }
-        }
-
-        // Computes the source perimeter point
-        mxPerimeterFunction sourcePerimeter = view
-            .getPerimeterFunction(source);
-
-        if (sourcePerimeter != null)
-        {
-          mxPoint pt = sourcePerimeter.apply(view.getPerimeterBounds(
-              source, null, true), null, source, true, new mxPoint(
-              current));
-
-          if (pt != null)
+  
+          // Computes the source perimeter point
+          mxPerimeterFunction sourcePerimeter = view
+              .getPerimeterFunction(source);
+  
+          if (sourcePerimeter != null)
           {
-            start = pt.getPoint();
+            mxPoint pt = sourcePerimeter.apply(view.getPerimeterBounds(
+                source, null, true), null, source, true, new mxPoint(
+                current));
+  
+            if (pt != null)
+            {
+              start = pt.getPoint();
+            }
           }
-        }
-        else
-        {
-          start = new Point((int) Math.round(source.getCenterX()),
-              (int) Math.round(source.getCenterY()));
+          else
+          {
+            start = new Point((int) Math.round(source.getCenterX()),
+                (int) Math.round(source.getCenterY()));
+          }
         }
 
         // Hides the connect icon or handle
