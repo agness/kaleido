@@ -1,5 +1,6 @@
 package processing.app;
 
+import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -38,6 +39,7 @@ import com.mxgraph.model.mxICell;
 import com.mxgraph.model.mxIGraphModel;
 import com.mxgraph.swing.mxGraphComponent;
 import com.mxgraph.swing.mxGraphOutline;
+import com.mxgraph.swing.handler.mxCellMarker;
 import com.mxgraph.swing.handler.mxConnectionHandler;
 import com.mxgraph.swing.handler.mxRubberband;
 import com.mxgraph.util.mxConstants;
@@ -441,15 +443,6 @@ public class DrawingArea extends JDesktopPane {
       return true;
     else
       return false;
-  }
-
-  /**
-   * Defines the code window mouse event trigger.
-   */
-  protected boolean isCodeWindowEvent(MouseEvent e) {
-    System.out.println("drawingArea >> isCodeWindowEvent?");
-    return ((e != null) && isCodeWindowsEnabled()) ? (e.getClickCount() == 2)
-                                                  : false;
   }
 
   /**
@@ -921,99 +914,6 @@ public class DrawingArea extends JDesktopPane {
 
   }
 
-  /**
-   * The difference here, from ShapeToolband, is only in the mouseDragged image
-   * (i.e. paint()) and the action upon mouseRelease.
-   * 
-   * @deprecated
-   * @author achang
-   */
-  protected static class ConnectorToolband extends ShapeToolband {
-
-    /**
-     * Constructor: just use the super class constructor.
-     */
-    public ConnectorToolband(final DrawingArea drawingArea) {
-      super(drawingArea);
-    }
-
-    /**
-     * We're not making a rubberband, but override the paint method anyway.
-     */
-    public void paintRubberband(Graphics g) {
-      if (first != null && bounds != null
-          && graphComponent.isSignificant(bounds.width, bounds.height)) {
-        Rectangle rect = new Rectangle(bounds);
-        g.setColor(borderColor);
-        rect.width -= 1;
-        rect.height -= 1;
-        g.drawLine(rect.x, rect.y, rect.x + rect.width, rect.y + rect.height);
-      }
-    }
-
-    public void mouseReleased(MouseEvent e) {
-      Rectangle rect = bounds;
-      // super.reset(); //task performed later with this.reset()
-      boolean success = false;
-      
-      if (!e.isConsumed() && rect != null && drawingArea.getToolMode() != null
-          && graphComponent.isSignificant(rect.width, rect.height)) {
-        String style = "";
-        String toolMode = drawingArea.getToolMode();
-
-        if (toolMode.equals(kConstants.CONNECTOR_KEYS[0])) {
-          style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
-                                   mxConstants.SHAPE_CONNECTOR);
-          style = mxUtils.setStyle(style, mxConstants.STYLE_ENDARROW,
-                                   mxConstants.NONE);
-        } else if (toolMode.equals(kConstants.CONNECTOR_KEYS[1])) {
-          style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
-                                   mxConstants.SHAPE_CONNECTOR);
-        } else if (toolMode.equals(kConstants.CONNECTOR_KEYS[2])) {
-          style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
-                                   mxConstants.SHAPE_CONNECTOR);
-          style = mxUtils.setStyle(style, mxConstants.STYLE_DASHED, "1");
-        } else {
-          System.err
-              .println("Magic! You managed to select a tool that doesn't exist! Please report this bug: class=ConnectorToolband, toolMode="
-                       + toolMode);
-        }
-
-        // ----------------
-        mxGraph graph = graphComponent.getGraph();
-        graph.getModel().beginUpdate();
-        try {
-          String value = "edge please";
-          mxGeometry geometry = new mxGeometry(rect.x, rect.y, rect.width,
-              rect.height);
-          geometry.setTerminalPoint(new mxPoint(rect.x, rect.y), true);
-          geometry.setTerminalPoint(new mxPoint(rect.x + rect.width,
-              rect.y + rect.height), false);
-          geometry.setRelative(true);
-          // TODO this geometry gets bad if I drag from right to left
-          // TODO also implement constricted dragging with shift-key
-
-          mxCell cell = new mxCell(value, geometry, style);
-          cell.setEdge(true);
-
-          graph.addCell(cell);
-        } finally {
-          graph.getModel().endUpdate();
-          success = true;
-        }
-        // ----------------
-
-        e.consume();
-
-        // end tool when success done
-        super.reset();
-        graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
-        drawingArea.endToolMode(success);
-      }
-    }
-
-  }
-
   protected static class ColorToolband extends MouseAdapter implements
       MouseMotionListener {
 
@@ -1031,6 +931,11 @@ public class DrawingArea extends JDesktopPane {
      * Specifies if the handler is enabled.
      */
     protected boolean enabled = true;
+    
+    /**
+     * A cell marker to highlight then mouseOver cells
+     */
+    protected mxCellMarker marker;
 
     /**
      * Constructor.
@@ -1041,6 +946,19 @@ public class DrawingArea extends JDesktopPane {
       this.graphComponent = drawingArea.getGraphComponent();
       this.drawingArea = drawingArea;
       this.enabled = false;
+      marker = new mxCellMarker(drawingArea.getGraphComponent()) {
+        /**
+         * Don't mark edges because we don't want to allow coloring of edges
+         * This returns null if cell is not found or cell is an edge.
+         */
+        protected Object getCell(MouseEvent e)
+        {
+          mxICell cell = (mxICell) graphComponent.getCellAt(e.getX(), e.getY(),
+              swimlaneContentEnabled);
+          return ((cell != null) ? ((!cell.isEdge()) ? cell : null) : null);
+        }
+      };
+      marker.setValidColor(kConstants.UI_COLOR_ROLLOVER);
 
       // Install ourselves as a listener
       graphComponent.getGraphControl().addMouseListener(this);
@@ -1079,15 +997,19 @@ public class DrawingArea extends JDesktopPane {
     public void mouseMoved(MouseEvent e) {
       if (!e.isConsumed() && isEnabled() && !e.isPopupTrigger()) {
         graphComponent.getGraphControl().setCursor(TOOL_CURSOR);
+        marker.process(e);
         e.consume();
       }
     }
 
     public void mouseReleased(MouseEvent e) {
       boolean success = false;
+
       if (!e.isConsumed() && isEnabled() && !e.isPopupTrigger()) {
         graphComponent.getGraphControl().setCursor(TOOL_CURSOR);
-        mxCell cell = (mxCell) graphComponent.getCellAt(e.getX(), e.getY());
+        // getting cell from the marker ensures that we don't grab edges
+        mxCell cell = (mxCell) ((marker.hasValidState()) ? marker
+            .getValidState().getCell() : null);
         if (cell != null) {
           mxGraph graph = graphComponent.getGraph();
           String style = cell.getStyle();
@@ -1109,18 +1031,20 @@ public class DrawingArea extends JDesktopPane {
         e.consume();
 
         // end tool when success done
+        marker.reset();
         graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
         drawingArea.endToolMode(success);
       }
     }
 
     public void reset() {
+      marker.reset();
       graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
       drawingArea.endToolMode(false);
     }
 
     public void mouseDragged(MouseEvent e) {
-      // do nothing, but need this since we implement MouseMotionListener
+      // do nothing, but need this stub since we implement MouseMotionListener
     }
 
   }
@@ -1208,10 +1132,14 @@ public class DrawingArea extends JDesktopPane {
             .println("Ut oh! You managed to select a tool that doesn't exist! Please report this bug: class=ConnectorToolband, toolMode="
                      + toolMode);
       }
+      style = mxUtils.setStyle(style, mxConstants.STYLE_STROKECOLOR, Integer
+          .toHexString((kConstants.EDGE_STROKE_COLOR).getRGB()));
+      style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
+          .toHexString((kConstants.EDGE_FONT_COLOR).getRGB()));
       return graphComponent.getGraph().insertEdge(parent, id, value, source,
                                                   target, style);
     }
-    
+
     /**
      * 
      */
@@ -1403,7 +1331,8 @@ public class DrawingArea extends JDesktopPane {
         graphComponent.selectCellForEvent(source.getCell(), e);
       }
 
-      reset();
+      if (isEnabled())
+        reset(); //only do this if enabled otherwise it will fire a TOOL_END event
     }
 
     /**
