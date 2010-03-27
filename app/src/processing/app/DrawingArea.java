@@ -1408,8 +1408,8 @@ public class DrawingArea extends JDesktopPane {
 
     /**
      * Override to accept current mousePoint for updating preview even if
-     * source==null SourcePerimeter point calculations are only performed if
-     * source==null and ignored if source is a dangling point
+     * source==null. SourcePerimeter point calculations are only performed if
+     * source==null and ignored if source is a dangling point.
      */
     public void mouseDragged(MouseEvent e)
     {
@@ -1437,37 +1437,41 @@ public class DrawingArea extends JDesktopPane {
             - trans.getY()) + trans.getY())
             * scale);
 
-        if (source != null) {
+        marker.process(e);
 
-          marker.process(e);
-  
-          // Checks if a color was used to highlight the state
-          mxCellState state = marker.getValidState();
-  
-          if (state != null)
+        // Checks if a color was used to highlight the state
+        mxCellState state = marker.getValidState();
+
+        if (state != null)
+        {
+          current.x = (int) state.getCenterX();
+          current.y = (int) state.getCenterY();
+
+          // Computes the target perimeter point
+          mxPerimeterFunction targetPerimeter = view
+              .getPerimeterFunction(state);
+
+          if (targetPerimeter != null)
           {
-            current.x = (int) state.getCenterX();
-            current.y = (int) state.getCenterY();
-  
-            // Computes the target perimeter point
-            mxPerimeterFunction targetPerimeter = view
-                .getPerimeterFunction(state);
-  
-            if (targetPerimeter != null)
-            {
-              mxPoint next = new mxPoint(source.getCenterX(), source
+            mxPoint next;
+            if (source != null)
+              next = new mxPoint(source.getCenterX(), source
                   .getCenterY());
-              mxPoint tmp = targetPerimeter.apply(view
-                  .getPerimeterBounds(state, null, false), null,
-                  state, false, next);
-  
-              if (tmp != null)
-              {
-                current = tmp.getPoint();
-              }
+            else
+              next = new mxPoint(start);
+            
+            mxPoint tmp = targetPerimeter.apply(view
+                .getPerimeterBounds(state, null, false), null,
+                state, false, next);
+
+            if (tmp != null)
+            {
+              current = tmp.getPoint();
             }
           }
-  
+        }
+          
+        if (source != null) {
           // Computes the source perimeter point
           mxPerimeterFunction sourcePerimeter = view
               .getPerimeterFunction(source);
