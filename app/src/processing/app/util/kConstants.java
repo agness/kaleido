@@ -1,6 +1,15 @@
 package processing.app.util;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Stroke;
+
+import javax.swing.border.Border;
+import javax.swing.border.LineBorder;
+
 
 import com.mxgraph.util.mxUtils;
 
@@ -18,7 +27,7 @@ public class kConstants
   public static final String VERSION_NAME = "001";
   
   /*
-   * Private library of color palettes that can be used in the settings.
+   * Private library of color palettes that can be used in these settings.
    */
   
   /**
@@ -66,10 +75,12 @@ public class kConstants
     Color.BLACK, 
     Color.BLACK }};
   
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
   /*
-   * End private members.
+   * EditorDrawingHeader stuff
    */
-  
   
   /**
    * Shape names.
@@ -97,7 +108,6 @@ public class kConstants
     "color1", "color2", "color3", "color4", "color5"
   };
   
-  
   /**
    * Color themes for UI elements: buttons(paintfill), cellMarker(onMouseOver), 
    * cellHandler(selection), swimlane, etc.
@@ -118,4 +128,64 @@ public class kConstants
    * Pairs of matched fill and font colors for graph elememnts.
    */
   public static Color[][] FILL_COLORS = colorpalette_cheerup;
+
+  
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+  /*
+   * kGraphComponent handler styling stuff
+   */
+
+  public static final Color CANVAS_COLOR = UI_COLOR_INACTIVE;
+
+  public static final Color CELL_MARKER_COLOR = UI_COLOR_ROLLOVER;
+
+  public static final Color SWIMLANE_MARKER_COLOR = Color.orange;
+
+  public static final Color HANDLE_FILLCOLOR = mxUtils.parseColor("#989898");
+
+  public static final Color HANDLE_BORDERCOLOR = mxUtils.parseColor("#989898");
+
+  public static final Color LABEL_HANDLE_FILLCOLOR = Color.CYAN;
+
+  public static final Color LOCKED_HANDLE_FILLCOLOR = Color.CYAN;
+
+  public static final Color CONNECT_HANDLE_FILLCOLOR = Color.orange;
+
+  public static final Color CONN_MARKER_VALID_COLOR = Color.CYAN;//mxUtils.parseColor("#B9FC00");
+
+  public static final Color CONN_MARKER_INVALID_COLOR = Color.magenta;//mxUtils.parseColor("#7AFC00"); 
+
+  public static final Color DEFAULT_VALID_COLOR = Color.magenta;
+
+  public static final Color DEFAULT_INVALID_COLOR = Color.yellow;//new Color(255,0,255);  
+
+  public static final Stroke PREVIEW_STROKE = new BasicStroke(1,
+  BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f,
+  new float[] { 3, 3 }, 0.0f);
+
+  public static Border PREVIEW_BORDER = new LineBorder(HANDLE_BORDERCOLOR) {
+    public void paintBorder(Component c, Graphics g, int x, int y, int width,
+                            int height) {
+      ((Graphics2D) g).setStroke(kConstants.VERTEX_SELECTION_STROKE);
+      super.paintBorder(c, g, x, y, width, height);
+    }
+  };
+
+  public static final Color VERTEX_SELECTION_COLOR = Color.yellow;
+
+  public static final Stroke VERTEX_SELECTION_STROKE = new BasicStroke(1,
+  BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f,
+  new float[] { 3, 3 }, 0.0f);
+
+  public static final Color EDGE_SELECTION_COLOR = Color.cyan;
+
+  public static final Stroke EDGE_SELECTION_STROKE = new BasicStroke(1,
+  BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f,
+  new float[] { 3, 3 }, 0.0f);
+
+  public static final Color PREVIEW_BORDER_COLOR = Color.GRAY;
+
+  public static final Color PREVIEW_FILL_COLOR = new Color(170, 170, 170, 70);
 }
