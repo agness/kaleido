@@ -1,9 +1,11 @@
 package processing.app;
 
-import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Stroke;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -14,8 +16,11 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.swing.JComponent;
 import javax.swing.JDesktopPane;
 import javax.swing.JInternalFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.text.BadLocationException;
 
 import processing.app.graph.kCellValue;
@@ -32,6 +37,7 @@ import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
 import com.mxgraph.swing.mxGraphComponent;
 import com.mxgraph.swing.mxGraphOutline;
+import com.mxgraph.swing.handler.mxConnectionHandler;
 import com.mxgraph.swing.handler.mxRubberband;
 import com.mxgraph.util.mxConstants;
 import com.mxgraph.util.mxEvent;
@@ -43,6 +49,8 @@ import com.mxgraph.util.mxEventSource.mxIEventListener;
 import com.mxgraph.view.mxCellState;
 import com.mxgraph.view.mxGraph;
 import com.mxgraph.view.mxGraphSelectionModel;
+import com.mxgraph.view.mxGraphView;
+import com.mxgraph.view.mxPerimeter.mxPerimeterFunction;
 
 /**
  * The Kaleido drawing JComponent, which is a desktop pane that contains the
@@ -105,7 +113,7 @@ public class DrawingArea extends JDesktopPane {
 
   ShapeToolband shapeToolband;
 
-  ConnectorToolband connectorToolband;
+  kConnectionHandler connectorToolband;
 
   ColorToolband colorToolband;
 
@@ -119,7 +127,7 @@ public class DrawingArea extends JDesktopPane {
     // hello world crap -------------<
 
     graphComponent = new kGraphComponent(graph);
-
+    
     // helloWorld2();
 
     // change tracker: updates the modified flag if anything in the graph model
@@ -135,8 +143,11 @@ public class DrawingArea extends JDesktopPane {
     rubberband.setEnabled(true);
     shapeToolband = new ShapeToolband(this);
     shapeToolband.setEnabled(false);
-    connectorToolband = new ConnectorToolband(this);
+    connectorToolband = new kConnectionHandler(this);
     connectorToolband.setEnabled(false);
+    //hereafter we won't reference graphComponent.connectionHandler 
+    //and instead will just treat it as "connectorToolband"
+    ((kGraphComponent) graphComponent).setConnectionHandler(connectorToolband); 
     colorToolband = new ColorToolband(this);
     colorToolband.setEnabled(false);
 
@@ -181,8 +192,10 @@ public class DrawingArea extends JDesktopPane {
         Object[] cells = ((mxGraphSelectionModel) sender).getCells();
         for (int i = 0; i < cells.length; i++)
           if (cells[i] instanceof mxICell
-              && ((mxICell) cells[i]).getValue() instanceof kCellValue)
+              && ((mxICell) cells[i]).getValue() instanceof kCellValue) {
             System.out.println("drawingArea >> graph selection changed: "+((kCellValue) ((mxICell) cells[i]).getValue()).toPrettyString());
+            System.out.println("drawingArea >> graph selection bounsd: "+graphComponent.getGraph().getCellBounds(cells[i]).getRectangle());
+          }
       }
     });
   }
@@ -204,6 +217,93 @@ public class DrawingArea extends JDesktopPane {
     newFrame.setVisible(true);
     newFrame.getContentPane().add(graphOutline);
     add(newFrame);
+  }
+
+  /**
+   * Debugging: Print out cell details onMouseOver. Stolen from
+   * mxgraph.examples.GraphEditor.
+   * 
+   * @param cell
+   * @return
+   * @deprecated
+   */
+  private String getToolTipForCell(Object cell) {
+    NumberFormat numberFormat = NumberFormat.getInstance();
+  
+    String tip = "<html>";
+    mxGeometry geo = graphComponent.getGraph().getModel().getGeometry(cell);
+    mxCellState state = graphComponent.getGraph().getView().getState(cell);
+  
+    if (graphComponent.getGraph().getModel().isEdge(cell)) {
+      tip += "points={";
+  
+      if (geo != null) {
+        List<mxPoint> points = geo.getPoints();
+  
+        if (points != null) {
+          Iterator<mxPoint> it = points.iterator();
+  
+          while (it.hasNext()) {
+            mxPoint point = it.next();
+            tip += "[x=" + numberFormat.format(point.getX()) + ",y="
+                   + numberFormat.format(point.getY()) + "],";
+          }
+  
+          tip = tip.substring(0, tip.length() - 1);
+        }
+      }
+  
+      tip += "}<br>";
+      tip += "absPoints={";
+  
+      if (state != null) {
+  
+        for (int i = 0; i < state.getAbsolutePointCount(); i++) {
+          mxPoint point = state.getAbsolutePoint(i);
+          tip += "[x=" + numberFormat.format(point.getX()) + ",y="
+                 + numberFormat.format(point.getY()) + "],";
+        }
+        tip = tip.substring(0, tip.length() - 1);
+        tip += "style=[" + state.getStyle() + "]";
+  
+      }
+  
+      tip += "}";
+    } else {
+      tip += "geo=[";
+  
+      if (geo != null) {
+        tip += "x=" + numberFormat.format(geo.getX()) + ",y="
+               + numberFormat.format(geo.getY()) + ",width="
+               + numberFormat.format(geo.getWidth()) + ",height="
+               + numberFormat.format(geo.getHeight());
+      }
+  
+      tip += "]<br>";
+      tip += "state=[";
+  
+      if (state != null) {
+        tip += "x=" + numberFormat.format(state.getX()) + ",y="
+               + numberFormat.format(state.getY()) + ",width="
+               + numberFormat.format(state.getWidth()) + ",height="
+               + numberFormat.format(state.getHeight()) + ", style="
+               + state.getStyle();
+      }
+  
+      tip += "]";
+    }
+  
+    mxPoint trans = graphComponent.getGraph().getView().getTranslate();
+  
+    tip += "<br>scale="
+           + numberFormat.format(graphComponent.getGraph().getView()
+               .getScale()) + ", translate=[x="
+           + numberFormat.format(trans.getX()) + ",y="
+           + numberFormat.format(trans.getY()) + "]";
+    tip += "</html>";
+  
+    System.out.println(tip);
+    return tip;
   }
 
   public mxGraphComponent getGraphComponent() {
@@ -236,7 +336,7 @@ public class DrawingArea extends JDesktopPane {
     graphComponent.getGraphHandler().setCloneEnabled(false);
     graphComponent.getGraphHandler().setMoveEnabled(false);
     graphComponent.getGraphHandler().setSelectEnabled(false);
-    graphComponent.getConnectionHandler().setEnabled(false); // gets ride of
+//    graphComponent.getConnectionHandler().setEnabled(false); // gets ride of
                                                              // cellMarkers
     // Notes on: cursor setting:
     // turns out we can't set the cursor here because it gets overridden
@@ -256,7 +356,7 @@ public class DrawingArea extends JDesktopPane {
       setCurrentFillColor(toolName);
       System.out.println("currentFillColor = " + currentFillColor);
       colorToolband.setEnabled(true);
-      graphComponent.getConnectionHandler().setEnabled(true); // put highlights
+//      graphComponent.getConnectionHandler().setEnabled(true); // TODO put highlights
                                                               // back
     }
 
@@ -276,7 +376,7 @@ public class DrawingArea extends JDesktopPane {
     graphComponent.getGraphHandler().setCloneEnabled(true);
     graphComponent.getGraphHandler().setMoveEnabled(true);
     graphComponent.getGraphHandler().setSelectEnabled(true);
-    graphComponent.getConnectionHandler().setEnabled(true);
+//    graphComponent.getConnectionHandler().setEnabled(true);
     setCursor(null); // clean up
     eventSource.fireEvent(new mxEventObject(kEvent.TOOL_END, "tool", toolMode, "success", (success ? Boolean.TRUE : Boolean.FALSE)));
     toolMode = null;
@@ -687,12 +787,14 @@ public class DrawingArea extends JDesktopPane {
     public ShapeToolband(final DrawingArea drawingArea) {
       super(drawingArea.getGraphComponent());
       this.drawingArea = drawingArea;
-      borderColor = Color.GRAY;
-      fillColor = new Color(170, 170, 170, 70); // half-transparent gray
+      borderColor = kConstants.PREVIEW_BORDER_COLOR;
+      fillColor = kConstants.PREVIEW_FILL_COLOR; // half-transparent gray
     }
 
     // TODO minor: implement shiftkey = square boundary
     // TODO our lovely cellmarker is pretty forkin' ugly
+    // TODO public void paintRubberband() could use kConstants.PREVIEW_STROKE for visual consistency?
+    // or the other way around...
 
     /**
      * TODO we can tell graphcomponent to set its cursor in beginToolMode (and
@@ -816,99 +918,13 @@ public class DrawingArea extends JDesktopPane {
       drawingArea.endToolMode(false);
     }
 
-    /**
-     * Debugging: Print out cell details onMouseOver. Stolen from
-     * mxgraph.examples.GraphEditor.
-     * 
-     * @param cell
-     * @return
-     * @deprecated
-     */
-    protected String getToolTipForCell(Object cell) {
-      NumberFormat numberFormat = NumberFormat.getInstance();
-
-      String tip = "<html>";
-      mxGeometry geo = graphComponent.getGraph().getModel().getGeometry(cell);
-      mxCellState state = graphComponent.getGraph().getView().getState(cell);
-
-      if (graphComponent.getGraph().getModel().isEdge(cell)) {
-        tip += "points={";
-
-        if (geo != null) {
-          List<mxPoint> points = geo.getPoints();
-
-          if (points != null) {
-            Iterator<mxPoint> it = points.iterator();
-
-            while (it.hasNext()) {
-              mxPoint point = it.next();
-              tip += "[x=" + numberFormat.format(point.getX()) + ",y="
-                     + numberFormat.format(point.getY()) + "],";
-            }
-
-            tip = tip.substring(0, tip.length() - 1);
-          }
-        }
-
-        tip += "}<br>";
-        tip += "absPoints={";
-
-        if (state != null) {
-
-          for (int i = 0; i < state.getAbsolutePointCount(); i++) {
-            mxPoint point = state.getAbsolutePoint(i);
-            tip += "[x=" + numberFormat.format(point.getX()) + ",y="
-                   + numberFormat.format(point.getY()) + "],";
-          }
-          tip = tip.substring(0, tip.length() - 1);
-          tip += "style=[" + state.getStyle() + "]";
-
-        }
-
-        tip += "}";
-      } else {
-        tip += "geo=[";
-
-        if (geo != null) {
-          tip += "x=" + numberFormat.format(geo.getX()) + ",y="
-                 + numberFormat.format(geo.getY()) + ",width="
-                 + numberFormat.format(geo.getWidth()) + ",height="
-                 + numberFormat.format(geo.getHeight());
-        }
-
-        tip += "]<br>";
-        tip += "state=[";
-
-        if (state != null) {
-          tip += "x=" + numberFormat.format(state.getX()) + ",y="
-                 + numberFormat.format(state.getY()) + ",width="
-                 + numberFormat.format(state.getWidth()) + ",height="
-                 + numberFormat.format(state.getHeight()) + ", style="
-                 + state.getStyle();
-        }
-
-        tip += "]";
-      }
-
-      mxPoint trans = graphComponent.getGraph().getView().getTranslate();
-
-      tip += "<br>scale="
-             + numberFormat.format(graphComponent.getGraph().getView()
-                 .getScale()) + ", translate=[x="
-             + numberFormat.format(trans.getX()) + ",y="
-             + numberFormat.format(trans.getY()) + "]";
-      tip += "</html>";
-
-      System.out.println(tip);
-      return tip;
-    }
-
   }
 
   /**
    * The difference here, from ShapeToolband, is only in the mouseDragged image
    * (i.e. paint()) and the action upon mouseRelease.
    * 
+   * @deprecated
    * @author achang
    */
   protected static class ConnectorToolband extends ShapeToolband {
@@ -1108,4 +1124,243 @@ public class DrawingArea extends JDesktopPane {
 
   }
 
+  /**
+   * Opportunistically stealing mxConnectionHandler and tweaking it to be
+   * our ConnectorTool -- ideally I'd like one that has functionalities of
+   * both but for now mxConnectionHandler is slightly more sophisticated and
+   * less buggy.
+   */
+  public static class kConnectionHandler extends mxConnectionHandler {
+
+    /**
+     * Reference to the enclosing drawing component.
+     */
+    DrawingArea drawingArea;
+    
+    /**
+     * Constructor
+     * @param drawingArea
+     */
+    public kConnectionHandler(final DrawingArea drawingArea) {
+      super(drawingArea.getGraphComponent());
+      this.drawingArea = drawingArea;
+      getMarker().setHotspot(1);
+      getMarker().setValidColor(kConstants.CONN_MARKER_VALID_COLOR);
+      getMarker().setInvalidColor(kConstants.CONN_MARKER_INVALID_COLOR);
+    }
+    
+    //set marker colors+stroke
+    //click on empty space draws disconnected arrows
+    //reset tool(success=true) when done
+    //reset tool(false) when click popupTrigger || escape
+    
+  /**
+  * PREVIEW is the component that draws the dotted line that 
+  * flies around when the mouse is still dragging. The graphics 
+  * are defined in the paint method.  
+  */
+ protected JComponent createPreview() {
+   return new JPanel() {
+     private static final long serialVersionUID = -6401041861368362818L;
+
+     public void paint(Graphics g) {
+       super.paint(g);
+       ((Graphics2D) g).setStroke(kConstants.PREVIEW_STROKE);
+
+       if (start != null && current != null) {
+         if (marker.hasValidState() || createTarget
+             || graphComponent.getGraph().isAllowDanglingEdges()) {
+           g.setColor(kConstants.DEFAULT_VALID_COLOR);
+         } else {
+           g.setColor(kConstants.DEFAULT_INVALID_COLOR);
+         }
+         g.drawLine(start.x - getX(), start.y - getY(),
+                    current.x - getX(), current.y - getY());
+       }
+     }
+   };
+ }
+    
+    /**
+     * Creates, inserts and returns a new edge using mxGraph.insertEdge.
+     * Modified to take connector style from current toolMode in drawingArea
+     */
+    protected Object insertEdge(Object parent, String id, Object value,
+                                Object source, Object target) {
+      String style = "";
+      String toolMode = drawingArea.getToolMode();
+
+      if (toolMode.equals(kConstants.CONNECTOR_KEYS[0])) {
+        style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
+                                 mxConstants.SHAPE_CONNECTOR);
+        style = mxUtils.setStyle(style, mxConstants.STYLE_ENDARROW,
+                                 mxConstants.NONE);
+      } else if (toolMode.equals(kConstants.CONNECTOR_KEYS[1])) {
+        style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
+                                 mxConstants.SHAPE_CONNECTOR);
+      } else if (toolMode.equals(kConstants.CONNECTOR_KEYS[2])) {
+        style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
+                                 mxConstants.SHAPE_CONNECTOR);
+        style = mxUtils.setStyle(style, mxConstants.STYLE_DASHED, "1");
+      } else {
+        System.err
+            .println("Magic! You managed to select a tool that doesn't exist! Please report this bug: class=ConnectorToolband, toolMode="
+                     + toolMode);
+      }
+      return graphComponent.getGraph().insertEdge(parent, id, value, source,
+                                                  target, style);
+    }
+    
+    /**
+     * 
+     * @param source
+     * @param target
+     * @param e
+     */
+    protected void connect(Object source, Object target, MouseEvent e)
+    {
+      super.connect(source,target,e);
+      System.out.println("drawArea >> kConnectionHandler >> connect >> success declared");
+      // end tool when success done
+      drawingArea.endToolMode(true);
+    }
+    
+    /**
+     * 
+     */
+    public void reset()
+    {
+      super.reset();
+      graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
+      if (drawingArea.getToolMode() != null) //if success didn't already reset earlier
+        drawingArea.endToolMode(false);
+    }
+    
+    /**
+     * TEMP test
+     */
+    public void mouseReleased(MouseEvent e)
+    {
+      if (!e.isConsumed() && isConnecting())
+      {
+        System.out.println("drawArea >> kConnectionHandler still trying to connect");
+        // Does not connect if there is an error
+        if (error != null)
+        {
+          if (error.length() > 0)
+          {
+            JOptionPane.showMessageDialog(graphComponent, error);
+          }
+        }
+        else if (source != null)
+        {
+          Object src = source.getCell();
+          Object trg = (marker.hasValidState()) ? marker.getValidState()
+              .getCell() : null;
+          connect(src, trg, e);
+        }
+
+        e.consume();
+      }
+      else if (source != null && !e.isPopupTrigger())
+      {
+        graphComponent.selectCellForEvent(source.getCell(), e);
+      }
+
+      reset();
+    }
+    /**
+     * TEMP TEST
+     */
+    public void mouseDragged(MouseEvent e)
+    {
+      if (!e.isConsumed() && source != null && start != null)
+      {
+        System.out.println("drawArea >> kConnectionHandler still trying to connect");
+        int dx = e.getX() - start.x;
+        int dy = e.getY() - start.y;
+
+        if (!preview.isVisible() && graphComponent.isSignificant(dx, dy))
+        {
+          preview.setVisible(true);
+          marker.reset();
+        }
+
+        current = e.getPoint();
+        mxGraph graph = graphComponent.getGraph();
+        mxGraphView view = graph.getView();
+        double scale = view.getScale();
+        mxPoint trans = view.getTranslate();
+
+        current.x = (int) Math.round((graph.snap(current.x / scale
+            - trans.getX()) + trans.getX())
+            * scale);
+        current.y = (int) Math.round((graph.snap(current.y / scale
+            - trans.getY()) + trans.getY())
+            * scale);
+
+        marker.process(e);
+
+        // Checks if a color was used to highlight the state
+        mxCellState state = marker.getValidState();
+
+        if (state != null)
+        {
+          current.x = (int) state.getCenterX();
+          current.y = (int) state.getCenterY();
+
+          // Computes the target perimeter point
+          mxPerimeterFunction targetPerimeter = view
+              .getPerimeterFunction(state);
+
+          if (targetPerimeter != null)
+          {
+            mxPoint next = new mxPoint(source.getCenterX(), source
+                .getCenterY());
+            mxPoint tmp = targetPerimeter.apply(view
+                .getPerimeterBounds(state, null, false), null,
+                state, false, next);
+
+            if (tmp != null)
+            {
+              current = tmp.getPoint();
+            }
+          }
+        }
+
+        // Computes the source perimeter point
+        mxPerimeterFunction sourcePerimeter = view
+            .getPerimeterFunction(source);
+
+        if (sourcePerimeter != null)
+        {
+          mxPoint pt = sourcePerimeter.apply(view.getPerimeterBounds(
+              source, null, true), null, source, true, new mxPoint(
+              current));
+
+          if (pt != null)
+          {
+            start = pt.getPoint();
+          }
+        }
+        else
+        {
+          start = new Point((int) Math.round(source.getCenterX()),
+              (int) Math.round(source.getCenterY()));
+        }
+
+        // Hides the connect icon or handle
+        setVisible(false);
+
+        // Updates the bounds of the previewed line
+        Rectangle bounds = new Rectangle(current);
+        bounds.add(start);
+        bounds.grow(1, 1);
+        preview.setBounds(bounds);
+
+        e.consume();
+      }
+    }
+    
+  }
 }
