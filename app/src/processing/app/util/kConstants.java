@@ -137,6 +137,10 @@ public class kConstants
    * kGraphComponent handler styling stuff
    */
 
+  public static final Color EDGE_STROKE_COLOR = Color.gray;
+
+  public static final Color EDGE_FONT_COLOR = Color.black;
+  
   public static final Color CANVAS_COLOR = UI_COLOR_INACTIVE;
 
   public static final Color CELL_MARKER_COLOR = UI_COLOR_ROLLOVER;
