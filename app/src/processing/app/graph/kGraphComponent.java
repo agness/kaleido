@@ -1,17 +1,21 @@
 package processing.app.graph;
 
+import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.Stroke;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.TransferHandler;
 
+import processing.app.Base;
 import processing.app.DrawingArea;
 import processing.app.Theme;
 import processing.app.util.kConstants;
@@ -28,6 +32,7 @@ import com.mxgraph.swing.handler.mxGraphHandler;
 import com.mxgraph.swing.handler.mxGraphTransferHandler;
 import com.mxgraph.swing.handler.mxVertexHandler;
 import com.mxgraph.swing.view.mxInteractiveCanvas;
+import com.mxgraph.util.mxCellRenderer;
 import com.mxgraph.util.mxConstants;
 import com.mxgraph.view.mxCellState;
 import com.mxgraph.view.mxEdgeStyle;
@@ -81,14 +86,49 @@ public class kGraphComponent extends mxGraphComponent {
   protected mxGraphHandler createGraphHandler()
   {
     return new mxGraphHandler(this) {
+      /**
+       * We just need a marker of a different color here.
+       */
       protected mxCellMarker createMarker()
       {
         mxCellMarker marker = super.createMarker();
         marker.setValidColor(kConstants.SWIMLANE_MARKER_COLOR);
-//        marker.setHotspot(1);
-//        marker.setHotspotEnabled(true); //neither of these seem to do anything
         return marker;
       }
+      /**
+       * Attempt to make drag images translucent.
+       */
+      public void updateDragImage(Object[] cells)
+      {
+        dragImage = null;
+        
+        if (cells != null && cells.length > 0)
+        {
+          Image img = mxCellRenderer.createBufferedImage(graphComponent
+              .getGraph(), cells, graphComponent.getGraph().getView()
+              .getScale(), null, graphComponent.isAntiAlias(), null,
+              graphComponent.getCanvas());
+      
+          if (img != null)
+          {
+            BufferedImage aimg = new BufferedImage(img.getWidth(null), img.getHeight(null), BufferedImage.TRANSLUCENT);  
+            // Get the images graphics  
+            Graphics2D g = aimg.createGraphics();  
+            // Set the Graphics composite to Alpha  
+            g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, (float) 0.55));  
+            // Draw the LOADED img into the prepared receiver image  
+            g.drawImage(img, 0, 0, null);  
+            // let go of all system resources in this Graphics  
+            g.dispose();  
+            
+            dragImage = new ImageIcon(aimg);
+      
+            setSize(dragImage.getIconWidth(), dragImage.getIconHeight());
+            getParent().setComponentZOrder(this, 0);
+          }
+        }
+      }
+
     };
   }
   
@@ -442,7 +482,7 @@ public class kGraphComponent extends mxGraphComponent {
 
       if (graph.isCellFoldable(cell, !tmp))
       {
-        return (tmp) ? collapsedIcon : expandedIcon;
+        return (tmp) ? Base.getImageIcon("folding-collapsed.gif", this) : Base.getImageIcon("folding-expanded.gif", this);
       }
     }
 
