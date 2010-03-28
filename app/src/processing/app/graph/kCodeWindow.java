@@ -114,6 +114,7 @@ public class kCodeWindow {
     editareaSettings.cols = TEXTAREA_DEFAULT_COLS;
     textarea = new JEditTextArea(editareaSettings);
     textarea.getDocument().setTokenMarker(Editor.pdeTokenMarker);
+    textarea.setEventsEnabled(false); //suppress JEditTextArea events (not that anyone is listening to it)
     textarea.setEditable(true);
     textarea.setHorizontalOffset(TEXTAREA_HORIZ_OFFSET);
     textarea.getPainter().setLineHighlightEnabled(false); // else looks funny
@@ -178,40 +179,36 @@ public class kCodeWindow {
     // stop showing buttons when this "frame" is defocused
     textarea.addFocusListener(new FocusListener() {
       public void focusGained(FocusEvent e) {
-        System.out.println("kCodeWindow >> textarea FocusGained");
+//        System.out.println("kCodeWindow >> textarea FocusGained");
         moveButton.setEnabled(true);
         closeButton.setEnabled(true);
       }
       public void focusLost(FocusEvent e) {
-        System.out.println("kCodeWindow >> textarea focusLost");
+//        System.out.println("kCodeWindow >> textarea focusLost");
         moveButton.setEnabled(false);
         closeButton.setEnabled(false);
       }
     });
     moveButton.addFocusListener(new FocusListener() {
       public void focusGained(FocusEvent e) {
-        System.out.println("kCodeWindow >> moveButton FocusGained");
+//        System.out.println("kCodeWindow >> moveButton FocusGained");
         moveButton.setEnabled(true);
         closeButton.setEnabled(true);
 //         textarea.requestFocus(); //put the cursor in the textarea
       }
       public void focusLost(FocusEvent e) {
-        System.out.println("kCodeWindow >> moveButton focusLost");
-//        moveButton.setEnabled(false); //redundant probably
-//        closeButton.setEnabled(false);
+//        System.out.println("kCodeWindow >> moveButton focusLost");
       }
     });
     closeButton.addFocusListener(new FocusListener() { //need to do this or else closeButton action won't work
       public void focusGained(FocusEvent e) {
-        System.out.println("kCodeWindow >> closeButton FocusGained");
+//        System.out.println("kCodeWindow >> closeButton FocusGained");
         moveButton.setEnabled(true);
         closeButton.setEnabled(true);
 //         textarea.requestFocus(); //put the cursor in the textarea
       }
       public void focusLost(FocusEvent e) {
-        System.out.println("kCodeWindow >> closeButton focusLost");
-//        moveButton.setEnabled(false);
-//        closeButton.setEnabled(false);
+//        System.out.println("kCodeWindow >> closeButton focusLost");
       }
     });
     // hide code window when close button is clicked
@@ -897,15 +894,9 @@ public class kCodeWindow {
   }
 
   /**
-   * Return the text editor document model; used by Editor to monitor code
-   * window document updates
-   * 
-   * @return
+   * Show the code window and all its component parts
+   * @param b
    */
-  public javax.swing.text.Document getDocument() {
-    return textarea.getDocument();
-  }
-
   public void setVisible(boolean b) {
     editFrame.setVisible(b);
     buttonFrame.setVisible(b);
@@ -915,6 +906,10 @@ public class kCodeWindow {
       textarea.requestFocus();
   }
 
+  /**
+   * Returns if the code window (represented by its textarea) is visible
+   * @param b
+   */
   public boolean isVisible() {
     return editFrame.isVisible();
   }

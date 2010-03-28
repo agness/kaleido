@@ -2103,8 +2103,8 @@ public class JEditTextArea extends JComponent
     public void mouseReleased(MouseEvent evt) {
       int newStart = getMarkPosition();
       int newEnd = xyToOffset(evt.getX(),evt.getY()); //using implementation from mouseDragged
-      System.out.println("JEditTextArea >> mouseReleased >> fire kEvent.TEXT_SELECTED newStart="+newStart+" newEnd="+newEnd);
-      eventSource.fireEvent(new mxEventObject(kEvent.TEXT_SELECTED,
+      if (eventSource.isEventsEnabled()) System.out.println("JEditTextArea >> mouseReleased >> fire kEvent.TEXT_SELECTION_CHANGE newStart="+newStart+" newEnd="+newEnd);
+      eventSource.fireEvent(new mxEventObject(kEvent.TEXT_SELECTION_CHANGE,
                                               "newStart", newStart, "newEnd", newEnd));
     }
     
