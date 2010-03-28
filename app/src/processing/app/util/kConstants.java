@@ -10,6 +10,8 @@ import java.awt.Stroke;
 import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
 
+import processing.app.Theme;
+
 
 import com.mxgraph.util.mxUtils;
 
@@ -137,31 +139,31 @@ public class kConstants
    * kGraphComponent handler styling stuff
    */
 
-  public static final Color EDGE_STROKE_COLOR = Color.gray;
+  public static final Color EDGE_STROKE_COLOR = Color.black;
 
-  public static final Color EDGE_FONT_COLOR = Color.black;
+  public static final Color EDGE_FONT_COLOR = Color.gray;
   
   public static final Color CANVAS_COLOR = UI_COLOR_INACTIVE;
 
-  public static final Color CELL_MARKER_COLOR = UI_COLOR_ROLLOVER;
+  public static final Color CELL_MARKER_COLOR = Color.gray;
 
-  public static final Color SWIMLANE_MARKER_COLOR = Color.orange;
+  public static final Color SWIMLANE_MARKER_COLOR = UI_COLOR_ACTIVE;
 
-  public static final Color HANDLE_FILLCOLOR = mxUtils.parseColor("#989898");
+  public static final Color HANDLE_FILLCOLOR = UI_COLOR_ROLLOVER;
 
-  public static final Color HANDLE_BORDERCOLOR = mxUtils.parseColor("#989898");
+  public static final Color HANDLE_BORDERCOLOR = UI_COLOR_ROLLOVER;
 
-  public static final Color LABEL_HANDLE_FILLCOLOR = Color.CYAN;
+  public static final Color LABEL_HANDLE_FILLCOLOR = UI_COLOR_ROLLOVER;
 
-  public static final Color LOCKED_HANDLE_FILLCOLOR = Color.CYAN;
+  public static final Color LOCKED_HANDLE_FILLCOLOR = Color.gray;
 
-  public static final Color CONNECT_HANDLE_FILLCOLOR = Color.orange;
+  public static final Color CONNECT_HANDLE_FILLCOLOR = Color.magenta;//what's this
 
   public static final Color CONN_MARKER_VALID_COLOR = Color.CYAN;//mxUtils.parseColor("#B9FC00");
 
-  public static final Color CONN_MARKER_INVALID_COLOR = Color.magenta;//mxUtils.parseColor("#7AFC00"); 
+  public static final Color CONN_MARKER_INVALID_COLOR = Theme.getColor("status.error.bgcolor"); 
 
-  public static final Color DEFAULT_VALID_COLOR = Color.magenta;
+  public static final Color DEFAULT_VALID_COLOR = Color.magenta;//what's this?
 
   public static final Color DEFAULT_INVALID_COLOR = Color.yellow;//new Color(255,0,255);  
 
@@ -177,19 +179,19 @@ public class kConstants
     }
   };
 
-  public static final Color VERTEX_SELECTION_COLOR = Color.yellow;
+  public static final Color VERTEX_SELECTION_COLOR = Color.yellow;//what's this?
 
-  public static final Stroke VERTEX_SELECTION_STROKE = new BasicStroke(1,
+  public static final Stroke VERTEX_SELECTION_STROKE = new BasicStroke(1,//what's this?
   BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f,
   new float[] { 3, 3 }, 0.0f);
 
-  public static final Color EDGE_SELECTION_COLOR = Color.cyan;
+  public static final Color EDGE_SELECTION_COLOR = Color.cyan;//what's this?
 
-  public static final Stroke EDGE_SELECTION_STROKE = new BasicStroke(1,
+  public static final Stroke EDGE_SELECTION_STROKE = new BasicStroke(1,//what's this?
   BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f,
   new float[] { 3, 3 }, 0.0f);
 
-  public static final Color PREVIEW_BORDER_COLOR = Color.GRAY;
+  public static final Color SHAPE_PREVIEW_BORDER_COLOR = Color.GRAY;//what's this?
 
-  public static final Color PREVIEW_FILL_COLOR = new Color(170, 170, 170, 70);
+  public static final Color SHAPE_PREVIEW_FILL_COLOR = new Color(170, 170, 170, 70);//what's this?
 }

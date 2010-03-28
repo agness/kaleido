@@ -2,6 +2,8 @@ package processing.app.graph;
 
 import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Composite;
+import java.awt.Cursor;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
@@ -87,13 +89,93 @@ public class kGraphComponent extends mxGraphComponent {
   {
     return new mxGraphHandler(this) {
       /**
-       * We just need a marker of a different color here.
+       * Final constant for repeated use when making transparent drag images. 
+       */
+      private final Composite ALPHA_COMPOSITE = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, (float) 0.55);
+      
+      /**
+       * We need a marker that will mark one color for swimlane drag-drops
+       * and one color for regular mouseOver for selection
        */
       protected mxCellMarker createMarker()
       {
-        mxCellMarker marker = super.createMarker();
-        marker.setValidColor(kConstants.SWIMLANE_MARKER_COLOR);
+        mxCellMarker marker = new mxCellMarker(graphComponent) {
+          /**
+           * This is mxGraphHandler's original customization of its marker that
+           * we want to keep Note that this method is only ever invoked (via
+           * getState(e) via process(e)) when the MouseEvent is MOUSE_MOVED or
+           * null (which in reality is MOUSE_DRAGGED, but my guess is that the
+           * mouseDragged events are being eaten before they get here so we
+           * never see them!)
+           * 
+           * @see com.mxgraph.swing.handler.mxGraphHandler#createMarker
+           * @see com.mxgraph.swing.handler.mxCellMarker#getCell
+           */
+          public Object getCell(MouseEvent e) {
+            System.out
+                .println("graphHandler.marker >> getCell entering with e.getID()="
+                         + e.getID());
+
+            mxGraph graph = graphComponent.getGraph();
+            Object cell = super.getCell(e);
+
+            if (e.getID() != MouseEvent.MOUSE_MOVED) { // i.e. if it should be a
+                                                       // MOUSE_DRAGGED event
+                                                       // but isn't detectable
+              TransferHandler th = graphComponent.getTransferHandler();
+              boolean isLocal = th instanceof mxGraphTransferHandler
+                                && ((mxGraphTransferHandler) th).isLocalDrag();
+
+              Object[] cells = (isLocal) ? graph.getSelectionCells()
+                                        : dragCells;
+              cell = graph.getDropTarget(cells, e.getPoint(), cell);
+              boolean clone = graphComponent.isCloneEvent(e) && cloneEnabled;
+
+              if (isLocal && cell != null && cells.length > 0 && !clone
+                  && graph.getModel().getParent(cells[0]) == cell) {
+                cell = null;
+              }
+            }
+
+            return cell;
+          }
+
+          /**
+           * Returns the valid- or invalidColor depending on the value of
+           * isValid. The given state is ignored by this implementation.
+           */
+          protected Color getMarkerColor(MouseEvent e, mxCellState state,
+                                         boolean isValid) {
+            return (isValid) ? ((e.getID() == MouseEvent.MOUSE_MOVED) ? kConstants.CELL_MARKER_COLOR
+                                                                     : kConstants.SWIMLANE_MARKER_COLOR)
+                            : invalidColor;
+          }
+        };
+        // we can ignore setting swimlaneContentEnabled here, since we enabled
+        // it globally in graphcomponent
         return marker;
+      }
+      /**
+       * Overriding to process cell markers on mouseOver (in regular states)
+       */
+      public void mouseMoved(MouseEvent e)
+      {
+        if (graphComponent.isEnabled() && isEnabled() && !e.isConsumed())
+        {
+          marker.process(e); //achang addition, hopefully only highlights when mouse hovers and NEVER any other time
+          
+          Cursor cursor = getCursor(e);
+
+          if (cursor != null)
+          {
+            graphComponent.getGraphControl().setCursor(cursor);
+            e.consume();
+          }
+          else
+          {
+            graphComponent.getGraphControl().setCursor(DEFAULT_CURSOR);
+          }
+        }
       }
       /**
        * Attempt to make drag images translucent.
@@ -115,7 +197,7 @@ public class kGraphComponent extends mxGraphComponent {
             // Get the images graphics  
             Graphics2D g = aimg.createGraphics();  
             // Set the Graphics composite to Alpha  
-            g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, (float) 0.55));  
+            g.setComposite(ALPHA_COMPOSITE);  
             // Draw the LOADED img into the prepared receiver image  
             g.drawImage(img, 0, 0, null);  
             // let go of all system resources in this Graphics  
@@ -471,7 +553,7 @@ public class kGraphComponent extends mxGraphComponent {
   }
   
   /**
-   * Overriding to redefine the images TODO
+   * Overriding to redefine the button images
    */
   public ImageIcon getFoldingIcon(mxCellState state)
   {

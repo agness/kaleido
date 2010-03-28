@@ -53,6 +53,7 @@ import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
 import com.mxgraph.util.mxEvent;
 import com.mxgraph.util.mxEventObject;
+import com.mxgraph.util.mxEventSource;
 import com.mxgraph.util.mxUtils;
 import com.mxgraph.util.mxEventSource.mxIEventListener;
 import com.mxgraph.view.mxGraph;
@@ -205,7 +206,24 @@ public class Editor extends JFrame implements RunnerListener {
     
     // TEXTEDITOR BOX holds code file tabs and code edit area 
     textHeader = new EditorTextHeader(this);
-    textarea = new JEditTextArea(pdeTextAreaDefaults);
+    textarea = new JEditTextArea(pdeTextAreaDefaults) {
+      /**
+       * Implement mxEvent system so textarea can fire events as well.
+       * @author achang
+       */
+      mxEventSource eventSource = new mxEventSource(this);
+    };
+    //TODO ###### add extra mouseAdapter that fires events
+    //also, dunno if it's legal to just add members like eventSource
+    /*
+      public void mouseReleased(MouseEvent evt) {
+      int newStart = getMarkPosition();
+      int newEnd = xyToOffset(evt.getX(),evt.getY()); //using implementation from mouseDragged
+      System.out.println("JEditTextArea >> mouseReleased >> fire kEvent.TEXT_SELECTION_CHANGE newStart="+newStart+" newEnd="+newEnd);
+      eventSource.fireEvent(new mxEventObject(kEvent.TEXT_SELECTION_CHANGE,
+                                              "newStart", newStart, "newEnd", newEnd));
+    }
+    */
     textarea.setRightClickPopup(new TextAreaPopup()); //TODO popupFocusHandler
     textarea.setHorizontalOffset(6);
     Box textEditorBox = Box.createVerticalBox();
@@ -2106,7 +2124,7 @@ public class Editor extends JFrame implements RunnerListener {
       if (sketch.save()) {
         // If sketch saved successfully, then get the pde folderpath and save the graph file inside.
         writeGraphToFile();
-//        undoManager.resetCounter(); //TODO asdf
+//        undoManager.resetCounter(); //TODO undoManager
         statusNotice("Done Saving.");
       } else {
         statusEmpty();
@@ -2145,7 +2163,7 @@ public class Editor extends JFrame implements RunnerListener {
       if (sketch.saveAs()) {
         // If sketch saved successfully, then get the pde folderpath and save the graph file inside.
         writeGraphToFile();
-//        undoManager.resetCounter();TODO
+//        undoManager.resetCounter(); TODO implement undo system
         statusNotice("Done Saving.");
         // Disabling this for 0125, instead rebuild the menu inside
         // the Save As method of the Sketch object, since that's the
@@ -2550,15 +2568,16 @@ public class Editor extends JFrame implements RunnerListener {
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
   /**
-   * Declares and installs graph listeners for:
-   * synchronizing selection with textarea
-   * graph popup
+   * Declares and installs graph listeners for synchronizing selection with
+   * textarea
    */
   public void installSelectionSyncListeners() {
     drawarea.getGraphComponent().getGraph().getSelectionModel()
         .addListener(mxEvent.CHANGE, new mxIEventListener() {
           public void invoke(Object sender, mxEventObject evt) {
-            System.out.println("editor >> graph listener selection sync, graphComponent.focusowner="+drawarea.getGraphComponent().isFocusOwner());
+            
+//            System.out.println("editor >> graph listener selection sync, graphComponent.focusowner="+drawarea.getGraphComponent().isFocusOwner());
+            
             if (drawarea.getGraphComponent().isFocusOwner()) { //then force text selection to sync with us
               Object cell = ((mxGraphSelectionModel) sender).getCell();
               if (cell instanceof mxICell
@@ -2579,10 +2598,11 @@ public class Editor extends JFrame implements RunnerListener {
             }
           }
         });
-    textarea.addListener(kEvent.TEXT_SELECTED, new mxIEventListener() {
+    textarea.addListener(kEvent.TEXT_SELECTION_CHANGE, new mxIEventListener() {
       public void invoke(Object sender, mxEventObject evt) {
 
-        System.out.println("editor >> text listener selection sync, textarea.focusowner="+textarea.isFocusOwner());
+//        System.out.println("editor >> text listener selection sync, textarea.focusowner="+textarea.isFocusOwner());
+        
         if (textarea.isFocusOwner()) // then force graph selection to sync with us
           drawarea.selectCodeIntersection(textarea.getSelectionStart(),
                                           textarea.getSelectionStop(), sketch
@@ -2594,18 +2614,22 @@ public class Editor extends JFrame implements RunnerListener {
 
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
-  
+  /**
+   * Declares and installs graph & textarea listeners for handling linking
+   * between code and visual. Also handles setting the various states of the
+   * linkButton located in drawingHeader depending on the selection.
+   */
   public void installCodeDrawLinkListeners() {
     // CASE 1
     drawarea.addListener(kEvent.TOOL_END, new mxIEventListener() {
       public void invoke(Object source, mxEventObject evt) {
+        // if linkButton.isSelected&&vertexTool was successful, then
+        // connect(text.sel, graph.sel) this works b/c newly created
+        // vertex is always the graph current selection
         if (drawingHeader.getLinkButton().isLinkActiveMode() && (Boolean) evt.getProperty("success")) {
           System.out.println("link >> link active and shape successful, so connect them");
           codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
         }
-        // if linkButton.isSelected&&vertexTool was successful, then
-        // connect(text.sel, graph.sel) this works b/c newly created
-        // vertex is always the graph current selection
       }
     });
     // CASE 1
@@ -2617,7 +2641,7 @@ public class Editor extends JFrame implements RunnerListener {
           //user select some text and clicks to create a new shape
           System.out.println("link >> user selected text and now to create new shape so set link button active");
           drawingHeader.getLinkButton().setLinkActiveMode();
-          // beginCompoundEdit();
+          // TODO beginCompoundEdit();
         }
       }
     });
@@ -2633,18 +2657,21 @@ public class Editor extends JFrame implements RunnerListener {
               codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
               
             // CASE 4  
-            } else if (drawarea.getGraphComponent().isFocusOwner() && drawarea.selectionHasLink()) {
-              System.out.println("link >> graph selection has link, changing buttons");
-              drawingHeader.getLinkButton().setUnlinkMode();
-            } else //includes cases where selection is null
-            {
-              System.out.println("link >> graph selection doesn't have link");
-              drawingHeader.getLinkButton().setLinkMode();
-            }
+            } else if (drawarea.getGraphComponent().isFocusOwner())
+              if (drawarea.isLinkValidOnSelected()) {
+                System.out.println("link >> graph selection has link, changing buttons");
+                drawingHeader.getLinkButton().setUnlinkMode();
+              } else if (!drawarea.isSelectionContainEdge() && drawarea.getGraphComponent().getGraph().getSelectionCount() > 0) {
+                System.out.println("link >> graph selection doesn't have link");
+                drawingHeader.getLinkButton().setLinkMode();
+              } else { //case where selection is null
+                System.out.println("link >> nothing selected");
+                drawingHeader.getLinkButton().setEnabled(false);
+              }
           }
         });
     // CASE 3
-    textarea.addListener(kEvent.TEXT_SELECTED, new mxIEventListener() {
+    textarea.addListener(kEvent.TEXT_SELECTION_CHANGE, new mxIEventListener() {
       public void invoke(Object sender, mxEventObject evt) {
 
         if (drawingHeader.getLinkButton().isLinkActiveMode() && drawarea.getGraphComponent().getGraph().getSelectionCount() > 0) {
@@ -2660,6 +2687,14 @@ public class Editor extends JFrame implements RunnerListener {
           else
             codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
         }
+        else if (textarea.isFocusOwner())
+          if (textarea.getSelectedText() == null) {
+          System.out.println("link >> selected text == null so disabling linkbutton");
+            drawingHeader.getLinkButton().setEnabled(false);
+          } else {
+            System.out.println("link >> text selection eligible for linking");
+            drawingHeader.getLinkButton().setLinkMode();
+          }
       }
     });
     // CASE 2 & 3
@@ -2715,8 +2750,10 @@ public class Editor extends JFrame implements RunnerListener {
           && ((mxICell) cells[i]).getValue() instanceof kCellValue)
         ((kCellValue) ((mxICell) cells[i]).getValue()).setCodeMark(start, stop, sketch.getCurrentCodeIndex());
     drawingHeader.getLinkButton().setLinkMode();
-    drawarea.getGraphComponent().repaint();
-    statusNotice("Code-visual link established."); //TODO figure out when to empty the status
+    statusNotice("Code-visual link established.");
+    //TODO figure out when to empty the status; maybe after a time delay?
+    //could hack it by putting a "counter" at top, which counts # of user select actions (2 or 3)
+    //before clearing.  This would avoid the immediate selection problem
   }
   
   /**
@@ -2731,7 +2768,6 @@ public class Editor extends JFrame implements RunnerListener {
           && ((mxICell) cells[i]).getValue() instanceof kCellValue)
         ((kCellValue) ((mxICell) cells[i]).getValue()).invalidateCodeMarks();
     drawingHeader.getLinkButton().setLinkMode();
-    drawarea.getGraphComponent().repaint();
     statusNotice("Code-visual link disconnected.");
   }
 }
