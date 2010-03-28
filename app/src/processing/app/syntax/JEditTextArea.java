@@ -14,6 +14,7 @@ package processing.app.syntax;
 import processing.app.*;
 
 import javax.swing.event.*;
+import javax.swing.event.DocumentEvent.EventType;
 import javax.swing.text.*;
 import javax.swing.undo.*;
 import javax.swing.*;
@@ -1627,6 +1628,10 @@ public class JEditTextArea extends JComponent
     }
   }
   
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+  
   /*
    * Redirected to event source
    * @author achang
@@ -1677,6 +1682,9 @@ public class JEditTextArea extends JComponent
   }
 
 
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+  
   /**
    * Forwards key events directly to the input handler.
    * This is slightly faster than using a KeyListener
@@ -1780,7 +1788,50 @@ public class JEditTextArea extends JComponent
     bracketLine = bracketPosition = -1;
   }
 
-  protected void documentChanged(DocumentEvent evt)
+  /**
+   * Modified to accommodate overloading, as well as firing document event when
+   * this textarea is where the user is making edits
+   * @param evt
+   * @param offset
+   * @author achang
+   */
+  public void documentChanged(DocumentEvent evt)
+  {
+    documentChanged(evt, evt.getOffset());
+    
+    if (this.isFocusOwner() && isEventsEnabled()) {
+      System.out.println("textarea is focus owner && eventEnabled");
+      
+      // we don't know which sketch is current; editor will know and can fill in this info before forwarding to drawarea
+      int sketchOffset = evt.getOffset();
+      String change;
+      if (evt.getType() == EventType.INSERT)
+        try {
+          change = document.getText(evt.getOffset(), evt.getLength());
+        } catch (BadLocationException e1) {
+          e1.printStackTrace();
+          change = null;
+        }
+      else
+        change = null;
+      
+      System.out
+      .println("textarea.documentChanged >> fire kEvent.TEXTAREA_DOCUMENT_CHANGE sketchOffset="+sketchOffset+" event="+evt+" change="+change);
+  eventSource.fireEvent(new mxEventObject(
+      kEvent.TEXTAREA_DOCUMENT_CHANGE,
+      "sketchOffset", sketchOffset, "event", evt, "change", change));
+    }
+  }
+
+  /**
+   * Changed from original <i>protected void documentChanged(DocumentEvent evt)</i>
+   * to take custom offset (so it can be called by editor to force mirroring changes
+   * initiated in code windows)
+   * @param evt
+   * @param offset
+   * @author achang
+   */
+  public void documentChanged(DocumentEvent evt, int offset)
   {
     DocumentEvent.ElementChange ch =
       evt.getChange(document.getDefaultRootElement());
@@ -1792,7 +1843,7 @@ public class JEditTextArea extends JComponent
       count = ch.getChildrenAdded().length -
         ch.getChildrenRemoved().length;
 
-    int line = getLineOfOffset(evt.getOffset());
+    int line = getLineOfOffset(offset);
     if(count == 0)
       {
         painter.invalidateLine(line);
@@ -2104,7 +2155,7 @@ public class JEditTextArea extends JComponent
       int newStart = getMarkPosition();
       int newEnd = xyToOffset(evt.getX(),evt.getY()); //using implementation from mouseDragged
       if (eventSource.isEventsEnabled()) System.out.println("JEditTextArea >> mouseReleased >> fire kEvent.TEXT_SELECTION_CHANGE newStart="+newStart+" newEnd="+newEnd);
-      eventSource.fireEvent(new mxEventObject(kEvent.TEXT_SELECTION_CHANGE,
+      eventSource.fireEvent(new mxEventObject(kEvent.TEXTAREA_SELECTION_CHANGE,
                                               "newStart", newStart, "newEnd", newEnd));
     }
     

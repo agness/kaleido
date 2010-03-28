@@ -21,11 +21,21 @@ public class kEvent {
   /**
    * Fired by drawingArea whenever a code window is opened or closed (i.e. visibility changes)
    */
-  public static final String CODE_WINDOW_VISIBLE = "codeWindowVisible";
+  public static final String CODE_WINDOW_VISIBILITY_CHANGE = "cwVisibilityChange";
+  
+  /**
+   * Fired by drawingArea whenever a code window's document has been edited
+   */
+  public static final String CODE_WINDOW_DOCUMENT_CHANGE = "cwDocumentChange";
 
+  /**
+   * Fired by JEditTextArea instances on document change
+   */
+  public static final String TEXTAREA_DOCUMENT_CHANGE = "textDocumentChange";
+  
   /**
    * Fired by JEditTextArea.select(int, int)
    */
-  public static final String TEXT_SELECTED = "selectionChange";
+  public static final String TEXTAREA_SELECTION_CHANGE = "textSelectionChange";
   
 }

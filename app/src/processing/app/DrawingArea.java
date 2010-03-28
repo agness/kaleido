@@ -1,12 +1,10 @@
 package processing.app;
 
-import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.Stroke;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -22,6 +20,9 @@ import javax.swing.JDesktopPane;
 import javax.swing.JInternalFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.event.DocumentEvent.EventType;
 import javax.swing.text.BadLocationException;
 
 import processing.app.graph.kCellValue;
@@ -92,17 +93,6 @@ public class DrawingArea extends JDesktopPane {
    */
   String currentFillColor = kConstants.COLOR_KEYS[0];
 
-  /**
-   * @deprecated This array stores references to all cells that have valid code
-   *             marks. It is used to update codeMarks after every textarea
-   *             edit.
-   * 
-   *             TODO instead, scan the graph each time, like this: Iterator it
-   *             = graphModel.getCells().values().iterator(); while(iterator.
-   *             hasNext()) System.out.println(it.next());
-   */
-  protected ArrayList<Object> kCellRegistry = new ArrayList<Object>(20);
-
   protected ArrayList<kCodeWindow> codeWindows;
 
   boolean codeWindowsEnabled = true;
@@ -113,12 +103,14 @@ public class DrawingArea extends JDesktopPane {
    * Tool and selection handling.
    */
   mxRubberband rubberband;
-
   ShapeToolband shapeToolband;
-
   kConnectionHandler connectorToolband;
-
   ColorToolband colorToolband;
+  
+  /**
+   * Code window document listener, used to mirror edits between code windows and main textarea
+   */
+  CodeWindowDocListener codeWindowDocListener;
 
   public DrawingArea(Editor editor) {
     super();
@@ -153,6 +145,8 @@ public class DrawingArea extends JDesktopPane {
     ((kGraphComponent) graphComponent).setConnectionHandler(connectorToolband); 
     colorToolband = new ColorToolband(this);
     colorToolband.setEnabled(false);
+    
+    codeWindowDocListener = new CodeWindowDocListener();
 
     // compose the swing components
     graphPanel = new JInternalFrame("Graph", false, // resizable
@@ -313,17 +307,30 @@ public class DrawingArea extends JDesktopPane {
     return graphComponent;
   }
 
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+  /*
+   * Tool handling
+   */
+  
+  /**
+   * Returns the current state of the color selection; used by ShapeToolband
+   * to determine what cell style to create
+   * @return
+   */
   public String getCurrentFillColor() {
     return currentFillColor;
   }
 
   /**
    * Used only internally, so technically an unnecessary method.
+   * @deprecated
    */
   protected void setCurrentFillColor(String currentFillColor) {
     this.currentFillColor = currentFillColor;
   }
-
+  
   /**
    * Fires TOOL_BEGIN event, sets the cursor, and enables toolband mouse drawing
    * instead of rubberband selection.
@@ -348,7 +355,7 @@ public class DrawingArea extends JDesktopPane {
     // change the cursor. Why? Dun ask me. @author achang
     setCursor(TOOL_CURSOR);
     toolMode = toolName;
-
+//TODO enable the ESCAPE_KEY listener that endsToolMode
     if (kUtils.stringLinearSearch(kConstants.SHAPE_KEYS, toolName) >= 0
         || toolName.equals(kConstants.SHAPE_TEXT))
       shapeToolband.setEnabled(true);
@@ -410,6 +417,10 @@ public class DrawingArea extends JDesktopPane {
     return modified;
   }
 
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+  
   /*
    * Code window methods
    */
@@ -427,6 +438,14 @@ public class DrawingArea extends JDesktopPane {
    */
   public boolean isCodeWindowsEnabled() {
     return codeWindowsEnabled;
+  }
+  
+  /**
+   * Shortcut method to get a cell when given a String id
+   */
+  protected Object getCell(String id)
+  {
+    return ((mxGraphModel) graphComponent.getGraph().getModel()).getCell(id);
   }
 
   /**
@@ -506,8 +525,31 @@ public class DrawingArea extends JDesktopPane {
       if (codewindow == null)
         codewindow = addCodeWindow(cell);
 
+      refreshCodeWindowContent(cell);
       codewindow.setLocation(locX, locY);
       codewindow.setVisible(true);
+    }
+  }
+  
+  /**
+   * Updates the content of the code window textarea regardless of whether the
+   * code window is currently visible. This method is called each time the code
+   * window is opened
+   * 
+   * @param cell
+   */
+  protected void refreshCodeWindowContent(mxICell cell) {
+    if (cell.getValue() instanceof kCellValue) {
+      kCellValue val = (kCellValue) cell.getValue();
+      try {
+        String content = editor.getSketch().getCode(val.getCodeIndex())
+            .getDocument().getText(val.getStartMark(),
+                                   val.getStopMark() - val.getStartMark());
+        getCodeWindow(cell).getTextArea().setText(content);
+      } catch (BadLocationException bl) {
+        System.err.println("drawingArea.refreshCodeWindowContent error with cell "+val.toPrettyString());
+        bl.printStackTrace();
+      }
     }
   }
 
@@ -541,7 +583,28 @@ public class DrawingArea extends JDesktopPane {
           .println("drawingArea >> addCodeWindow >> added new code windows ArrayList");
     }
     codeWindows.add(newWindow);
+    newWindow.getTextArea().getDocument().addDocumentListener(codeWindowDocListener);
     return newWindow;
+  }
+  
+  /**
+   * Given a swing document, this method returns the code window in which 
+   * the document is contained, if said code window exists and is open.
+   * It does a linear search, and returns null if not found.
+   * @param document
+   * @return
+   */
+  protected kCodeWindow getCodeWindowOfDocument(javax.swing.text.Document document) {
+    if (codeWindows != null) {
+      Iterator it = codeWindows.iterator();
+      while (it.hasNext()) // System.out.println(it.next());
+      {
+        kCodeWindow next = (kCodeWindow) it.next();
+        if (next.getTextArea().getDocument() == document && next.isVisible()) 
+          return next;
+      }
+    }
+    return null; // return null if not found
   }
 
   /**
@@ -595,6 +658,18 @@ public class DrawingArea extends JDesktopPane {
         hideCodeWindow((mxICell) selected[i]);
     }
   }
+  
+  /**
+   * Returns whether or not the current selection contains an edge
+   * @return
+   */
+  public boolean isSelectionContainEdge() {
+    Object[] selected = graphComponent.getGraph().getSelectionCells();
+    for (int i = 0; i < selected.length; i++)
+      if (((mxICell) selected[i]).isEdge())
+        return true;
+    return false;
+  }
 
   /**
    * Closes all code windows.
@@ -612,8 +687,164 @@ public class DrawingArea extends JDesktopPane {
    * and thus update the codeWindowButton's status
    */
   public void fireCodeWindowEvent() {
-    eventSource.fireEvent(new mxEventObject(kEvent.CODE_WINDOW_VISIBLE));
+    eventSource.fireEvent(new mxEventObject(kEvent.CODE_WINDOW_VISIBILITY_CHANGE));
   }
+
+  /**
+   * Called by editor to have this drawingArea to find the relevant code
+   * window(s) and mirror the given edit.
+   * 
+   * General algorithm:
+   * go thru all cells
+   * if hasvalidCodeMarks && same sketch index
+   *    if intersects
+   *      update code marks
+   *    else if later in document than event
+   *      shift code marks
+   *    if either of these cases have have open windows
+   *      refresh code window content
+   */
+  public void mirrorDocEdit(int sketchInd, int sketchOffset, DocumentEvent e,
+                            String change) {
+    System.out
+    .println("drawarea.mirrorDocEdit >> make sure we received everything sketchInd="
+             + sketchInd+" sketchOffset="+sketchOffset+" event="+e+" change="+change);
+    
+    EventType type = e.getType();
+    
+    Object[] cells = mxGraphModel.getChildren(graphComponent.getGraph()
+        .getModel(), graphComponent.getGraph().getDefaultParent());
+    
+    for (int i = 0; i < cells.length; i++)
+      if (cells[i] instanceof mxICell
+          && ((mxICell) cells[i]).getValue() instanceof kCellValue
+          && ((kCellValue) ((mxICell) cells[i]).getValue()).hasValidCodeMarks()
+          && ((kCellValue) ((mxICell) cells[i]).getValue()).getCodeIndex() == sketchInd) {
+        
+        kCellValue val = ((kCellValue) ((mxICell) cells[i]).getValue());
+        
+        if (type == EventType.INSERT) {
+          System.out.println("drawarea.mirrorDocEdit >> type=INSERT");
+          
+          //if the insertion point falls into the range of the cell,
+          //then expand the code mark range to include the edit
+          if ((val.getStartMark() <= sketchOffset) && (val.getStopMark() >= sketchOffset)) {
+            val.setStopMark(val.getStopMark()+e.getLength());
+            refreshCodeWindowContent((mxICell) cells[i]);
+            
+          //else if the insertion point is before the cell
+          //shift both code marks to accommodate the extra characters
+          } else if (val.getStartMark() > sketchOffset) {
+            val.shiftCodeMarks(e.getLength());
+            refreshCodeWindowContent((mxICell) cells[i]);
+          }
+        } else if (type == EventType.REMOVE) {
+          int changeStop = sketchOffset+e.getLength();
+   
+          //if the entire contents of the cell is contained in the
+          //range of edit, disconnect the cell: invalidate its code 
+          //marks and close/delete the code window if there is one
+          if ((val.getStartMark() >= sketchOffset) && (val.getStopMark() <= changeStop)) {
+            val.invalidateCodeMarks();
+            //TODO figure out how to repaint just one cell
+            kCodeWindow cw = getCodeWindow((mxICell) cells[i]);
+            if (cw != null) {
+              cw.setVisible(false);
+              codeWindows.remove(cw);
+            }
+          }  
+          //if the latter half of the cell range overlaps with the first
+          //half of the range of edit, truncate the tail cell code mark to
+          //the beginning of range of edit
+          else if ((val.getStartMark() < sketchOffset) && (val.getStopMark() > sketchOffset) && (val.getStopMark() <= changeStop)) {
+            val.setStopMark(sketchOffset);
+            refreshCodeWindowContent((mxICell) cells[i]);
+          }
+          //if the first half of the cell range overlaps with the latter
+          //half of the range of edit, trim the front cell code mark to
+          //the end of the range of edit
+          else if ((val.getStartMark() >= sketchOffset) && (val.getStartMark() < changeStop) && (val.getStopMark() > changeStop)) {
+            int newLength = val.getStopMark()-changeStop;
+            val.setStartMark(sketchOffset);
+            val.setStopMark(sketchOffset+newLength);
+            refreshCodeWindowContent((mxICell) cells[i]);
+          }
+          //if the entire contents of the cell is larger than the range 
+          //of edit at both head and tail, then shorten the code marks with
+          //the corresponding number of characters removed
+          else if ((val.getStartMark() < sketchOffset) && (val.getStopMark() > changeStop)) {
+            val.setStopMark(val.getStopMark()-e.getLength());
+            refreshCodeWindowContent((mxICell) cells[i]);
+          }
+          //if the entire contents of the cell is located later in the
+          //document, then shift both code marks forward
+          else if (val.getStartMark() > changeStop) {
+            val.shiftCodeMarks(0-e.getLength());
+            refreshCodeWindowContent((mxICell) cells[i]);
+          }
+        }
+      }
+    
+  }
+  
+  /**
+   * Listens for edits inside all code windows. If the source code window has the
+   * UI focus, then this drawArea will fire a kEvent.CODE_WINDOW_DOCUMENT_CHANGE
+   * which will notify the editor to mirror the change in the main textarea.
+   */
+  public class CodeWindowDocListener implements DocumentListener {
+
+    public void insertUpdate(DocumentEvent e) {
+        handleUpdate(e);
+    }
+    
+    public void removeUpdate(DocumentEvent e) {
+        handleUpdate(e);
+    }
+
+    public void changedUpdate(DocumentEvent e) {
+      //never called by simple text components
+    }  
+    
+    private void handleUpdate(DocumentEvent e) {
+      javax.swing.text.Document document = (javax.swing.text.Document) e.getDocument();
+      kCodeWindow codeWindow = getCodeWindowOfDocument(document);
+      // TODO dunno why but the first time this DocListener is added it
+      // executes/handles update, which means it finds a null codeWindow (when
+      // initially refreshing content?)
+      // System.out.println("drawArea.CodeWindowDocListener >> codeWindow="+codeWindow);
+      
+      if (codeWindow != null && codeWindow.getTextArea().isFocusOwner()) { 
+
+        kCellValue val = (kCellValue) ((mxICell) getCell(codeWindow.getId())).getValue();
+        int sketchInd = val.getCodeIndex();
+        int sketchOffset = val.getStartMark() + e.getOffset();
+        String change;
+        if (e.getType() == EventType.INSERT)
+          try {
+            change = document.getText(e.getOffset(), e.getLength());
+          } catch (BadLocationException e1) {
+            e1.printStackTrace();
+            change = null;
+          }
+        else
+          change = null;
+        
+        //update codemarks here
+        val.setStopMark(val.getStartMark()+document.getLength());
+        
+        System.out
+            .println("drawArea.CodeWindowDocListener >> fire kEvent.CODE_WINDOW_DOCUMENT_CHANGE sketchInd="
+                     + sketchInd+" sketchOffset="+sketchOffset+" event="+e+" change="+change);
+        eventSource.fireEvent(new mxEventObject(
+            kEvent.CODE_WINDOW_DOCUMENT_CHANGE, "sketchInd", sketchInd,
+            "sketchOffset", sketchOffset, "event", e, "change", change));
+      }
+        
+    }
+  }
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
   /*
    * Lock methods
@@ -664,6 +895,9 @@ public class DrawingArea extends JDesktopPane {
     }
   }
   
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
   /*
    * Linking business
    */
@@ -671,7 +905,7 @@ public class DrawingArea extends JDesktopPane {
   /**
    * Returns whether or not any of the selected cells is connected to code
    */
-  public boolean selectionHasLink() {
+  public boolean isLinkValidOnSelected() {
     Object[] selected = graphComponent.getGraph().getSelectionCells();
     for (int i = 0; i < selected.length; i++)
       if (hasValidCodeMarks((mxICell) selected[i]))
@@ -697,8 +931,10 @@ public class DrawingArea extends JDesktopPane {
                            + val.toPrettyString());
         if (val.hasValidCodeMarks()
             && val.getCodeIndex() == ind
-            && ((start > val.getStartMark() && start < val.getStopMark()) || (stop > val
-                .getStartMark() && stop < val.getStopMark())))
+            && ((start > val.getStartMark() && start < val.getStopMark())
+                || (stop > val.getStartMark() && stop < val.getStopMark())
+                || (start == val.getStartMark() && stop == val.getStopMark())
+                || (stop == val.getStartMark() && start == val.getStopMark())))
           graphComponent.getGraph().getSelectionModel().addCell(cells[i]);
       }
     System.out
@@ -706,6 +942,9 @@ public class DrawingArea extends JDesktopPane {
                  + graphComponent.getGraph().getSelectionCount());
   }
 
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  
   /*
    * Redirected to event source
    */
@@ -754,6 +993,13 @@ public class DrawingArea extends JDesktopPane {
     eventSource.removeListener(listener, eventName);
   }
 
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+  /*
+   * Tool handling classes
+   */
+  
   /**
    * This class handles drawing shapes and connectors according to
    * mouse-specified position and dimensions. It inherits from mxRubberband for
@@ -781,8 +1027,8 @@ public class DrawingArea extends JDesktopPane {
     public ShapeToolband(final DrawingArea drawingArea) {
       super(drawingArea.getGraphComponent());
       this.drawingArea = drawingArea;
-      borderColor = kConstants.PREVIEW_BORDER_COLOR;
-      fillColor = kConstants.PREVIEW_FILL_COLOR; // half-transparent gray
+      borderColor = kConstants.SHAPE_PREVIEW_BORDER_COLOR;
+      fillColor = kConstants.SHAPE_PREVIEW_FILL_COLOR; // half-transparent gray
     }
 
     // TODO minor: implement shiftkey = square boundary
@@ -1437,4 +1683,5 @@ public class DrawingArea extends JDesktopPane {
     }
     
   }
+
 }

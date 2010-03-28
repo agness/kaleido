@@ -42,6 +42,7 @@ import java.util.zip.*;
 
 import javax.swing.*;
 import javax.swing.event.*;
+import javax.swing.event.DocumentEvent.EventType;
 import javax.swing.text.*;
 import javax.swing.undo.*;
 
@@ -206,13 +207,7 @@ public class Editor extends JFrame implements RunnerListener {
     
     // TEXTEDITOR BOX holds code file tabs and code edit area 
     textHeader = new EditorTextHeader(this);
-    textarea = new JEditTextArea(pdeTextAreaDefaults) {
-      /**
-       * Implement mxEvent system so textarea can fire events as well.
-       * @author achang
-       */
-      mxEventSource eventSource = new mxEventSource(this);
-    };
+    textarea = new JEditTextArea(pdeTextAreaDefaults);
     //TODO ###### add extra mouseAdapter that fires events
     //also, dunno if it's legal to just add members like eventSource
     /*
@@ -304,6 +299,7 @@ public class Editor extends JFrame implements RunnerListener {
     listener = new TextAreaListener(this, textarea);
     installCodeDrawLinkListeners();
     installSelectionSyncListeners();
+    installDocumentSyncListeners();
 
     
     // SET KEY/MOUSE/WHATEVER LISTENERS
@@ -2598,7 +2594,7 @@ public class Editor extends JFrame implements RunnerListener {
             }
           }
         });
-    textarea.addListener(kEvent.TEXT_SELECTION_CHANGE, new mxIEventListener() {
+    textarea.addListener(kEvent.TEXTAREA_SELECTION_CHANGE, new mxIEventListener() {
       public void invoke(Object sender, mxEventObject evt) {
 
 //        System.out.println("editor >> text listener selection sync, textarea.focusowner="+textarea.isFocusOwner());
@@ -2611,6 +2607,95 @@ public class Editor extends JFrame implements RunnerListener {
     });
   }
   
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+  /**
+   * Declares and installs document listeners for synchronizing edits between
+   * the main textarea and code windows
+   */
+  public void installDocumentSyncListeners() {
+    drawarea.addListener(kEvent.CODE_WINDOW_DOCUMENT_CHANGE, new mxIEventListener() {
+      public void invoke(Object sender, mxEventObject evt) {
+        textareaMirrorDocEdit(
+                              ((Integer) evt
+                                  .getProperty("sketchInd"))
+                                  .intValue(),
+                              ((Integer) evt
+                                  .getProperty("sketchOffset"))
+                                  .intValue(),
+                              ((DocumentEvent) evt
+                                  .getProperty("event")),
+                              (String) evt
+                                  .getProperty("change"));
+      }
+    });
+    textarea.addListener(kEvent.TEXTAREA_DOCUMENT_CHANGE, new mxIEventListener() {
+      public void invoke(Object sender, mxEventObject evt) {
+        drawarea.mirrorDocEdit(
+                              //textarea doesn't know which sketch is current;
+                              //we fill in this info before forwarding to drawarea
+                              sketch.getCurrentCodeIndex(),
+                              ((Integer) evt
+                                  .getProperty("sketchOffset"))
+                                  .intValue(),
+                              ((DocumentEvent) evt
+                                  .getProperty("event")),
+                              (String) evt
+                                  .getProperty("change"));
+      }
+    });
+  }
+  
+  /**
+   * Called by editor asking the textarea to mirror the given edit; its graph counterpart
+   * lives in drawarea, but this lives in editor because sketch lives in editor.
+   * 
+   * @param sketchInd which sketchCode this change is relevant to
+   * @param sketchOffset the offset adjusted to sketch (not the original offset in code window)
+   * @param e
+   * @param change if it is an insert event, the text that was inserted, else null
+   */
+  private void textareaMirrorDocEdit(int sketchInd, int sketchOffset, DocumentEvent e, String change) {
+
+    System.out
+    .println("editor.textareaMirrorDocEdit >> make sure we received everything sketchInd="
+             + sketchInd+" sketchOffset="+sketchOffset+" event="+e+" change="+change);
+    
+    EventType type = e.getType();
+    
+    if (sketchInd == sketch.getCurrentCodeIndex())
+    {
+      textarea.documentChanged(e, sketchOffset);
+      if (type == EventType.INSERT) {
+        textarea.select(sketchOffset, sketchOffset);
+        textarea.setSelectedText(change);
+      } else if (type == EventType.REMOVE) {
+        textarea.select(sketchOffset, sketchOffset+e.getLength());
+        textarea.setSelectedText("");
+      }
+      sketch.setModified(true);
+    }
+    else // the change is not in the current file
+    {
+      SketchCode targetCode = sketch.getCode(sketchInd);
+      javax.swing.text.Document targetDocument = targetCode.getDocument();
+      try {
+        if (type == EventType.INSERT) 
+        {
+          targetDocument.insertString(sketchOffset, change, null);
+        }
+        else if (type == EventType.REMOVE) 
+        {
+          targetDocument.remove(sketchOffset, e.getLength());
+        }
+      } catch (BadLocationException e1) {
+        e1.printStackTrace();
+      }
+      targetCode.setModified(true);
+    }
+    textHeader.repaint();
+  }
 
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
@@ -2671,7 +2756,7 @@ public class Editor extends JFrame implements RunnerListener {
           }
         });
     // CASE 3
-    textarea.addListener(kEvent.TEXT_SELECTION_CHANGE, new mxIEventListener() {
+    textarea.addListener(kEvent.TEXTAREA_SELECTION_CHANGE, new mxIEventListener() {
       public void invoke(Object sender, mxEventObject evt) {
 
         if (drawingHeader.getLinkButton().isLinkActiveMode() && drawarea.getGraphComponent().getGraph().getSelectionCount() > 0) {
