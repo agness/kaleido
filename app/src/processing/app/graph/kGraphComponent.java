@@ -112,9 +112,6 @@ public class kGraphComponent extends mxGraphComponent {
            * @see com.mxgraph.swing.handler.mxCellMarker#getCell
            */
           public Object getCell(MouseEvent e) {
-            System.out
-                .println("graphHandler.marker >> getCell entering with e.getID()="
-                         + e.getID());
 
             mxGraph graph = graphComponent.getGraph();
             Object cell = super.getCell(e);
