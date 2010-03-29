@@ -192,7 +192,8 @@ public class DrawingArea extends JDesktopPane {
           
           //testing for whether cells are locked/lockable...
           System.out.println("drawingArea >> graph selection changed: isCellLocked="+graphComponent.getGraph().isCellLocked(cells[i]));
-
+          System.out.println("drawingArea >> graph selection changed: isCellLinked="+((kGraph) graphComponent.getGraph()).isCellLinked(cells[i]));
+          
           if (cells[i] instanceof mxICell
               && ((mxICell) cells[i]).getValue() instanceof kCellValue) {
             System.out.println("drawingArea >> graph selection changed: "+((kCellValue) ((mxICell) cells[i]).getValue()).toPrettyString());
@@ -861,7 +862,7 @@ public class DrawingArea extends JDesktopPane {
    * 
    * @return if any code window is open
    */
-  public boolean isLockOnSelected() {
+  public boolean isSelectionLocked() {
     if (lockEnabled) {
       Object[] selected = graphComponent.getGraph().getSelectionCells();
       for (int i = 0; i < selected.length; i++)
@@ -975,10 +976,10 @@ public class DrawingArea extends JDesktopPane {
   /**
    * Returns whether or not any of the selected cells is connected to code
    */
-  public boolean isLinkValidOnSelected() {
+  public boolean isSelectionLinked() {
     Object[] selected = graphComponent.getGraph().getSelectionCells();
     for (int i = 0; i < selected.length; i++)
-      if (hasValidCodeMarks((mxICell) selected[i]))
+      if (((kGraph) graphComponent.getGraph()).isCellLinked(selected[i]))
         return true;
     return false;
   }

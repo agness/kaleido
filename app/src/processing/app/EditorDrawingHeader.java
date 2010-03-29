@@ -115,7 +115,7 @@ public class EditorDrawingHeader extends JPanel {
               lockButton.setEnabled(false);
             } else {
               lockButton.setEnabled(true);
-              lockButton.setSelected(!drawingArea.isLockOnSelected());
+              lockButton.setSelected(!drawingArea.isSelectionLocked());
             }
             updateCodeWindowButton();
           }
@@ -357,7 +357,7 @@ public class EditorDrawingHeader extends JPanel {
   }
 
   private void updateCodeWindowButton() {
-    codeWindowButton.setEnabled(drawingArea.isLinkValidOnSelected());
+    codeWindowButton.setEnabled(drawingArea.isSelectionLinked());
     codeWindowButton.setSelected(drawingArea.isCodeWindowOpenOnSelected());
   }
 

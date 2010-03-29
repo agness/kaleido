@@ -40,6 +40,9 @@ public class kCanvas extends mxInteractiveCanvas {
   public void drawShape(int x, int y, int w, int h, Map<String, Object> style)
   {
     String shape = mxUtils.getString(style, mxConstants.STYLE_SHAPE, "");
+    boolean locked = mxUtils.isTrue(style, kConstants.STYLE_LOCKED,
+                                     false);
+    style.put(mxConstants.STYLE_SHADOW, (!locked) ? "true" : "false");
     
     if (shape.equals(kConstants.SHAPE_AUDIO)
         || shape.equals(kConstants.SHAPE_KEYBOARD)
@@ -55,7 +58,7 @@ public class kCanvas extends mxInteractiveCanvas {
       {
         // Prepares the background
         boolean shadow = mxUtils.isTrue(style, mxConstants.STYLE_SHADOW,
-            false);
+                                        false);
         Color fillColor = mxUtils.getColor(style,
             mxConstants.STYLE_FILLCOLOR);
         Paint fillPaint = getFillPaint(new Rectangle(x, y, w, h),

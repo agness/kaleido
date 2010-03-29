@@ -2743,7 +2743,7 @@ public class Editor extends JFrame implements RunnerListener {
               
             // CASE 4  
             } else if (drawarea.getGraphComponent().isFocusOwner())
-              if (drawarea.isLinkValidOnSelected()) {
+              if (drawarea.isSelectionLinked()) {
                 System.out.println("link >> graph selection has link, changing buttons");
                 drawingHeader.getLinkButton().setUnlinkMode();
               } else if (!drawarea.isSelectionContainEdge() && drawarea.getGraphComponent().getGraph().getSelectionCount() > 0) {

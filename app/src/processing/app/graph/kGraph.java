@@ -47,7 +47,7 @@ public class kGraph extends mxGraph {
   }
   
   /**
-   * Returns true if the given cell may not be moved, sized, bended,
+   * Override returns true if the given cell may not be moved, sized, bended,
    * disconnected, edited or selected.
    * 
    * @param cell Cell whose locked state should be returned.
@@ -57,6 +57,17 @@ public class kGraph extends mxGraph {
   {
     return isCellsLocked() || mxUtils.isTrue(getCellStyle(cell), kConstants.STYLE_LOCKED,
                                              false);
+  }
+  
+  /**
+   * Returns true if the given cell may not be moved, sized, bended,
+   * disconnected, edited or selected.
+   * 
+   * @param cell Cell whose locked state should be returned.
+   * @return Returns true if the given cell is locked.
+   */
+  public boolean isCellLinked(Object cell) {
+    return mxUtils.isTrue(getCellStyle(cell), kConstants.STYLE_LINKED, false);
   }
   
   /**
