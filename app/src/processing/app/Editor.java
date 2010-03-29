@@ -2830,10 +2830,11 @@ public class Editor extends JFrame implements RunnerListener {
   private void codeDrawLink(Object[] cells, int start, int stop) {
     System.out.println("editor >> codeDrawLink start=" + start + " stop="
                        + stop);
-    for (int i = 0; i < cells.length; i++)
-      if (cells[i] instanceof mxICell
-          && ((mxICell) cells[i]).getValue() instanceof kCellValue)
-        ((kCellValue) ((mxICell) cells[i]).getValue()).setCodeMark(start, stop, sketch.getCurrentCodeIndex());
+//    for (int i = 0; i < cells.length; i++)
+//      if (cells[i] instanceof mxICell
+//          && ((mxICell) cells[i]).getValue() instanceof kCellValue)
+//        ((kCellValue) ((mxICell) cells[i]).getValue()).setCodeMark(start, stop, sketch.getCurrentCodeIndex());
+    drawarea.linkCells(cells, start, stop, sketch.getCurrentCodeIndex());
     drawingHeader.getLinkButton().setLinkMode();
     statusNotice("Code-visual link established.");
     //TODO figure out when to empty the status; maybe after a time delay?
@@ -2848,10 +2849,11 @@ public class Editor extends JFrame implements RunnerListener {
   private void codeDrawDisconnect(Object[] cells) {
     System.out.println("editor >> codeDrawDisconnect cells.length="
                        + cells.length);
-    for (int i = 0; i < cells.length; i++)
-      if (cells[i] instanceof mxICell
-          && ((mxICell) cells[i]).getValue() instanceof kCellValue)
-        ((kCellValue) ((mxICell) cells[i]).getValue()).invalidateCodeMarks();
+//    for (int i = 0; i < cells.length; i++)
+//      if (cells[i] instanceof mxICell
+//          && ((mxICell) cells[i]).getValue() instanceof kCellValue)
+//        ((kCellValue) ((mxICell) cells[i]).getValue()).invalidateCodeMarks();
+    drawarea.unlinkCells(cells);
     drawingHeader.getLinkButton().setLinkMode();
     statusNotice("Code-visual link disconnected.");
   }

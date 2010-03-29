@@ -115,6 +115,7 @@ public class EditorDrawingHeader extends JPanel {
               lockButton.setEnabled(false);
             } else {
               lockButton.setEnabled(true);
+              lockButton.setSelected(!drawingArea.isLockOnSelected());
             }
             updateCodeWindowButton();
           }
@@ -216,6 +217,7 @@ public class EditorDrawingHeader extends JPanel {
           drawingArea.closeCodeWindowOnSelected();
       }
     });
+    codeWindowButton.setEnabled(false); //start false, assuming nothing is selected at the beginning
 
     /*
      * LOCK/UNLOCK:
@@ -239,12 +241,13 @@ public class EditorDrawingHeader extends JPanel {
                            + ((AbstractButton) e.getSource()).isSelected());
         AbstractButton source = (AbstractButton) e.getSource();
         if (source.isSelected())
-          drawingArea.lockSelected();
-        else
           drawingArea.unlockSelected();
+        else
+          drawingArea.lockSelected();
       }
     });
-
+    lockButton.setEnabled(false); //start false, assuming nothing is selected at the beginning
+    
     /*
      * ZOOMIN
      */
@@ -279,6 +282,7 @@ public class EditorDrawingHeader extends JPanel {
      * as a button)
      */
     linkButton = new LinkButton();
+    linkButton.setEnabled(false);
 
     /*
      * BUTTON PANEL add everything

@@ -13,6 +13,7 @@ import javax.swing.border.LineBorder;
 import processing.app.Theme;
 
 
+import com.mxgraph.util.mxConstants;
 import com.mxgraph.util.mxUtils;
 
 /**
@@ -81,11 +82,11 @@ public class kConstants
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
   /*
-   * EditorDrawingHeader stuff
+   * Cell/vertex/edge/shape stuff
    */
   
   /**
-   * Shape names.
+   * Style keys: Shape names.
    */
   public static String SHAPE_TEXT = "text";
   public static String SHAPE_STAR = "star";
@@ -93,6 +94,11 @@ public class kConstants
   public static String SHAPE_KEYBOARD = "keyboard";
   public static String SHAPE_PERSON = "person";
   
+  /**
+   * Style key: Locked or not...
+   */
+  public static final String STYLE_LOCKED = "locked"; //mxConstants.STYLE_SHADOW
+  public static final String STYLE_LINKED = "linked";
   
   /** Rollover titles for each shape-making button. */
   public static final String SHAPE_KEYS[] = {
@@ -194,4 +200,5 @@ public class kConstants
   public static final Color SHAPE_PREVIEW_BORDER_COLOR = Color.GRAY;//what's this?
 
   public static final Color SHAPE_PREVIEW_FILL_COLOR = new Color(170, 170, 170, 70);//what's this?
+  
 }

@@ -116,6 +116,7 @@ public class DrawingArea extends JDesktopPane {
     super();
     this.editor = editor;
     mxGraph graph = new kGraph();
+    graph.setEdgeLabelsMovable(false); //vertexLabels are by default not movable
 
     // <!------------- hello world crap TODO remove
     helloWorld(graph);
@@ -187,12 +188,17 @@ public class DrawingArea extends JDesktopPane {
     graph.getSelectionModel().addListener(mxEvent.CHANGE, new mxIEventListener() {
       public void invoke(Object sender, mxEventObject evt) {
         Object[] cells = ((mxGraphSelectionModel) sender).getCells();
-        for (int i = 0; i < cells.length; i++)
+        for (int i = 0; i < cells.length; i++) {
+          
+          //testing for whether cells are locked/lockable...
+          System.out.println("drawingArea >> graph selection changed: isCellLocked="+graphComponent.getGraph().isCellLocked(cells[i]));
+
           if (cells[i] instanceof mxICell
               && ((mxICell) cells[i]).getValue() instanceof kCellValue) {
             System.out.println("drawingArea >> graph selection changed: "+((kCellValue) ((mxICell) cells[i]).getValue()).toPrettyString());
 //            System.out.println("drawingArea >> graph selection bounsd: "+graphComponent.getGraph().getCellBounds(cells[i]).getRectangle());
           }
+        }
       }
     });
   }
@@ -856,7 +862,7 @@ public class DrawingArea extends JDesktopPane {
    * @return if any code window is open
    */
   public boolean isLockOnSelected() {
-    if (codeWindowsEnabled) {
+    if (lockEnabled) {
       Object[] selected = graphComponent.getGraph().getSelectionCells();
       for (int i = 0; i < selected.length; i++)
         if (graphComponent.getGraph().isCellLocked(selected[i]))
@@ -873,11 +879,7 @@ public class DrawingArea extends JDesktopPane {
   public void lockSelected() {
     System.out.println("DrawingArea >> locking selected");
     if (lockEnabled) {
-      Object[] selected = graphComponent.getGraph().getSelectionCells();
-      for (int i = 0; i < selected.length; i++)
-        ((mxICell) selected[i]).getGeometry().setRelative(false); // TODO this
-                                                                  // doesn't
-                                                                  // work
+      lockCells(null);
     }
   }
 
@@ -889,9 +891,7 @@ public class DrawingArea extends JDesktopPane {
   public void unlockSelected() {
     System.out.println("DrawingArea >> UN-locking selected");
     if (lockEnabled) {
-      Object[] selected = graphComponent.getGraph().getSelectionCells();
-      for (int i = 0; i < selected.length; i++)
-        ((mxICell) selected[i]).getGeometry().setRelative(true);
+      unlockCells(null);
     }
   }
   
@@ -901,6 +901,76 @@ public class DrawingArea extends JDesktopPane {
   /*
    * Linking business
    */
+  
+  /**
+   * Links the specified cells by setting the code marks and updating the label
+   * object, as well as synchronizing the style state to the state of the code
+   * marks. If no cells are given, then the selection cells are changed.
+   */
+  public Object[] linkCells(Object[] cells, int start, int stop, int ind) {
+    if (cells == null) {
+      cells = graphComponent.getGraph().getSelectionCells();
+    }
+    
+    System.out.println("drawarea.linkCells >>");
+
+    for (int i = 0; i < cells.length; i++)
+      if (cells[i] instanceof mxICell
+          && ((mxICell) cells[i]).getValue() instanceof kCellValue) {
+
+        ((kCellValue) ((mxICell) cells[i]).getValue()).setCodeMark(start, stop,
+                                                                   ind);
+        graphComponent.labelChanged(cells[i], ((mxICell) cells[i]).getValue(),
+                                    null);
+
+        String value = ((kCellValue) ((mxICell) cells[i]).getValue())
+            .hasValidCodeMarks() ? "true" : "false";
+        graphComponent.getGraph().setCellStyles(kConstants.STYLE_LINKED, value,
+                                                new Object[] {cells[i]});
+      }
+
+    return cells;
+  }
+  
+  /**
+   * Disconnects the link of the given cells by using linkCells to set all code
+   * marks to invalid marks.
+   * @param cells
+   * @return
+   */
+  public Object[] unlinkCells(Object[] cells) {
+    System.out.println("drawarea.unlinkCells >>");
+    return linkCells(cells, -1, -1, -1);
+  }
+  
+  /**
+   * "Locks" given cells by setting their styles to locked, which will draw them
+   * in that way. Based on the implementation in mxGraph.setCellStyles, if no
+   * cells are given, then the selection cells are changed.
+   * 
+   * @param cells
+   * @return
+   */
+  public Object[] lockCells(Object[] cells) {
+    System.out.println("drawarea.lockCells >>");
+    return graphComponent.getGraph().setCellStyles(kConstants.STYLE_LOCKED,
+                                                   "true", cells);
+  }
+  
+  /**
+   * "Locks" given cells by setting their locked styles to false, which will
+   * draw them in that way. Based on the implementation in
+   * mxGraph.setCellStyles, if no cells are given, then the selection cells are
+   * changed.
+   * 
+   * @param cells
+   * @return
+   */
+  public Object[] unlockCells(Object[] cells) {
+    System.out.println("drawarea.unlockCells >>");
+    return graphComponent.getGraph().setCellStyles(kConstants.STYLE_LOCKED,
+                                                   "false", cells);
+  }
   
   /**
    * Returns whether or not any of the selected cells is connected to code

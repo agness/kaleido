@@ -5,15 +5,22 @@ import java.awt.Rectangle;
 import java.awt.Shape;
 import java.util.Map;
 
+import processing.app.util.kConstants;
+
 import com.mxgraph.canvas.mxGraphics2DCanvas;
 import com.mxgraph.canvas.mxICanvas;
 import com.mxgraph.canvas.mxImageCanvas;
+import com.mxgraph.model.mxCell;
+import com.mxgraph.model.mxGeometry;
+import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
+import com.mxgraph.model.mxIGraphModel;
 import com.mxgraph.util.mxConstants;
 import com.mxgraph.util.mxRectangle;
 import com.mxgraph.util.mxUtils;
 import com.mxgraph.view.mxCellState;
 import com.mxgraph.view.mxGraph;
+import com.mxgraph.view.mxStylesheet;
 
 /**
  * Extending mxGraph class in order to handle painting and editing of
@@ -38,7 +45,20 @@ public class kGraph extends mxGraph {
     }
     return false;
   }
-
+  
+  /**
+   * Returns true if the given cell may not be moved, sized, bended,
+   * disconnected, edited or selected.
+   * 
+   * @param cell Cell whose locked state should be returned.
+   * @return Returns true if the given cell is locked.
+   */
+  public boolean isCellLocked(Object cell)
+  {
+    return isCellsLocked() || mxUtils.isTrue(getCellStyle(cell), kConstants.STYLE_LOCKED,
+                                             false);
+  }
+  
   /**
    * Override the drawCell method so we can tell our kCanvas to draw notes.
    * The superclass implementation only passes the String type label to be painted
