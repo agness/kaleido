@@ -214,10 +214,10 @@ public class kCanvas extends mxInteractiveCanvas {
     final int h_incr = h*2/3 / (rows + 2);
     int x_temp = x + w_incr*3/2;
     int y_temp = y + h/3 + h_incr*3/2;
-    g.setColor(Color.LIGHT_GRAY);    
+    g.setColor(kConstants.CANVAS_COLOR);    
     for (int i=0; i < rows; i++) {
       for (int j=0; j < cols; j++) {
-        g.drawRect(x_temp+j*w_incr, y_temp+i*h_incr, w_incr/2, h_incr/2);
+        g.fillRect(x_temp+j*w_incr, y_temp+i*h_incr, w_incr/2, h_incr/2);
       }
     }
   }
@@ -267,7 +267,7 @@ public class kCanvas extends mxInteractiveCanvas {
     path.closePath();
     drawPath(path, fillColor, fillPaint, penColor, shadow);
   }
-
+   
   /**
    * Takes the "notes", or description, of the kCell and fits the text within the 
    * boundaries of the kCell. Takes care of multiple lines scenarios. 
@@ -286,7 +286,7 @@ public class kCanvas extends mxInteractiveCanvas {
     if (g.hitClip(x, y, w, h))
     {
       FontMetrics fm = g.getFontMetrics();
-
+      
       // Stores the original transform
       AffineTransform at = g.getTransform();
 
