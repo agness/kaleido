@@ -42,6 +42,7 @@ import com.mxgraph.swing.mxGraphComponent;
 import com.mxgraph.swing.mxGraphOutline;
 import com.mxgraph.util.mxEvent;
 import com.mxgraph.util.mxEventObject;
+import com.mxgraph.util.mxUtils;
 import com.mxgraph.util.mxEventSource.mxIEventListener;
 import com.mxgraph.view.mxGraphSelectionModel;
 
@@ -128,7 +129,8 @@ public class EditorDrawingHeader extends JPanel {
       }
     });
 
-    setBackground(Theme.getColor("header.bgcolor"));
+    setOpaque(true);
+    setBackground(Theme.getColor("header.bgcolor")); //TODO dunno why this doesn't work when packaged
     setLayout(new FlowLayout(FlowLayout.RIGHT, 0, 0));
     setBorder(null);
     toolButtons = new ButtonGroup();
@@ -590,6 +592,8 @@ public class EditorDrawingHeader extends JPanel {
      */
     public TrayComboBox(Object[] items) {
       super(items);
+      setOpaque(true);
+      setBackground(kConstants.UI_COLOR_INACTIVE);
       setRenderer(new ListRenderer());
       setUI(trayUI);
       setPreferredSize(new Dimension(BUTTON_WIDTH, BUTTON_WIDTH));

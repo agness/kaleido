@@ -125,7 +125,6 @@ public class Editor extends JFrame implements RunnerListener {
   JEditTextArea textarea;
   
   // syntax default settings shared by all code editors (i.e. code windows + text area)
-  public static final TextAreaDefaults pdeTextAreaDefaults = new PdeTextAreaDefaults();
   public static final PdeKeywords pdeTokenMarker = new PdeKeywords();
 
   // graph-side object & swing component
@@ -207,18 +206,7 @@ public class Editor extends JFrame implements RunnerListener {
     
     // TEXTEDITOR BOX holds code file tabs and code edit area 
     textHeader = new EditorTextHeader(this);
-    textarea = new JEditTextArea(pdeTextAreaDefaults);
-    //TODO ###### add extra mouseAdapter that fires events
-    //also, dunno if it's legal to just add members like eventSource
-    /*
-      public void mouseReleased(MouseEvent evt) {
-      int newStart = getMarkPosition();
-      int newEnd = xyToOffset(evt.getX(),evt.getY()); //using implementation from mouseDragged
-      System.out.println("JEditTextArea >> mouseReleased >> fire kEvent.TEXT_SELECTION_CHANGE newStart="+newStart+" newEnd="+newEnd);
-      eventSource.fireEvent(new mxEventObject(kEvent.TEXT_SELECTION_CHANGE,
-                                              "newStart", newStart, "newEnd", newEnd));
-    }
-    */
+    textarea = new JEditTextArea(new PdeTextAreaDefaults());
     textarea.setRightClickPopup(new TextAreaPopup()); //TODO popupFocusHandler
     textarea.setHorizontalOffset(6);
     Box textEditorBox = Box.createVerticalBox();

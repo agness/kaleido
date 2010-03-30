@@ -44,6 +44,7 @@ import processing.app.DrawingArea;
 import processing.app.Editor;
 import processing.app.Preferences;
 import processing.app.syntax.JEditTextArea;
+import processing.app.syntax.PdeTextAreaDefaults;
 import processing.app.syntax.TextAreaDefaults;
 
 import com.mxgraph.model.mxGeometry;
@@ -109,7 +110,7 @@ public class kCodeWindow {
 
     // make the editor portions
 
-    TextAreaDefaults editareaSettings = Editor.pdeTextAreaDefaults;
+    TextAreaDefaults editareaSettings = new PdeTextAreaDefaults();
     editareaSettings.rows = TEXTAREA_DEFAULT_ROWS;
     editareaSettings.cols = TEXTAREA_DEFAULT_COLS;
     textarea = new JEditTextArea(editareaSettings);
