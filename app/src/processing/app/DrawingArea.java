@@ -540,9 +540,9 @@ public class DrawingArea extends JDesktopPane {
    * @param locY
    */
   protected void showCodeWindow(mxICell cell, int locX, int locY) {
-    System.out.println("drawingArea >> showCodeWindow >> id=" + cell.getId() + " val=" + cell.getValue());
+//    System.out.println("drawarea.showCodeWindow >> id=" + cell.getId() + " val=" + cell.getValue());
     if (hasValidCodeMarks(cell)) {
-      // System.out.println("drawingArea >> showCodeWindow >> hasValidCodeMarks");
+//      System.out.println("drawarea.showCodeWindow >> hasValidCodeMarks");
       kCodeWindow codewindow = getCodeWindow(cell.getId());
       if (codewindow == null)
         codewindow = addCodeWindow(cell);
@@ -563,15 +563,15 @@ public class DrawingArea extends JDesktopPane {
   protected void refreshCodeWindowContent(mxICell cell) {
     if (cell.getValue() instanceof kCellValue) {
       kCellValue val = (kCellValue) cell.getValue();
-      System.out.println("drawingArea >> refreshCodeWindowContent >> id=" + cell.getId() + " val=" + cell.getValue());
+//      System.out.println("drawarea.refreshCodeWindowContent >> id=" + cell.getId() + " val=" + cell.getValue());
       try {
         String content = editor.getSketch().getCode(val.getCodeIndex())
             .getDocument().getText(val.getStartMark(),
                                    val.getStopMark() - val.getStartMark());
-        System.out.println("drawingArea >> refreshCodeWindowContent >> cw="+getCodeWindow(cell).getId()+" textarea="+getCodeWindow(cell).getTextArea().getClass().getName() + '@' + Integer.toHexString(hashCode()));
+//        System.out.println("drawarea.refreshCodeWindowContent >> cw="+getCodeWindow(cell).getId()+" textarea="+getCodeWindow(cell).getTextArea().getClass().getName() + '@' + Integer.toHexString(hashCode()));
         getCodeWindow(cell).getTextArea().setText(content);
       } catch (BadLocationException bl) {
-        System.err.println("drawingArea.refreshCodeWindowContent error with cell "+val.toPrettyString());
+//        System.err.println("drawarea.refreshCodeWindowContent error with cell "+val.toPrettyString());
         bl.printStackTrace();
       }
     }
@@ -583,9 +583,9 @@ public class DrawingArea extends JDesktopPane {
    * @param cell
    */
   protected void hideCodeWindow(mxICell cell) {
-    System.out.println("drawingArea >> hideCodeWindow id="+cell.getId()+" val=" + cell.getValue());
+//    System.out.println("drawarea >> hideCodeWindow id="+cell.getId()+" val=" + cell.getValue());
     if (hasValidCodeMarks(cell)) {
-      // System.out.println("drawingArea >> hideCodeWindow >> hasValidCodeMarks");
+//      System.out.println("drawarea >> hideCodeWindow >> hasValidCodeMarks");
       kCodeWindow codewindow = getCodeWindow(cell.getId());
       if (codewindow != null)
         codewindow.setVisible(false);
@@ -600,12 +600,12 @@ public class DrawingArea extends JDesktopPane {
    */
   protected kCodeWindow addCodeWindow(mxICell cell) {
     kCodeWindow newWindow = new kCodeWindow(cell, this);
-    System.out.println("drawingArea >> addCodeWindow id="+cell.getId()+" val="+cell.getValue()+" textarea="+newWindow.getTextArea().getClass().getName() + '@' + Integer.toHexString(hashCode()));
+//    System.out.println("drawarea >> addCodeWindow id="+cell.getId()+" val="+cell.getValue()+" textarea="+newWindow.getTextArea().getClass().getName() + '@' + Integer.toHexString(hashCode()));
     
     if (codeWindows == null) {
       codeWindows = new ArrayList<kCodeWindow>();
-      System.out
-          .println("drawingArea >> addCodeWindow >> added new code windows ArrayList");
+//      System.out
+//          .println("drawarea >> addCodeWindow >> added new code windows ArrayList");
     }
     codeWindows.add(newWindow);
     newWindow.getTextArea().getDocument().addDocumentListener(codeWindowDocListener);
@@ -839,7 +839,7 @@ public class DrawingArea extends JDesktopPane {
       // initially refreshing content?)
       // System.out.println("drawArea.CodeWindowDocListener >> codeWindow="+codeWindow);
       
-      System.out.println("drawarea.handleUpdate >> "+e+" cw.id="+((codeWindow != null)? codeWindow.getId() : codeWindow));
+//      System.out.println("drawarea.handleUpdate >> "+e+" cw.id="+((codeWindow != null)? codeWindow.getId() : codeWindow));
       
       if (codeWindow != null && codeWindow.getTextArea().isFocusOwner()) { 
 
@@ -850,7 +850,7 @@ public class DrawingArea extends JDesktopPane {
         if (e.getType() == EventType.INSERT)
           try {
             change = document.getText(e.getOffset(), e.getLength());
-            System.out.println("drawarea.handleUpdate >> string change="+change);
+//            System.out.println("drawarea.handleUpdate >> string change="+change);
           } catch (BadLocationException e1) {
             e1.printStackTrace();
             change = null;
@@ -899,7 +899,7 @@ public class DrawingArea extends JDesktopPane {
    * @see com.mxgraph.view.mxGraph#isCellsLocked()
    */
   public void lockSelected() {
-    System.out.println("DrawingArea >> locking selected");
+    System.out.println("drawarea >> locking selected");
     if (lockEnabled) {
       lockCells(null);
     }
@@ -911,7 +911,7 @@ public class DrawingArea extends JDesktopPane {
    * @see com.mxgraph.view.mxGraph#isCellsLocked()
    */
   public void unlockSelected() {
-    System.out.println("DrawingArea >> UN-locking selected");
+    System.out.println("drawarea >> UN-locking selected");
     if (lockEnabled) {
       unlockCells(null);
     }

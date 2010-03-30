@@ -177,41 +177,23 @@ public class kCodeWindow {
 
     // myriad event handling
 
-    // stop showing buttons when this "frame" is defocused
-    textarea.addFocusListener(new FocusListener() {
+    // disable buttons when this "frame" is defocused
+    FocusListener focusListener = new FocusListener() {
       public void focusGained(FocusEvent e) {
-//        System.out.println("kCodeWindow >> textarea FocusGained");
         moveButton.setEnabled(true);
         closeButton.setEnabled(true);
       }
       public void focusLost(FocusEvent e) {
-//        System.out.println("kCodeWindow >> textarea focusLost");
         moveButton.setEnabled(false);
         closeButton.setEnabled(false);
       }
-    });
-    moveButton.addFocusListener(new FocusListener() {
-      public void focusGained(FocusEvent e) {
-//        System.out.println("kCodeWindow >> moveButton FocusGained");
-        moveButton.setEnabled(true);
-        closeButton.setEnabled(true);
-//         textarea.requestFocus(); //put the cursor in the textarea
-      }
-      public void focusLost(FocusEvent e) {
-//        System.out.println("kCodeWindow >> moveButton focusLost");
-      }
-    });
-    closeButton.addFocusListener(new FocusListener() { //need to do this or else closeButton action won't work
-      public void focusGained(FocusEvent e) {
-//        System.out.println("kCodeWindow >> closeButton FocusGained");
-        moveButton.setEnabled(true);
-        closeButton.setEnabled(true);
-//         textarea.requestFocus(); //put the cursor in the textarea
-      }
-      public void focusLost(FocusEvent e) {
-//        System.out.println("kCodeWindow >> closeButton focusLost");
-      }
-    });
+    };
+    textarea.addFocusListener(focusListener);
+    //have to put the focus listener on every component else it doesn't work every time
+    buttonPanel.addFocusListener(focusListener);
+    moveButton.addFocusListener(focusListener);
+    closeButton.addFocusListener(focusListener);
+    
     // hide code window when close button is clicked
     closeButton.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
@@ -224,7 +206,6 @@ public class kCodeWindow {
         if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
           setVisible(false);
         if (e.getKeyCode() == KeyEvent.VK_ENTER) { //HACK force enter key to work (cause i dunno why it doesn't) TODO dun hack.
-          System.out.println("TEXT AREA HEARS ENTER KEY PRESSED");
           textarea.setSelectedText("\n");
         }
       }
@@ -286,7 +267,6 @@ public class kCodeWindow {
    */
   protected mxMouseControl createMoveListener() {
     return new mxMouseControl() {
-
       public void mouseDragged(MouseEvent e) {
         Point buttonLocation = buttonFrame.getLocation();
         Point realLocation = new Point(e.getX() + buttonLocation.x,
