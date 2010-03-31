@@ -150,7 +150,7 @@ public class DrawingArea extends JDesktopPane {
         Object[] cells = (Object[]) evt.getProperty("cells");
         kCodeWindow cw;
         for (int i = 0; i < cells.length; i++) {
-          cw = getCodeWindow((mxICell) cells[i]);
+          cw = getCodeWindow(cells[i]);
           if (cw != null) {
             System.out.println("drawarea >> cell removed, removing code window id="+cw.getId());
             codeWindows.remove(cw);
@@ -546,8 +546,8 @@ public class DrawingArea extends JDesktopPane {
    * @param cell
    * @return
    */
-  protected kCodeWindow getCodeWindow(mxICell cell) {
-    return getCodeWindow(cell.getId());
+  protected kCodeWindow getCodeWindow(Object cell) {
+    return getCodeWindow(((mxICell) cell).getId());
   }
 
   /**
@@ -579,9 +579,9 @@ public class DrawingArea extends JDesktopPane {
    * @param locX
    * @param locY
    */
-  protected void showCodeWindow(mxICell cell) {
-    showCodeWindow(cell, (int) cell.getGeometry().getCenterX(), (int) cell
-        .getGeometry().getCenterY());
+  protected void showCodeWindow(Object cell) {
+    mxGeometry geo = ((mxICell) cell).getGeometry();
+    showCodeWindow(cell, (int) geo.getCenterX(), (int) geo.getCenterY());
   }
 
   /**
@@ -591,11 +591,11 @@ public class DrawingArea extends JDesktopPane {
    * @param locX
    * @param locY
    */
-  protected void showCodeWindow(mxICell cell, int locX, int locY) {
+  protected void showCodeWindow(Object cell, int locX, int locY) {
 //    System.out.println("drawarea.showCodeWindow >> id=" + cell.getId() + " val=" + cell.getValue());
     if (hasValidCodeMarks(cell)) {
 //      System.out.println("drawarea.showCodeWindow >> hasValidCodeMarks");
-      kCodeWindow codewindow = getCodeWindow(cell.getId());
+      kCodeWindow codewindow = getCodeWindow(((mxICell) cell).getId());
       if (codewindow == null)
         codewindow = addCodeWindow(cell);
 
@@ -612,9 +612,9 @@ public class DrawingArea extends JDesktopPane {
    * 
    * @param cell
    */
-  protected void refreshCodeWindowContent(mxICell cell) {
-    if (cell.getValue() instanceof kCellValue) {
-      kCellValue val = (kCellValue) cell.getValue();
+  protected void refreshCodeWindowContent(Object cell) {
+    if (((mxICell) cell).getValue() instanceof kCellValue) {
+      kCellValue val = (kCellValue) ((mxICell) cell).getValue();
 //      System.out.println("drawarea.refreshCodeWindowContent >> id=" + cell.getId() + " val=" + cell.getValue());
       try {
         String content = editor.getSketch().getCode(val.getCodeIndex())
@@ -634,11 +634,11 @@ public class DrawingArea extends JDesktopPane {
    * 
    * @param cell
    */
-  protected void hideCodeWindow(mxICell cell) {
+  protected void hideCodeWindow(Object cell) {
 //    System.out.println("drawarea >> hideCodeWindow id="+cell.getId()+" val=" + cell.getValue());
     if (hasValidCodeMarks(cell)) {
 //      System.out.println("drawarea >> hideCodeWindow >> hasValidCodeMarks");
-      kCodeWindow codewindow = getCodeWindow(cell.getId());
+      kCodeWindow codewindow = getCodeWindow(((mxICell) cell).getId());
       if (codewindow != null)
         codewindow.setVisible(false);
     }
@@ -650,8 +650,8 @@ public class DrawingArea extends JDesktopPane {
    * @param cell
    * @return
    */
-  protected kCodeWindow addCodeWindow(mxICell cell) {
-    kCodeWindow newWindow = new kCodeWindow(cell, this);
+  protected kCodeWindow addCodeWindow(Object cell) {
+    kCodeWindow newWindow = new kCodeWindow(((mxICell) cell), this);
 //    System.out.println("drawarea >> addCodeWindow id="+cell.getId()+" val="+cell.getValue()+" textarea="+newWindow.getTextArea().getClass().getName() + '@' + Integer.toHexString(hashCode()));
     
     if (codeWindows == null) {
@@ -689,10 +689,10 @@ public class DrawingArea extends JDesktopPane {
    * 
    * @return if any code window is open
    */
-  protected boolean isCodeWindowOpen(mxICell cell) {
+  protected boolean isCodeWindowOpen(Object cell) {
     if (hasValidCodeMarks(cell)) {
 //      System.out.println("drawingArea >> isCodeWindowOpen >> hasValidCodeMarks");
-      kCodeWindow codewindow = getCodeWindow(cell.getId());
+      kCodeWindow codewindow = getCodeWindow(((mxICell) cell).getId());
       if (codewindow != null)
         return codewindow.isVisible();
     }
@@ -708,7 +708,7 @@ public class DrawingArea extends JDesktopPane {
     if (codeWindowsEnabled) {
       Object[] selected = graphComponent.getGraph().getSelectionCells();
       for (int i = 0; i < selected.length; i++)
-        if (isCodeWindowOpen((mxICell) selected[i]))
+        if (isCodeWindowOpen(selected[i]))
           return true;
     }
     return false;
@@ -721,7 +721,7 @@ public class DrawingArea extends JDesktopPane {
     if (codeWindowsEnabled) {
       Object[] selected = graphComponent.getGraph().getSelectionCells();
       for (int i = 0; i < selected.length; i++)
-        showCodeWindow((mxICell) selected[i]);
+        showCodeWindow(selected[i]);
     }
   }
 
@@ -732,7 +732,7 @@ public class DrawingArea extends JDesktopPane {
     if (codeWindowsEnabled) {
       Object[] selected = graphComponent.getGraph().getSelectionCells();
       for (int i = 0; i < selected.length; i++)
-        hideCodeWindow((mxICell) selected[i]);
+        hideCodeWindow(selected[i]);
     }
   }
   
@@ -807,13 +807,13 @@ public class DrawingArea extends JDesktopPane {
           //then expand the code mark range to include the edit
           if ((val.getStartMark() <= sketchOffset) && (val.getStopMark() >= sketchOffset)) {
             val.setStopMark(val.getStopMark()+e.getLength());
-            refreshCodeWindowContent((mxICell) cells[i]);
+            refreshCodeWindowContent(cells[i]);
             
           //else if the insertion point is before the cell
           //shift both code marks to accommodate the extra characters
           } else if (val.getStartMark() > sketchOffset) {
             val.shiftCodeMarks(e.getLength());
-            refreshCodeWindowContent((mxICell) cells[i]);
+            refreshCodeWindowContent(cells[i]);
           }
         } else if (type == EventType.REMOVE) {
           int changeStop = sketchOffset+e.getLength();
@@ -824,7 +824,7 @@ public class DrawingArea extends JDesktopPane {
           if ((val.getStartMark() >= sketchOffset) && (val.getStopMark() <= changeStop)) {
             val.invalidateCodeMarks();
             //TODO figure out how to repaint just one cell
-            kCodeWindow cw = getCodeWindow((mxICell) cells[i]);
+            kCodeWindow cw = getCodeWindow(cells[i]);
             if (cw != null) {
               cw.setVisible(false);
               codeWindows.remove(cw);
@@ -835,7 +835,7 @@ public class DrawingArea extends JDesktopPane {
           //the beginning of range of edit
           else if ((val.getStartMark() < sketchOffset) && (val.getStopMark() > sketchOffset) && (val.getStopMark() <= changeStop)) {
             val.setStopMark(sketchOffset);
-            refreshCodeWindowContent((mxICell) cells[i]);
+            refreshCodeWindowContent(cells[i]);
           }
           //if the first half of the cell range overlaps with the latter
           //half of the range of edit, trim the front cell code mark to
@@ -844,20 +844,20 @@ public class DrawingArea extends JDesktopPane {
             int newLength = val.getStopMark()-changeStop;
             val.setStartMark(sketchOffset);
             val.setStopMark(sketchOffset+newLength);
-            refreshCodeWindowContent((mxICell) cells[i]);
+            refreshCodeWindowContent(cells[i]);
           }
           //if the entire contents of the cell is larger than the range 
           //of edit at both head and tail, then shorten the code marks with
           //the corresponding number of characters removed
           else if ((val.getStartMark() < sketchOffset) && (val.getStopMark() > changeStop)) {
             val.setStopMark(val.getStopMark()-e.getLength());
-            refreshCodeWindowContent((mxICell) cells[i]);
+            refreshCodeWindowContent(cells[i]);
           }
           //if the entire contents of the cell is located later in the
           //document, then shift both code marks forward
           else if (val.getStartMark() > changeStop) {
             val.shiftCodeMarks(0-e.getLength());
-            refreshCodeWindowContent((mxICell) cells[i]);
+            refreshCodeWindowContent(cells[i]);
           }
         }
       }
