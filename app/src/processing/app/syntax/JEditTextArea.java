@@ -84,11 +84,26 @@ public class JEditTextArea extends JComponent
    */
   public JEditTextArea(TextAreaDefaults defaults)
   {
+    this(defaults, null);
+  }
+  
+  /**
+   * An overloaded constructor which takes a drawingArea, which if not null
+   * indicates that this instance of the JEditTextArea will have a
+   * kTextAreaPainter and thus, line marker functionality. The horizontal offset
+   * is fudged right if it's a kTextAreaPainter; all other textarea
+   * settings are the same.
+   * 
+   * @param defaults
+   * @param drawarea
+   */
+  public JEditTextArea(TextAreaDefaults defaults, DrawingArea drawarea)
+  {
     // Enable the necessary events
     enableEvents(AWTEvent.KEY_EVENT_MASK);
 
     // Initialize some misc. stuff
-    painter = new TextAreaPainter(this,defaults);
+    painter = (drawarea == null) ? new TextAreaPainter(this,defaults) : new kTextAreaPainter(this,defaults,drawarea);
     documentHandler = new DocumentHandler();
     eventListenerList = new EventListenerList();
     caretEvent = new MutableCaretEvent();
@@ -131,6 +146,10 @@ public class JEditTextArea extends JComponent
           vertical.setValue(vertical.getValue() + amt * 3);
         }
       });
+    
+    // begin kEdits
+    if (painter instanceof kTextAreaPainter)
+      setHorizontalOffset(6+kTextAreaPainter.LINK_MARKER_WIDTH); //6 is the original processing value
   }
 
   /**

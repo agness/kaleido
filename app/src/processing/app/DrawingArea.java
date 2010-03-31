@@ -1,5 +1,6 @@
 package processing.app;
 
+import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -606,9 +607,9 @@ public class DrawingArea extends JDesktopPane {
   }
   
   /**
-   * Updates the content of the code window textarea regardless of whether the
-   * code window is currently visible. This method is called each time the code
-   * window is opened
+   * Updates the content of the code window textarea to match the content of the
+   * active sketch code regardless of whether the code window is currently
+   * visible. This method is called each time the code window is opened
    * 
    * @param cell
    */
@@ -1061,31 +1062,67 @@ public class DrawingArea extends JDesktopPane {
    * Selects all cells that have codemarks that intersect with the specified
    * code range of the given code index.
    */
-  public void selectCodeIntersection(int start, int stop, int ind) {
+  public void selectCellsIntersectCode(int start, int stop) {
+    int ind = editor.getSketch().getCurrentCodeIndex();
     graphComponent.getGraph().getSelectionModel().clear();
+    graphComponent.getGraph().getSelectionModel().setCells(getCellsIntersectCode(start,stop,ind));
+    System.out
+    .println("drawarea >> selectCellsIntersectCode selectionCells.length="
+             + graphComponent.getGraph().getSelectionCount());
+  }
+
+  /**
+   * Selects all cells that have codemarks that intersect with the specified
+   * code range of the given code index.
+   */
+  protected Object[] getCellsIntersectCode(int start, int stop, int ind) {
+
     Object[] cells = mxGraphModel.getChildren(graphComponent.getGraph()
         .getModel(), graphComponent.getGraph().getDefaultParent());
-    System.out.println("drawArea >> selectCodeIntersection allCells.length="
-                       + cells.length + " start=" + start + " stop=" + stop);
+    ArrayList<Object> result = new ArrayList<Object>();
+
     for (int i = 0; i < cells.length; i++)
       if (cells[i] instanceof mxICell
           && ((mxICell) cells[i]).getValue() instanceof kCellValue) {
+        
         kCellValue val = ((kCellValue) ((mxICell) cells[i]).getValue());
-        System.out.println("drawArea >> selectCodeIntersection val="
-                           + val.toPrettyString());
         if (val.hasValidCodeMarks()
             && val.getCodeIndex() == ind
             && ((start > val.getStartMark() && start < val.getStopMark())
                 || (stop > val.getStartMark() && stop < val.getStopMark())
                 || (start == val.getStartMark() && stop == val.getStopMark())
                 || (stop == val.getStartMark() && start == val.getStopMark())))
-          graphComponent.getGraph().getSelectionModel().addCell(cells[i]);
+          result.add(cells[i]);
       }
-    System.out
-        .println("drawArea >> selectCodeIntersection selectionCells.length="
-                 + graphComponent.getGraph().getSelectionCount());
-  }
 
+    return result.toArray();
+  }
+  
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  
+  /**
+   * Return the fill colors of the cells associated with the code specified by
+   * the given code marks, used by the kTextAreaPainter for the line marker
+   */
+  public Object[] getColorsIntersectCode(int start, int stop) {
+    ArrayList<Color> result = new ArrayList<Color>();
+    int ind = editor.getSketch().getCurrentCodeIndex();
+    Object[] cells = getCellsIntersectCode(start,stop,ind);
+    for (int i = 0; i < cells.length; i++) {
+
+      mxCellState state = graphComponent.getGraph().getView().getState(cells[i]);
+      System.out.println("     "+mxUtils.getColor(state.getStyle(),mxConstants.STYLE_FILLCOLOR));
+      result.add(mxUtils.getColor(state.getStyle(),mxConstants.STYLE_FILLCOLOR));
+    }
+    
+    System.out
+    .println("drawarea >> getColorsIntersectCode cells.length="
+             + result.size());
+    return result.toArray();
+    
+  }
+  
 
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
   

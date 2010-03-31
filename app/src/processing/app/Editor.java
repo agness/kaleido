@@ -204,23 +204,23 @@ public class Editor extends JFrame implements RunnerListener {
     buildMenuBar();
     
     
-    // TEXTEDITOR BOX holds code file tabs and code edit area 
-    textHeader = new EditorTextHeader(this);
-    textarea = new JEditTextArea(new PdeTextAreaDefaults());
-    textarea.setRightClickPopup(new TextAreaPopup()); //TODO popupFocusHandler
-    textarea.setHorizontalOffset(6);
-    Box textEditorBox = Box.createVerticalBox();
-    textEditorBox.add(textHeader);
-    textEditorBox.add(textarea);
-    
-    
-    // DRAWEDITOR BOX holds the draw tool bar and draw area
+    // DRAWEDITOR BOX holds the draw tool bar and draw area (needs to be constructed before textarea)
     drawarea = new DrawingArea(this);
     drawingHeader = new EditorDrawingHeader(drawarea);
     Box drawEditorBox = Box.createVerticalBox();
     drawEditorBox.add(drawingHeader);
     drawEditorBox.add(drawarea);
     
+    
+    // TEXTEDITOR BOX holds code file tabs and code edit area 
+    textHeader = new EditorTextHeader(this);
+    textarea = new JEditTextArea(new PdeTextAreaDefaults(), drawarea);
+    textarea.setRightClickPopup(new TextAreaPopup()); //TODO popupFocusHandler
+//    textarea.setHorizontalOffset(6); //set inside JEditTextArea to give space for kTextAreaPainter
+    Box textEditorBox = Box.createVerticalBox();
+    textEditorBox.add(textHeader);
+    textEditorBox.add(textarea);
+
     
     // GRAPHCODE SPLIT PANE holds the text editor box and the draw editor box
     graphCodeSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, drawEditorBox, textEditorBox);
@@ -2588,9 +2588,8 @@ public class Editor extends JFrame implements RunnerListener {
 //        System.out.println("editor >> text listener selection sync, textarea.focusowner="+textarea.isFocusOwner());
         
         if (textarea.isFocusOwner()) // then force graph selection to sync with us
-          drawarea.selectCodeIntersection(textarea.getSelectionStart(),
-                                          textarea.getSelectionStop(), sketch
-                                              .getCurrentCodeIndex());
+          drawarea.selectCellsIntersectCode(textarea.getSelectionStart(),
+                                          textarea.getSelectionStop());
       }
     });
   }
