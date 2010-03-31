@@ -100,6 +100,13 @@ public class kConstants
   public static final String STYLE_LOCKED = "locked"; //mxConstants.STYLE_SHADOW
   public static final String STYLE_LINKED = "linked";
   
+  /**
+   * Default font for labels
+   * TODO read theme.getFont or something and set this instead of hardwiring?
+   */
+  public static final String DEFAULT_FONTFAMILY = "SansSerif";
+  
+  
   /** Rollover titles for each shape-making button. */
   public static final String SHAPE_KEYS[] = {
     "rect", "circle", "diam", "star", "audio", "keyb", "pers"
@@ -147,7 +154,7 @@ public class kConstants
 
   public static final Color EDGE_STROKE_COLOR = Color.black;
 
-  public static final Color EDGE_FONT_COLOR = Color.gray;
+  public static final Color EDGE_FONT_COLOR = Color.black;
   
   public static final Color CANVAS_COLOR = UI_COLOR_INACTIVE;
 
