@@ -8,8 +8,6 @@ import java.awt.Graphics;
 import java.awt.Point;
 import java.awt.Polygon;
 import java.awt.Toolkit;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
@@ -47,10 +45,10 @@ import processing.app.syntax.JEditTextArea;
 import processing.app.syntax.PdeTextAreaDefaults;
 import processing.app.syntax.TextAreaDefaults;
 
-import com.mxgraph.model.mxGeometry;
 import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
 import com.mxgraph.swing.util.mxMouseControl;
+import com.mxgraph.view.mxCellState;
 
 //TODO at some future date: make right-click popup menus for code windows
 
@@ -177,22 +175,7 @@ public class kCodeWindow {
 
     // myriad event handling
 
-    // disable buttons when this "frame" is defocused
-    FocusListener focusListener = new FocusListener() {
-      public void focusGained(FocusEvent e) {
-        moveButton.setEnabled(true);
-        closeButton.setEnabled(true);
-      }
-      public void focusLost(FocusEvent e) {
-        moveButton.setEnabled(false);
-        closeButton.setEnabled(false);
-      }
-    };
-    textarea.addFocusListener(focusListener);
-    //have to put the focus listener on every component else it doesn't work every time
-    buttonPanel.addFocusListener(focusListener);
-    moveButton.addFocusListener(focusListener);
-    closeButton.addFocusListener(focusListener);
+    installFocusHandlers(buttonPanel);
     
     // hide code window when close button is clicked
     closeButton.addActionListener(new ActionListener() {
@@ -246,16 +229,25 @@ public class kCodeWindow {
   }
 
   /**
-   * Gets the coordinate location of the center of this code window's associated
-   * cell TODO if we ever have to refer to the cell one more time it'll make
-   * sense to save a reference to it as a member variable
-   * 
-   * @return
+   * @param buttonPanel
    */
-  protected Point getCellCenter() {
-    mxGeometry geo = ((mxICell) ((mxGraphModel) ((DrawingArea) desktop)
-        .getGraphComponent().getGraph().getModel()).getCell(id)).getGeometry();
-    return new Point((int) geo.getCenterX(), (int) geo.getCenterY());
+  protected void installFocusHandlers(JPanel buttonPanel) {
+    // disable buttons when this "frame" is defocused
+    FocusListener focusListener = new FocusListener() {
+      public void focusGained(FocusEvent e) {
+        moveButton.setEnabled(true);
+        closeButton.setEnabled(true);
+      }
+      public void focusLost(FocusEvent e) {
+        moveButton.setEnabled(false);
+        closeButton.setEnabled(false);
+      }
+    };
+    textarea.addFocusListener(focusListener);
+    //have to put the focus listener on every component else it doesn't work every time
+    buttonPanel.addFocusListener(focusListener);
+    moveButton.addFocusListener(focusListener);
+    closeButton.addFocusListener(focusListener);
   }
 
   /**
@@ -281,175 +273,8 @@ public class kCodeWindow {
       }
 
       public void mouseReleased(MouseEvent e) {
-        Point buttonLocation = buttonFrame.getLocation();
-        
-        //TODO minor: what the heck is "18"? remove all hardwiring in triangle painting
-        
-        Point realLocation = new Point(e.getX() + buttonLocation.x,
-            e.getY() + buttonLocation.y);
-        Dimension editFrameSize = editFrame.getSize();
-
-        Point editwindowlocation = new Point(realLocation.x
-                                             - editFrameSize.width + 18,
-            realLocation.y + 6);
-        int X_FUDGE = 15;
-        int Y_FUDGE = 5;
-        int tribase = (Math.round((Math.min(editFrameSize.width,
-                                            editFrameSize.height))) / 10 > 15) ? Math
-                                                                                  .round((Math
-                                                                                      .min(
-                                                                                           editFrameSize.width,
-                                                                                           editFrameSize.height))) / 10
-                                                                              : 15; // How
-                                                                                    // wide
-                                                                                    // the
-                                                                                    // base
-                                                                                    // of
-                                                                                    // the
-                                                                                    // triangle
-                                                                                    // is
-        int tilt = -1;
-        int cellX = getCellCenter().x;
-        int cellY = getCellCenter().y;
-        int width, height;
-
-        if (editwindowlocation.x + editFrameSize.width / 2 >= cellX
-            && editwindowlocation.x - X_FUDGE <= cellX
-            && editwindowlocation.y >= cellY) { // Right , bottom (DEFAULT)
-          direction = "SE";
-          height = editwindowlocation.y - cellY;
-          if (editwindowlocation.x >= cellX) {
-            tilt = 0; // Pointing left
-            width = Math.abs(editwindowlocation.x - cellX) + tribase;
-          } else {
-            tilt = 1; // Pointing right
-            if (Math.abs(editwindowlocation.x - cellX) > tribase) {
-              width = Math.abs(editwindowlocation.x - cellX);
-            } else {
-              width = tribase;
-            }
-          }
-        } else if (editwindowlocation.x + editFrameSize.width / 2 < cellX
-                   && editwindowlocation.x + editFrameSize.width > cellX
-                   && editwindowlocation.y >= cellY + Y_FUDGE) { // Middle,
-                                                                 // bottom
-          direction = "S"; // SAME CODE AS "SE" DIRECTION BECAUSE OF OVERLAPPING
-                           // OF BUTTONS AND TRIANGLE
-          height = editwindowlocation.y - cellY;
-          if (editwindowlocation.x >= cellX) {
-            tilt = 0; // Pointing left
-            width = Math.abs(editwindowlocation.x - cellX) + tribase;
-          } else {
-            tilt = 1; // Pointing right
-            if (Math.abs(editwindowlocation.x - cellX) > tribase) {
-              width = Math.abs(editwindowlocation.x - cellX);
-            } else {
-              width = tribase;
-            }
-          }
-
-        } else if (editwindowlocation.x + editFrameSize.width <= cellX
-                   && editwindowlocation.y + editFrameSize.height + 3 * Y_FUDGE >= cellY
-                   || editwindowlocation.x + 3 * editFrameSize.width / 2 < cellX
-                   && editwindowlocation.y + editFrameSize.height < cellY
-
-        ) { // Left, middle
-
-          direction = "W";
-          width = Math.abs(editwindowlocation.x + editFrameSize.width
-                               - cellX);
-          if (editwindowlocation.y >= cellY) {
-            tilt = 0; // Pointing up
-            height = Math.abs(editwindowlocation.y - cellY) + tribase;
-          } else {
-            tilt = 1; // Pointing down
-            if (Math.abs(editwindowlocation.y - cellY) > tribase) {
-              height = Math.abs(editwindowlocation.y - cellY);
-            } else {
-              height = tribase;
-            }
-          }
-
-        } else if (editwindowlocation.x + editFrameSize.width / 2 <= cellX
-                   && editwindowlocation.x + 3 * editFrameSize.width / 2 >= cellX
-                   && editwindowlocation.y + editFrameSize.height + 3 * Y_FUDGE < cellY) { // Left,
-                                                                                           // top
-          direction = "NW";
-          height = Math.abs(editwindowlocation.y + editFrameSize.height
-                                - cellY);
-          if (editwindowlocation.x + editFrameSize.width > cellX) {
-            tilt = 0; // Pointing left
-            if (Math.abs(editwindowlocation.x + editFrameSize.width - cellX) > tribase) {
-              width = Math.abs(editwindowlocation.x + editFrameSize.width
-                               - cellX);
-            } else {
-              width = tribase;
-            }
-
-          } else {
-            tilt = 1; // Pointing right
-            width = Math
-                .abs(editwindowlocation.x + editFrameSize.width - cellX)
-                    + tribase;
-          }
-
-        } else if (editwindowlocation.x + editFrameSize.width / 2 > cellX
-                   && editwindowlocation.x - editFrameSize.width / 2 <= cellX
-                   && editwindowlocation.y + editFrameSize.height + Y_FUDGE < cellY) { // Middle,
-                                                                                       // top
-          direction = "N";
-          height = Math.abs(editwindowlocation.y + editFrameSize.height
-                                - cellY);
-          if (editwindowlocation.x >= cellX) {
-            tilt = 0; // Pointing left
-            width = Math.abs(editwindowlocation.x - cellX) + tribase;
-          } else {
-            tilt = 1; // Pointing right
-            if (Math.abs(editwindowlocation.x - cellX) > tribase) {
-              width = Math.abs(editwindowlocation.x - cellX);
-            } else {
-              width = tribase;
-            }
-
-          }
-
-        } else if (editwindowlocation.x - X_FUDGE > cellX
-                   || editwindowlocation.y - editFrameSize.height / 2 >= cellY
-                   && editwindowlocation.x - X_FUDGE <= cellX) {// Right, middle
-          direction = "E";
-          width = Math.abs(editwindowlocation.x - cellX);
-          if (editwindowlocation.y >= cellY) {
-            tilt = 0; // Pointing up
-            height = Math.abs(editwindowlocation.y - cellY) + tribase;
-          } else {
-            tilt = 1; // Pointing down
-            if (Math.abs(editwindowlocation.y - cellY) > tribase) {
-              height = Math.abs(editwindowlocation.y - cellY);
-            } else {
-              height = tribase;
-            }
-          }
-
-        } else {
-          direction = "NONE";
-          height = editwindowlocation.y - cellY;
-          if (editwindowlocation.x >= cellX) {
-            tilt = 0;
-            width = Math.abs(editwindowlocation.x - cellX) + tribase;
-          } else {
-            tilt = 1;
-            if (Math.abs(editwindowlocation.x - cellX) > tribase) {
-              width = Math.abs(editwindowlocation.x - cellX);
-            } else {
-              width = tribase;
-            }
-          }
-
-        }
-        triangleFrame.setSize(width, height);
-        ((Triangle) triangleFrame.getContentPane()).setGeometry(direction, tilt, width, height, tribase);
-        setFrameGeometry(direction, tilt, realLocation.x - editFrameSize.width
-                                     + buttonFrame.getWidth()*3/4, realLocation.y - buttonFrame.getWidth()/2);
+        updateTriangle(e.getX() + buttonFrame.getLocation().x,
+            e.getY() + buttonFrame.getLocation().y);
         triangleFrame.setVisible(true);
       }
     };
@@ -720,7 +545,7 @@ public class kCodeWindow {
    * @see processing.app.Editor#handleCommentUncomment
    * @author fry
    */
-  private void handleCommentUncomment() {
+  protected void handleCommentUncomment() {
     //TODO startCompoundEdit();
 
     int startLine = textarea.getSelectionStartLine();
@@ -828,34 +653,6 @@ public class kCodeWindow {
   }
   
   /**
-   * Move internal frames to front so it isn't covered by other code windows.
-   * 
-   * @author susiefu
-   */
-  protected void moveToFrontLayer() {
-    editFrame.setLayer(2);
-    buttonFrame.setLayer(2);
-    triangleFrame.setLayer(2);
-    editFrame.moveToFront();
-    triangleFrame.moveToFront();
-    buttonFrame.moveToFront();
-  }
-
-  /**
-   * Allow internal frames to go behind other frames (i.e. code windows).
-   * 
-   * @author susiefu
-   */
-  protected void moveToBackLayer() {
-    editFrame.setLayer(1);
-    buttonFrame.setLayer(1);
-    triangleFrame.setLayer(1);
-    editFrame.moveToFront();
-    triangleFrame.moveToFront();
-    buttonFrame.moveToFront();
-  }
-
-  /**
    * Get the id of this code window (matches the id of its associated cell)
    * 
    * @return
@@ -903,8 +700,224 @@ public class kCodeWindow {
    * @param y
    */
   public void setLocation(int x, int y) {
-    resetTriangle();
+    resetTriangleToDefault();
     setFrameGeometry("NONE", 0, x, y);
+  }
+   
+  /**
+   * Will update the triangle assuming that the cell center has moved but
+   * that the edit window and button panel has not.
+   * @author achang
+   */
+  public void updateTriangle() {
+    Point buttonLocation = buttonFrame.getLocation();
+    updateTriangle(buttonFrame.getWidth()/4 + buttonLocation.x, buttonFrame.getHeight()/2 + buttonLocation.y);
+  }
+  
+  /**
+   * Will update the triangle given the absolute location of the center of
+   * the moveButton.
+   * @author achang, adapted from code by susiefu
+   */
+  public void updateTriangle(int x, int y) {
+
+    Point realLocation = new Point(x,y);
+    Dimension editFrameSize = editFrame.getSize();
+    Point editFrameLocation = editFrame.getLocation();
+//        new Point(realLocation.x - editFrameSize.width + buttonFrame.getWidth()*3/4,
+//        realLocation.y + buttonFrame.getHeight()/2);
+    int X_FUDGE = 15;
+    int Y_FUDGE = 5;
+    int tribase = (Math.round((Math.min(editFrameSize.width, 
+                                        editFrameSize.height))) / 10 > TRIANGLE_BASE) ?
+                  Math.round((Math.min(editFrameSize.width, editFrameSize.height))) / 10 
+                  : TRIANGLE_BASE;
+    int tilt = -1;
+    int cellX = getCellCenter().x;
+    int cellY = getCellCenter().y;
+    System.out.println("kCW >> updateTriangle >> cellCenter="+getCellCenter());
+    int width, height;
+
+    if (editFrameLocation.x + editFrameSize.width / 2 >= cellX
+        && editFrameLocation.x - X_FUDGE <= cellX
+        && editFrameLocation.y >= cellY) { // Right , bottom (DEFAULT)
+      direction = "SE";
+      height = editFrameLocation.y - cellY;
+      if (editFrameLocation.x >= cellX) {
+        tilt = 0; // Pointing left
+        width = Math.abs(editFrameLocation.x - cellX) + tribase;
+      } else {
+        tilt = 1; // Pointing right
+        if (Math.abs(editFrameLocation.x - cellX) > tribase) {
+          width = Math.abs(editFrameLocation.x - cellX);
+        } else {
+          width = tribase;
+        }
+      }
+    } else if (editFrameLocation.x + editFrameSize.width / 2 < cellX
+               && editFrameLocation.x + editFrameSize.width > cellX
+               && editFrameLocation.y >= cellY + Y_FUDGE) { // Middle,
+                                                             // bottom
+      direction = "S"; // SAME CODE AS "SE" DIRECTION BECAUSE OF OVERLAPPING
+                       // OF BUTTONS AND TRIANGLE
+      height = editFrameLocation.y - cellY;
+      if (editFrameLocation.x >= cellX) {
+        tilt = 0; // Pointing left
+        width = Math.abs(editFrameLocation.x - cellX) + tribase;
+      } else {
+        tilt = 1; // Pointing right
+        if (Math.abs(editFrameLocation.x - cellX) > tribase) {
+          width = Math.abs(editFrameLocation.x - cellX);
+        } else {
+          width = tribase;
+        }
+      }
+
+    } else if (editFrameLocation.x + editFrameSize.width <= cellX
+               && editFrameLocation.y + editFrameSize.height + 3 * Y_FUDGE >= cellY
+               || editFrameLocation.x + 3 * editFrameSize.width / 2 < cellX
+               && editFrameLocation.y + editFrameSize.height < cellY
+
+    ) { // Left, middle
+
+      direction = "W";
+      width = Math.abs(editFrameLocation.x + editFrameSize.width
+                           - cellX);
+      if (editFrameLocation.y >= cellY) {
+        tilt = 0; // Pointing up
+        height = Math.abs(editFrameLocation.y - cellY) + tribase;
+      } else {
+        tilt = 1; // Pointing down
+        if (Math.abs(editFrameLocation.y - cellY) > tribase) {
+          height = Math.abs(editFrameLocation.y - cellY);
+        } else {
+          height = tribase;
+        }
+      }
+
+    } else if (editFrameLocation.x + editFrameSize.width / 2 <= cellX
+               && editFrameLocation.x + 3 * editFrameSize.width / 2 >= cellX
+               && editFrameLocation.y + editFrameSize.height + 3 * Y_FUDGE < cellY) { // Left,
+                                                                                       // top
+      direction = "NW";
+      height = Math.abs(editFrameLocation.y + editFrameSize.height
+                            - cellY);
+      if (editFrameLocation.x + editFrameSize.width > cellX) {
+        tilt = 0; // Pointing left
+        if (Math.abs(editFrameLocation.x + editFrameSize.width - cellX) > tribase) {
+          width = Math.abs(editFrameLocation.x + editFrameSize.width
+                           - cellX);
+        } else {
+          width = tribase;
+        }
+
+      } else {
+        tilt = 1; // Pointing right
+        width = Math
+            .abs(editFrameLocation.x + editFrameSize.width - cellX)
+                + tribase;
+      }
+
+    } else if (editFrameLocation.x + editFrameSize.width / 2 > cellX
+               && editFrameLocation.x - editFrameSize.width / 2 <= cellX
+               && editFrameLocation.y + editFrameSize.height + Y_FUDGE < cellY) { // Middle,
+                                                                                   // top
+      direction = "N";
+      height = Math.abs(editFrameLocation.y + editFrameSize.height
+                            - cellY);
+      if (editFrameLocation.x >= cellX) {
+        tilt = 0; // Pointing left
+        width = Math.abs(editFrameLocation.x - cellX) + tribase;
+      } else {
+        tilt = 1; // Pointing right
+        if (Math.abs(editFrameLocation.x - cellX) > tribase) {
+          width = Math.abs(editFrameLocation.x - cellX);
+        } else {
+          width = tribase;
+        }
+
+      }
+
+    } else if (editFrameLocation.x - X_FUDGE > cellX
+               || editFrameLocation.y - editFrameSize.height / 2 >= cellY
+               && editFrameLocation.x - X_FUDGE <= cellX) {// Right, middle
+      direction = "E";
+      width = Math.abs(editFrameLocation.x - cellX);
+      if (editFrameLocation.y >= cellY) {
+        tilt = 0; // Pointing up
+        height = Math.abs(editFrameLocation.y - cellY) + tribase;
+      } else {
+        tilt = 1; // Pointing down
+        if (Math.abs(editFrameLocation.y - cellY) > tribase) {
+          height = Math.abs(editFrameLocation.y - cellY);
+        } else {
+          height = tribase;
+        }
+      }
+
+    } else {
+      direction = "NONE";
+      height = editFrameLocation.y - cellY;
+      if (editFrameLocation.x >= cellX) {
+        tilt = 0;
+        width = Math.abs(editFrameLocation.x - cellX) + tribase;
+      } else {
+        tilt = 1;
+        if (Math.abs(editFrameLocation.x - cellX) > tribase) {
+          width = Math.abs(editFrameLocation.x - cellX);
+        } else {
+          width = tribase;
+        }
+      }
+
+    }
+    triangleFrame.setSize(width, height);
+    ((Triangle) triangleFrame.getContentPane()).setGeometry(direction, tilt, width, height, tribase);
+    setFrameGeometry(direction, tilt, realLocation.x - editFrameSize.width
+                                 + buttonFrame.getWidth()*3/4, realLocation.y - buttonFrame.getWidth()/2);
+  }
+
+  /**
+   * Gets the coordinate location of the center of this code window's associated
+   * cell TODO if we ever have to refer to the cell one more time it'll make
+   * sense to save a reference to it as a member variable instead of saving the id...
+   * Updated to use the cell state so this still works when graph is scaled/panned
+   * 
+   * @author achang
+   */
+  protected Point getCellCenter() {
+    Object cell = ((mxGraphModel) ((DrawingArea) desktop)
+        .getGraphComponent().getGraph().getModel()).getCell(id);
+    mxCellState state = ((DrawingArea) desktop).getGraphComponent().getGraph().getView().getState(cell);
+    return new Point((int) state.getCenterX(), (int) state.getCenterY());
+  }
+
+  /**
+   * Move internal frames to front so it isn't covered by other code windows.
+   * 
+   * @author susiefu
+   */
+  protected void moveToFrontLayer() {
+    editFrame.setLayer(2);
+    buttonFrame.setLayer(2);
+    triangleFrame.setLayer(2);
+    editFrame.moveToFront();
+    triangleFrame.moveToFront();
+    buttonFrame.moveToFront();
+  }
+
+  /**
+   * Allow internal frames to go behind other frames (i.e. code windows).
+   * 
+   * @author susiefu
+   */
+  protected void moveToBackLayer() {
+    editFrame.setLayer(1);
+    buttonFrame.setLayer(1);
+    triangleFrame.setLayer(1);
+    editFrame.moveToFront();
+    triangleFrame.moveToFront();
+    buttonFrame.moveToFront();
   }
 
   /**
@@ -1005,8 +1018,12 @@ public class kCodeWindow {
 
   }
 
-  // Resets the triangle
-  protected void resetTriangle() {
+  /**
+   * Resets the triangle graphic to the fixed default location
+   * 
+   * @author susiefu
+   */
+  protected void resetTriangleToDefault() {
     int tribase = (Math.round((Math.min(editFrame.getSize().width, editFrame
         .getSize().height))) / 10 > 15) ? Math.round((Math.min(editFrame
         .getSize().width, editFrame.getSize().height))) / 10 : 15; // How wide

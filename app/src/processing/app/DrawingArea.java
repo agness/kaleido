@@ -75,8 +75,10 @@ public class DrawingArea extends JDesktopPane {
 
   boolean modified = false;
 
-  // making these beforehand so we don't make infinite new objects when swapping
-  // between these two
+  /**
+   * Making this beforehand so we don't make infinite new objects when swapping
+   * between this and the default cursor.
+   */ 
   static final Cursor TOOL_CURSOR = new Cursor(Cursor.CROSSHAIR_CURSOR);
 
   /**
@@ -117,6 +119,7 @@ public class DrawingArea extends JDesktopPane {
     this.editor = editor;
     mxGraph graph = new kGraph();
     graph.setEdgeLabelsMovable(false); //vertexLabels are by default not movable
+    graph.setVertexLabelsMovable(true);//DEBUGGING
 
     // <!------------- hello world crap TODO remove
     helloWorld(graph);
@@ -133,7 +136,29 @@ public class DrawingArea extends JDesktopPane {
         setModified(true);
       }
     });
-
+    // also a change tracker, but if any graph change required repainting (i.e.
+    // cells moved, resized, deleted) then update the codeWindows
+    graph.addListener(mxEvent.REPAINT, new mxIEventListener() {
+      public void invoke(Object source, mxEventObject evt) {
+        repaintCodeWindows();
+      }
+    });
+    // in the particular case of a cell with a code window being deleted
+    // on the data layer we need to remove the associated code window
+    graph.addListener(mxEvent.CELLS_REMOVED, new mxIEventListener() {
+      public void invoke(Object source, mxEventObject evt) {
+        Object[] cells = (Object[]) evt.getProperty("cells");
+        kCodeWindow cw;
+        for (int i = 0; i < cells.length; i++) {
+          cw = getCodeWindow((mxICell) cells[i]);
+          if (cw != null) {
+            System.out.println("drawarea >> cell removed, removing code window id="+cw.getId());
+            codeWindows.remove(cw);
+          }
+        }
+      }
+    });
+    
     // tool handling
     rubberband = new mxRubberband(graphComponent);
     rubberband.setEnabled(true);
@@ -177,14 +202,18 @@ public class DrawingArea extends JDesktopPane {
     try {
       String style = "";
       style = mxUtils.setStyle(style, mxConstants.STYLE_FILLCOLOR, Integer
-                               .toHexString(kUtils.getFillColorFromKey(getCurrentFillColorKey())
-                                   .getRGB()));
-                           style = mxUtils.setStyle(style, mxConstants.STYLE_STROKECOLOR, Integer
-                               .toHexString(kUtils.getFillColorFromKey(getCurrentFillColorKey())
-                                   .getRGB()));
-                           style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
-                               .toHexString(kUtils.getFontColorFromKey(getCurrentFillColorKey())
-                                   .getRGB()));
+          .toHexString(kUtils.getFillColorFromKey(getCurrentFillColorKey())
+              .getRGB()));
+      style = mxUtils.setStyle(style, mxConstants.STYLE_STROKECOLOR, Integer
+          .toHexString(kUtils.getFillColorFromKey(getCurrentFillColorKey())
+              .getRGB()));
+      style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
+          .toHexString(kUtils.getFontColorFromKey(getCurrentFillColorKey())
+              .getRGB()));
+      style = mxUtils.setStyle(style, mxConstants.STYLE_FONTFAMILY,
+                               kConstants.DEFAULT_FONTFAMILY);
+                           
+
       Object v1 = graph.insertVertex(parent, null, new kCellValue("superstar",
           "VCR"), 20, 20, 80, 30, style);
       Object v2 = graph.insertVertex(parent, null, new kCellValue("hello",
@@ -192,9 +221,13 @@ public class DrawingArea extends JDesktopPane {
       
       style = "";
       style = mxUtils.setStyle(style, mxConstants.STYLE_STROKECOLOR, Integer
-                               .toHexString((kConstants.EDGE_STROKE_COLOR).getRGB()));
-                           style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
-                               .toHexString((kConstants.EDGE_FONT_COLOR).getRGB()));
+          .toHexString((kConstants.EDGE_STROKE_COLOR).getRGB()));
+      style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
+          .toHexString((kConstants.EDGE_FONT_COLOR).getRGB()));
+      style = mxUtils.setStyle(style, mxConstants.STYLE_FONTFAMILY,
+                               kConstants.DEFAULT_FONTFAMILY);
+                           
+
       graph.insertEdge(parent, null, "happy edge", v1, v2, style);
     } finally {
       graph.getModel().endUpdate();
@@ -206,12 +239,13 @@ public class DrawingArea extends JDesktopPane {
         for (int i = 0; i < cells.length; i++) {
           
           //testing for whether cells are locked/lockable...
-          System.out.println("drawingArea >> graph selection changed: isCellLocked="+graphComponent.getGraph().isCellLocked(cells[i]));
-          System.out.println("drawingArea >> graph selection changed: isCellLinked="+((kGraph) graphComponent.getGraph()).isCellLinked(cells[i]));
+//          System.out.println("drawingArea >> graph selection changed: isCellLocked="+graphComponent.getGraph().isCellLocked(cells[i]));
+//          System.out.println("drawingArea >> graph selection changed: isCellLinked="+((kGraph) graphComponent.getGraph()).isCellLinked(cells[i]));
+          System.out.println("drawingArea >> graph selection changed: cellCenter="+graphComponent.getGraph().getView().getState(cells[i]).getCenterX()+","+graphComponent.getGraph().getView().getState(cells[i]).getCenterY());
           
           if (cells[i] instanceof mxICell
               && ((mxICell) cells[i]).getValue() instanceof kCellValue) {
-            System.out.println("drawingArea >> graph selection changed: "+((kCellValue) ((mxICell) cells[i]).getValue()).toPrettyString());
+//            System.out.println("drawingArea >> graph selection changed: "+((kCellValue) ((mxICell) cells[i]).getValue()).toPrettyString());
 //            System.out.println("drawingArea >> graph selection bounsd: "+graphComponent.getGraph().getCellBounds(cells[i]).getRectangle());
           }
         }
@@ -461,7 +495,25 @@ public class DrawingArea extends JDesktopPane {
   public boolean isCodeWindowsEnabled() {
     return codeWindowsEnabled;
   }
-  
+   
+  /**
+   * Repaints all currently open code windows.
+   * TODO not super efficient, since we have a way of knowing which cells were changed
+   * and only those code windows need to be repainted, not all...
+   */
+  protected void repaintCodeWindows() {
+    if (codeWindows != null) {
+      System.out.println("drawarea >> repainting code windows");
+      Iterator it = codeWindows.iterator();
+      while (it.hasNext())
+      {
+        kCodeWindow next = (kCodeWindow) it.next();
+        if (next.isVisible())
+          next.updateTriangle();
+      }
+    }    
+  }
+
   /**
    * Shortcut method to get a cell when given a String id
    */
@@ -1182,7 +1234,11 @@ public class DrawingArea extends JDesktopPane {
                                                     drawingArea
                                                         .getCurrentFillColorKey())
                 .getRGB()));
-
+        style = mxUtils.setStyle(style, mxConstants.STYLE_FONTFAMILY,
+                                 kConstants.DEFAULT_FONTFAMILY);
+//        style = mxUtils.setStyle(style, mxConstants.STYLE_ALIGN,
+//                                 mxConstants.ALIGN_LEFT);
+       
         if (toolMode.equals(kConstants.SHAPE_KEYS[1])) {
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
                                    mxConstants.SHAPE_ELLIPSE);
@@ -1474,6 +1530,10 @@ public class DrawingArea extends JDesktopPane {
           .toHexString((kConstants.EDGE_STROKE_COLOR).getRGB()));
       style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
           .toHexString((kConstants.EDGE_FONT_COLOR).getRGB()));
+      style = mxUtils.setStyle(style, mxConstants.STYLE_FONTFAMILY,
+                               kConstants.DEFAULT_FONTFAMILY);
+      
+
       return graphComponent.getGraph().insertEdge(parent, id, value, source,
                                                   target, style);
     }
