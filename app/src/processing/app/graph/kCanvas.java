@@ -71,22 +71,18 @@ public class kCanvas extends mxInteractiveCanvas {
           
         if (shape.equals(kConstants.SHAPE_AUDIO))
         {
-          System.out.println("drawing audio shape");
           drawAudio(x, y, w, h, fillColor, fillPaint, penColor, shadow);
         }
         else if (shape.equals(kConstants.SHAPE_KEYBOARD))
-        {
-          System.out.println("drawing keyboard shape");    
+        {  
           drawKeyboard(x, y, w, h, fillColor, fillPaint, penColor, shadow);
         }
         else if (shape.equals(kConstants.SHAPE_PERSON))
         {
-          System.out.println("drawing person shape");
           drawPerson(x, y, w, h, fillColor, fillPaint, penColor, shadow);
         }
         else if (shape.equals(kConstants.SHAPE_STAR))
         {
-          System.out.println("drawing star shape");
           drawStar(x, y, w, h, fillColor, fillPaint, penColor, shadow);
         }
       } // end if hitClip

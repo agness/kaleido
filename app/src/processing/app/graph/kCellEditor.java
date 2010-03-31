@@ -56,7 +56,7 @@ public class kCellEditor extends mxCellEditor {
    * The color of text in text fields (editable text); set this 
    * to null to use the cell label's original font color.
    */
-  public static final Color EDITTEXT_FONTCOLOR = null;
+  public static final Color EDITTEXT_FONTCOLOR = Color.black;
   /**
    * Border color of text field and text area
    */

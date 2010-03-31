@@ -41,7 +41,7 @@ public class kCellValue implements Serializable {
    * Constructors
    */
   public kCellValue() {
-    this("<unlabeled>","",-1,-1,-1);
+    this("","",-1,-1,-1);
   }
   public kCellValue(String label) {
     this(label,"",-1,-1,-1);
