@@ -687,7 +687,7 @@ implements TabExpander, Printable
     if (textArea.isFocusOwner()) {
       gfx.setColor(selectionColor);
     } else {
-      gfx.setColor(kConstants.UI_COLOR_INACTIVE);
+      gfx.setColor(kConstants.SECONDARY_SELECTION_COLOR);
     }
     
     if (selectionStart == selectionEnd) {

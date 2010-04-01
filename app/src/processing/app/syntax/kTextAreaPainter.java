@@ -11,6 +11,7 @@ import javax.swing.text.PlainDocument;
 import javax.swing.text.Utilities;
 
 import processing.app.DrawingArea;
+import processing.app.util.kConstants;
 
 /**
  * A custom version of TextAreaPainter that paints a vertical strip (i.e. the
@@ -20,10 +21,8 @@ import processing.app.DrawingArea;
  */
 public class kTextAreaPainter extends TextAreaPainter {
 
-  //TODO refactor into kConstants
-  public static final int LINK_MARKER_WIDTH = 6;
-
-  private static final Color LINK_MARKER_BACKGROUND_COLOR = Color.lightGray;
+  private static final boolean FIXED_STRIPE_WIDTH_STYLE = false; //each stripe is a fixed width but random order
+  private static final boolean FIXED_STRIPE_LANE_STYLE = true; //each color has a lane it will always go in
   
   final DrawingArea drawarea;
   
@@ -61,30 +60,55 @@ public class kTextAreaPainter extends TextAreaPainter {
   
   protected void paintLinkMarker(Graphics gfx, int line, int y) {
 //    if (!printing) {
-    System.out.println("kTAP >> painting line marker start="+textArea.getLineStartOffset(line)+" stop="+textArea.getLineStopOffset(line));
+//    System.out.println("kTAP >> painting line marker start="+textArea.getLineStartOffset(line)+" stop="+textArea.getLineStopOffset(line));
         int x = 0;
         int height = fm.getHeight();
         y += fm.getLeading() + fm.getMaxDescent();
-        gfx.setColor(LINK_MARKER_BACKGROUND_COLOR);
-        gfx.fillRect(x, y, LINK_MARKER_WIDTH, height);
+        gfx.setColor(kConstants.LINK_MARKER_BACKGROUND_COLOR);
+        gfx.fillRect(x, y, kConstants.LINK_MARKER_WIDTH, height);
   
         Object[] colors = drawarea.getColorsIntersectCode(textArea.getLineStartOffset(line), textArea.getLineStopOffset(line));
         
         if (colors.length > 0) {
           int stripeWidth;
-          if (colors.length > LINK_MARKER_WIDTH)
-            stripeWidth = 1;
-          else
-            stripeWidth = LINK_MARKER_WIDTH / colors.length;
-          //TODO might look better if everything was just 1 px, esp. since I can't ensure consistency in width across lines
-    
-          for (int i = 0; i < LINK_MARKER_WIDTH/stripeWidth; i++) {
-            gfx.setColor((Color) colors[i]);
-            gfx.fillRect(x, y, stripeWidth, height);
-            x += stripeWidth;
+          
+          if (FIXED_STRIPE_LANE_STYLE) {
+            Color[][] palette = kConstants.FILL_COLORS;
+            boolean[] stripe = new boolean[palette[0].length];
+            stripeWidth = kConstants.LINK_MARKER_WIDTH / palette[0].length;
+            
+            for (int i = 0; i < colors.length; i++)
+              for (int j = 0; j < stripe.length; j++) {
+              if (!stripe[j] && ((Color) colors[i]).equals(palette[0][j]))
+                stripe[j] = true;
+            }
+            
+            for (int i = 0; i < palette[0].length; i++)
+              if (stripe[i]) {
+                gfx.setColor(palette[0][i]);
+                gfx.fillRect(x+stripeWidth*i, y, stripeWidth, height);
+            }
+          } else {
+            if (FIXED_STRIPE_WIDTH_STYLE) {
+              stripeWidth=3;
+            } else {
+              if (colors.length > kConstants.LINK_MARKER_WIDTH)
+                stripeWidth = 1; //minimum stripe width, i.e. max number of stripes
+              else
+                stripeWidth = kConstants.LINK_MARKER_WIDTH / colors.length;
+            }
+      
+            for (int i = 0; i < Math.min(colors.length, kConstants.LINK_MARKER_WIDTH/stripeWidth); i++) {
+              gfx.setColor((Color) colors[i]);
+              gfx.fillRect(x, y, stripeWidth, height);
+              x += stripeWidth;
+            }
+            //if there was a remainder, fill it with the last color
+            if (x < kConstants.LINK_MARKER_WIDTH)
+              gfx.fillRect(x, y, kConstants.LINK_MARKER_WIDTH-x, height);
           }
         }
-//    }
+//    } //!printing if statement
   }
 
 }

@@ -31,6 +31,7 @@ import java.util.Vector;
 import java.awt.im.InputMethodRequests;
 
 import processing.app.syntax.im.InputMethodSupport;
+import processing.app.util.kConstants;
 import processing.app.util.kEvent;
 
 /**
@@ -149,7 +150,7 @@ public class JEditTextArea extends JComponent
     
     // begin kEdits
     if (painter instanceof kTextAreaPainter)
-      setHorizontalOffset(6+kTextAreaPainter.LINK_MARKER_WIDTH); //6 is the original processing value
+      setHorizontalOffset(6+kConstants.LINK_MARKER_WIDTH); //6 is the original processing value
   }
 
   /**
