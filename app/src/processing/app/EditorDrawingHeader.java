@@ -593,7 +593,7 @@ public class EditorDrawingHeader extends JPanel {
     public TrayComboBox(Object[] items) {
       super(items);
       setOpaque(true);
-      setBackground(kConstants.UI_COLOR_INACTIVE);
+      setBackground(kConstants.UI_COLOR_BUTTONFILL);
       setRenderer(new ListRenderer());
       setUI(trayUI);
       setPreferredSize(new Dimension(BUTTON_WIDTH, BUTTON_WIDTH));

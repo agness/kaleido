@@ -36,6 +36,7 @@ import com.mxgraph.swing.handler.mxVertexHandler;
 import com.mxgraph.swing.view.mxInteractiveCanvas;
 import com.mxgraph.util.mxCellRenderer;
 import com.mxgraph.util.mxConstants;
+import com.mxgraph.util.mxUtils;
 import com.mxgraph.view.mxCellState;
 import com.mxgraph.view.mxEdgeStyle;
 import com.mxgraph.view.mxGraph;
@@ -63,11 +64,11 @@ public class kGraphComponent extends mxGraphComponent {
     
     //Set the background (must first clear viewport)
     getViewport().setOpaque(false);
-    setBackground(kConstants.UI_COLOR_BACKGROUND);
+    setBackground(kConstants.UI_COLOR_CANVAS);//Color.white);//kConstants.UI_COLOR_BACKGROUND);
     // the following setting doesn't affect the graphComponent, but affects the
     // graphOutline background color; we're using the same color as the
     // background color of inactive buttons
-    setPageBackgroundColor(kConstants.UI_COLOR_INACTIVE); 
+    setPageBackgroundColor(kConstants.UI_COLOR_BUTTONFILL); 
   }
   
   /**
@@ -99,80 +100,9 @@ public class kGraphComponent extends mxGraphComponent {
        */
       protected mxCellMarker createMarker()
       {
-        mxCellMarker marker = new mxCellMarker(graphComponent) {
-          /**
-           * This is mxGraphHandler's original customization of its marker that
-           * we want to keep Note that this method is only ever invoked (via
-           * getState(e) via process(e)) when the MouseEvent is MOUSE_MOVED or
-           * null (which in reality is MOUSE_DRAGGED, but my guess is that the
-           * mouseDragged events are being eaten before they get here so we
-           * never see them!)
-           * 
-           * @see com.mxgraph.swing.handler.mxGraphHandler#createMarker
-           * @see com.mxgraph.swing.handler.mxCellMarker#getCell
-           */
-          public Object getCell(MouseEvent e) {
-
-            mxGraph graph = graphComponent.getGraph();
-            Object cell = super.getCell(e);
-
-            if (e.getID() != MouseEvent.MOUSE_MOVED) { // i.e. if it should be a
-                                                       // MOUSE_DRAGGED event
-                                                       // but isn't detectable
-              TransferHandler th = graphComponent.getTransferHandler();
-              boolean isLocal = th instanceof mxGraphTransferHandler
-                                && ((mxGraphTransferHandler) th).isLocalDrag();
-
-              Object[] cells = (isLocal) ? graph.getSelectionCells()
-                                        : dragCells;
-              cell = graph.getDropTarget(cells, e.getPoint(), cell);
-              boolean clone = graphComponent.isCloneEvent(e) && cloneEnabled;
-
-              if (isLocal && cell != null && cells.length > 0 && !clone
-                  && graph.getModel().getParent(cells[0]) == cell) {
-                cell = null;
-              }
-            }
-
-            return cell;
-          }
-
-          /**
-           * Returns the valid- or invalidColor depending on the value of
-           * isValid. The given state is ignored by this implementation.
-           */
-          protected Color getMarkerColor(MouseEvent e, mxCellState state,
-                                         boolean isValid) {
-            return (isValid) ? ((e.getID() == MouseEvent.MOUSE_MOVED) ? kConstants.CELL_MARKER_COLOR
-                                                                     : kConstants.SWIMLANE_MARKER_COLOR)
-                            : invalidColor;
-          }
-        };
-        // we can ignore setting swimlaneContentEnabled here, since we enabled
-        // it globally in graphcomponent
+        mxCellMarker marker = super.createMarker();
+        marker.setValidColor(kConstants.SWIMLANE_MARKER_COLOR);
         return marker;
-      }
-      /**
-       * Overriding to process cell markers on mouseOver (in regular states)
-       */
-      public void mouseMoved(MouseEvent e)
-      {
-        if (graphComponent.isEnabled() && isEnabled() && !e.isConsumed())
-        {
-          marker.process(e); //achang addition, hopefully only highlights when mouse hovers and NEVER any other time
-          
-          Cursor cursor = getCursor(e);
-
-          if (cursor != null)
-          {
-            graphComponent.getGraphControl().setCursor(cursor);
-            e.consume();
-          }
-          else
-          {
-            graphComponent.getGraphControl().setCursor(DEFAULT_CURSOR);
-          }
-        }
       }
       /**
        * Attempt to make drag images translucent.
@@ -329,6 +259,15 @@ public class kGraphComponent extends mxGraphComponent {
         {
           return kConstants.HANDLE_BORDERCOLOR;
         }
+        protected JComponent createPreview()
+        {
+          JPanel preview = new JPanel();
+          preview.setBorder(kConstants.PREVIEW_BORDER);
+          preview.setOpaque(false);
+          preview.setVisible(false);
+
+          return preview;
+        }
       };
     }
     else if (graph.getModel().isEdge(state.getCell()))
@@ -353,7 +292,7 @@ public class kGraphComponent extends mxGraphComponent {
           }
           protected Color getHandleBorderColor(int index)
           {
-            return kConstants.HANDLE_BORDERCOLOR;
+            return kConstants.EDGE_HANDLE_BORDERCOLOR;
           }
           protected Color getHandleFillColor(int index) {
             boolean source = isSource(index);
@@ -372,7 +311,7 @@ public class kGraphComponent extends mxGraphComponent {
             if (isLabel(index)) {
               return kConstants.LABEL_HANDLE_FILLCOLOR;
             }
-            return kConstants.HANDLE_FILLCOLOR;
+            return kConstants.EDGE_HANDLE_FILLCOLOR;
           }
           protected JComponent createPreview()
           {
@@ -423,7 +362,7 @@ public class kGraphComponent extends mxGraphComponent {
             };
             if (isLabel(index))
             {
-              preview.setBorder(mxConstants.PREVIEW_BORDER);
+              preview.setBorder(kConstants.PREVIEW_BORDER);
             }
 
             preview.setOpaque(false);
@@ -445,7 +384,7 @@ public class kGraphComponent extends mxGraphComponent {
         }
         protected Color getHandleBorderColor(int index)
         {
-          return kConstants.HANDLE_BORDERCOLOR;
+          return kConstants.EDGE_HANDLE_BORDERCOLOR;
         }
         protected Color getHandleFillColor(int index) {
           
@@ -465,7 +404,7 @@ public class kGraphComponent extends mxGraphComponent {
           if (isLabel(index)) {
             return kConstants.LABEL_HANDLE_FILLCOLOR;
           }
-          return kConstants.HANDLE_FILLCOLOR;
+          return kConstants.EDGE_HANDLE_FILLCOLOR;
         }
         /**
          * mxEdgeHandler apparently has its own override of 
@@ -521,7 +460,7 @@ public class kGraphComponent extends mxGraphComponent {
           };
           if (isLabel(index))
           {
-            preview.setBorder(mxConstants.PREVIEW_BORDER);
+            preview.setBorder(kConstants.PREVIEW_BORDER);
           }
 
           preview.setOpaque(false);

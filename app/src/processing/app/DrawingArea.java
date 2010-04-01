@@ -6,6 +6,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Stroke;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -120,7 +121,7 @@ public class DrawingArea extends JDesktopPane {
     this.editor = editor;
     mxGraph graph = new kGraph();
     graph.setEdgeLabelsMovable(false); //vertexLabels are by default not movable
-    graph.setVertexLabelsMovable(true);//DEBUGGING
+//    graph.setVertexLabelsMovable(true);//DEBUGGING
 
     // <!------------- hello world crap TODO remove
     helloWorld(graph);
@@ -161,7 +162,22 @@ public class DrawingArea extends JDesktopPane {
     });
     
     // tool handling
-    rubberband = new mxRubberband(graphComponent);
+    rubberband = new mxRubberband(graphComponent) {
+      /**
+       * Customized rubberband to take the universal selection color
+       * and no border
+       */
+      public void paintRubberband(Graphics g)
+      {
+        if (first != null && bounds != null
+            && graphComponent.isSignificant(bounds.width, bounds.height))
+        {
+          Rectangle rect = new Rectangle(bounds);
+          g.setColor(kConstants.RUBBERBAND_COLOR);
+          mxUtils.fillClippedRect(g, rect.x, rect.y, rect.width, rect.height);
+        }
+      }
+    };
     rubberband.setEnabled(true);
     shapeToolband = new ShapeToolband(this);
     shapeToolband.setEnabled(false);
@@ -1066,34 +1082,42 @@ public class DrawingArea extends JDesktopPane {
     int ind = editor.getSketch().getCurrentCodeIndex();
     graphComponent.getGraph().getSelectionModel().clear();
     graphComponent.getGraph().getSelectionModel().setCells(getCellsIntersectCode(start,stop,ind));
-    System.out
-    .println("drawarea >> selectCellsIntersectCode selectionCells.length="
-             + graphComponent.getGraph().getSelectionCount());
+    
+//    if (graphComponent.getGraph().getSelectionCount()>0)
+//    System.out
+//    .println("drawarea >> selectCellsIntersectCode selection.length="
+//             + graphComponent.getGraph().getSelectionCount()+" val="+((kCellValue) ((mxICell) graphComponent.getGraph().getSelectionCell()).getValue()).toPrettyString());
   }
 
   /**
    * Selects all cells that have codemarks that intersect with the specified
    * code range of the given code index.
+   * This method assumes that parameters start is always < stop
    */
   protected Object[] getCellsIntersectCode(int start, int stop, int ind) {
-
+    
+    //get all cells of the model
     Object[] cells = mxGraphModel.getChildren(graphComponent.getGraph()
         .getModel(), graphComponent.getGraph().getDefaultParent());
     ArrayList<Object> result = new ArrayList<Object>();
 
+    //add valid & intersecting cells to result bag
     for (int i = 0; i < cells.length; i++)
       if (cells[i] instanceof mxICell
-          && ((mxICell) cells[i]).getValue() instanceof kCellValue) {
-        
+          && ((mxICell) cells[i]).getValue() instanceof kCellValue)
+      {
         kCellValue val = ((kCellValue) ((mxICell) cells[i]).getValue());
         if (val.hasValidCodeMarks()
             && val.getCodeIndex() == ind
             && ((start > val.getStartMark() && start < val.getStopMark())
                 || (stop > val.getStartMark() && stop < val.getStopMark())
-                || (start == val.getStartMark() && stop == val.getStopMark())
-                || (stop == val.getStartMark() && start == val.getStopMark())))
+                || (start <= val.getStartMark() && stop >= val.getStopMark())
+                || (start > val.getStartMark() && stop < val.getStopMark())))
           result.add(cells[i]);
       }
+    
+//    System.out.println("drawarea >> getCellsIntersectCode start="+start+" stop="+stop +" result.count="+result.size());
+    
 
     return result.toArray();
   }
@@ -1116,9 +1140,9 @@ public class DrawingArea extends JDesktopPane {
       result.add(mxUtils.getColor(state.getStyle(),mxConstants.STYLE_FILLCOLOR));
     }
     
-    System.out
-    .println("drawarea >> getColorsIntersectCode cells.length="
-             + result.size());
+//    System.out
+//    .println("drawarea >> getColorsIntersectCode cells.length="
+//             + result.size());
     return result.toArray();
     
   }
@@ -1196,6 +1220,7 @@ public class DrawingArea extends JDesktopPane {
      * Reference to the enclosing drawing component.
      */
     DrawingArea drawingArea;
+    Stroke borderStroke;
 
     /**
      * Constructor. The super class constructor handles 1. adding this to the
@@ -1210,6 +1235,23 @@ public class DrawingArea extends JDesktopPane {
       this.drawingArea = drawingArea;
       borderColor = kConstants.SHAPE_PREVIEW_BORDER_COLOR;
       fillColor = kConstants.SHAPE_PREVIEW_FILL_COLOR; // half-transparent gray
+      borderStroke = kConstants.PREVIEW_STROKE;
+    }
+    
+    public void paintRubberband(Graphics g)
+    {
+      if (first != null && bounds != null
+          && graphComponent.isSignificant(bounds.width, bounds.height))
+      {
+        Rectangle rect = new Rectangle(bounds);
+        g.setColor(fillColor);
+        mxUtils.fillClippedRect(g, rect.x, rect.y, rect.width, rect.height);
+        ((Graphics2D) g).setStroke(borderStroke);
+        g.setColor(borderColor);
+        rect.width -= 1;
+        rect.height -= 1;
+        g.drawRect(rect.x, rect.y, rect.width, rect.height);
+      }
     }
 
     // TODO minor: implement shiftkey = square boundary
@@ -1389,7 +1431,8 @@ public class DrawingArea extends JDesktopPane {
           return ((cell != null) ? ((!cell.isEdge()) ? cell : null) : null);
         }
       };
-      marker.setValidColor(kConstants.UI_COLOR_ROLLOVER);
+      marker.setValidColor(kConstants.DEFAULT_VALID_COLOR);
+      marker.setInvalidColor(kConstants.DEFAULT_INVALID_COLOR);
 
       // Install ourselves as a listener
       graphComponent.getGraphControl().addMouseListener(this);
@@ -1501,8 +1544,8 @@ public class DrawingArea extends JDesktopPane {
       super(drawingArea.getGraphComponent());
       this.drawingArea = drawingArea;
       getMarker().setHotspot(1);
-      getMarker().setValidColor(kConstants.CONN_MARKER_VALID_COLOR);
-      getMarker().setInvalidColor(kConstants.CONN_MARKER_INVALID_COLOR);
+      getMarker().setValidColor(kConstants.DEFAULT_VALID_COLOR);
+      getMarker().setInvalidColor(kConstants.DEFAULT_INVALID_COLOR);
     }
     
     //set marker colors+stroke

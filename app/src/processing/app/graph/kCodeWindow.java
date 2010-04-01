@@ -44,6 +44,7 @@ import processing.app.Preferences;
 import processing.app.syntax.JEditTextArea;
 import processing.app.syntax.PdeTextAreaDefaults;
 import processing.app.syntax.TextAreaDefaults;
+import processing.app.util.kConstants;
 
 import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
@@ -117,6 +118,7 @@ public class kCodeWindow {
     textarea.setEditable(true);
     textarea.setHorizontalOffset(TEXTAREA_HORIZ_OFFSET);
     textarea.getPainter().setLineHighlightEnabled(false); // else looks funny
+    textarea.getPainter().setBackground(kConstants.CODE_WINDOW_COLOR);
     setShortcutKeystrokes();
     JScrollPane scrollPane = new JScrollPane(textarea);
     scrollPane.setBorder(null);
@@ -1131,7 +1133,7 @@ public class kCodeWindow {
       int[] xs = { p1.x, p2.x, p3.x };
       int[] ys = { p1.y, p2.y, p3.y };
       Polygon triangle = new Polygon(xs, ys, xs.length);
-      g.setColor(Color.WHITE);
+      g.setColor(kConstants.CODE_WINDOW_COLOR);
 
       g.fillPolygon(triangle);
 

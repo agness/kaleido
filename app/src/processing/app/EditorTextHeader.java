@@ -28,6 +28,8 @@ import java.awt.event.*;
 
 import javax.swing.*;
 
+import processing.app.util.kConstants;
+
 
 /**
  * Sketch tabs at the top of the text editor window.
@@ -170,7 +172,7 @@ public class EditorTextHeader extends JComponent {
       tabRight = new int[codeCount];
     }
 
-    int x = 6; // offset from left edge of the component
+    int x = kConstants.LINK_MARKER_WIDTH-1; // offset from left edge of the component
     for (int i = 0; i < sketch.getCodeCount(); i++) {
       SketchCode code = sketch.getCode(i);
 

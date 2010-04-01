@@ -210,7 +210,7 @@ public class kCanvas extends mxInteractiveCanvas {
     final int h_incr = h*2/3 / (rows + 2);
     int x_temp = x + w_incr*3/2;
     int y_temp = y + h/3 + h_incr*3/2;
-    g.setColor(kConstants.CANVAS_COLOR);    
+    g.setColor(kConstants.UI_COLOR_CANVAS);    
     for (int i=0; i < rows; i++) {
       for (int j=0; j < cols; j++) {
         g.fillRect(x_temp+j*w_incr, y_temp+i*h_incr, w_incr/2, h_incr/2);
