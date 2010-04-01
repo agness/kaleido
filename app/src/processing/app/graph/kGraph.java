@@ -1,11 +1,13 @@
 package processing.app.graph;
 
 import java.awt.Graphics;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Shape;
 import java.util.Map;
 
 import processing.app.util.kConstants;
+import processing.app.util.kUtils;
 
 import com.mxgraph.canvas.mxGraphics2DCanvas;
 import com.mxgraph.canvas.mxICanvas;
@@ -68,6 +70,21 @@ public class kGraph extends mxGraph {
    */
   public boolean isCellLinked(Object cell) {
     return mxUtils.isTrue(getCellStyle(cell), kConstants.STYLE_LINKED, false);
+  }
+  
+  /**
+   * Overriding to make sure that the drop target candidate is not a child of
+   * one of the selected cells (else we get stack overflow)
+   */
+  public Object getDropTarget(Object[] cells, Point pt, Object cell)
+  {
+    Object target = super.getDropTarget(cells, pt, cell);
+    for (int i = 0; i < cells.length; i++)
+      if (mxUtils.contains(mxGraphModel.getChildren(getModel(),cells[i]), target)) {
+        target = null;
+        break;
+      }
+    return target;
   }
   
   /**
