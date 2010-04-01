@@ -60,7 +60,7 @@ public class kConstants
   { mxUtils.parseColor("#eeeeee"),
     Color.BLACK, 
     Color.BLACK,
-    mxUtils.parseColor("#eeeeee"), 
+    Color.BLACK, 
     mxUtils.parseColor("#eeeeee") }};
   
   /**
@@ -96,9 +96,13 @@ public class kConstants
   private static Color UI_COLOR_ACTIVETAB = new Color(0xd3d3d3); //the color of selected text tab, light gray
   private static Color UI_COLOR_OFFWHITE = new Color(0xeeeeee); //very nearly white
   private static Color UI_COLOR_BUTTONBAR = new Color(0x686868); //equals Theme.getColor(buttons.bgcolor)
+//  private static Color UI_COLOR_HEADERBKGD = new Color(0x989898); //equals Theme.getColor(header.bgcolor)
   private static Stroke UI_DOTTED_STROKE = new BasicStroke(1,
       BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f,
       new float[] { 1, 3 }, 0.0f);
+  public static Stroke SHAPE_DOTTED_STROKE = new BasicStroke(4,
+      BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f,
+      new float[] { 5, 5 }, 0.0f);
   
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
@@ -152,7 +156,7 @@ public class kConstants
   /**
    * The uniform color of all connectors created in Kaleido
    */
-  public static final Color EDGE_STROKE_COLOR = UI_COLOR_BUTTONBAR;
+  public static final Color EDGE_STROKE_COLOR = Color.gray;
 
   /**
    * The uniform font color of all connector labels
@@ -165,6 +169,11 @@ public class kConstants
    */
   public static final Color CODE_WINDOW_COLOR = Color.white;
   
+  public static final Color SHADOW_COLOR = Color.black;
+
+  public static final int SHADOW_OFFSETX = 3;
+
+  public static final int SHADOW_OFFSETY = 4;
 
 
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
@@ -242,5 +251,6 @@ public class kConstants
   public static final Color LINK_MARKER_BACKGROUND_COLOR = Color.white;
 
   public static final int LINK_MARKER_WIDTH = 10;
+
 
 }

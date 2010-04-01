@@ -5,6 +5,7 @@ import java.awt.FontMetrics;
 import java.awt.Paint;
 import java.awt.Polygon;
 import java.awt.Rectangle;
+import java.awt.Stroke;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.GeneralPath;
 import java.util.Hashtable;
@@ -22,9 +23,448 @@ import com.mxgraph.util.mxUtils;
  */
 public class kCanvas extends mxInteractiveCanvas {
 
+  /**
+   * Quick way to turn off the dotted-empty style of for not-linked shapes
+   */
+  protected boolean linkDottedStyleEnabled = false;
+  protected boolean linkLighterStyleEnabled = true;
+  
   public kCanvas() {
     // TODO Auto-generated constructor stub
   }
+  
+  /**
+   * @param linked Boolean indicating if it should be painted in the linked style.
+   */
+  protected void drawPolygon(Polygon polygon, Color fillColor,
+      Paint fillPaint, Color penColor, boolean shadow, boolean linked)
+  {
+    if (linked) {
+      if (fillColor != null || fillPaint != null)
+      {
+        if (shadow)
+        {
+          g.setColor(kConstants.SHADOW_COLOR);
+          g.translate(kConstants.SHADOW_OFFSETX,
+              kConstants.SHADOW_OFFSETY);
+          g.fillPolygon(polygon);
+          g.translate(-kConstants.SHADOW_OFFSETX,
+              -kConstants.SHADOW_OFFSETY);
+        }
+  
+        if (fillPaint != null)
+        {
+          g.setPaint(fillPaint);
+        }
+        else
+        {
+          g.setColor(fillColor);
+        }
+  
+        g.fillPolygon(polygon);
+      }
+  
+      if (penColor != null)
+      {
+        g.setColor(penColor);
+        g.drawPolygon(polygon);
+      }
+    } else if (!linked && linkLighterStyleEnabled) {
+      System.out.println("kCanvas >> drawing not linked polygon");
+      if (shadow)
+      {
+        g.setColor(kConstants.SHADOW_COLOR);
+        g.translate(kConstants.SHADOW_OFFSETX,
+            kConstants.SHADOW_OFFSETY);
+        g.fillPolygon(polygon);
+        g.translate(-kConstants.SHADOW_OFFSETX,
+            -kConstants.SHADOW_OFFSETY);
+      }
+      if (penColor != null)
+      {
+//        g.setColor(penColor.brighter().brighter());
+        g.setColor(new Color(penColor.getRed(),penColor.getBlue(),penColor.getGreen(),70));
+        g.fillPolygon(polygon);
+      }
+    } else if (!linked && linkDottedStyleEnabled) {
+      System.out.println("kCanvas >> drawing not linked polygon");
+      Stroke originalStroke = g.getStroke();
+      g.setStroke(kConstants.SHAPE_DOTTED_STROKE);
+      if (shadow)
+      {
+        g.setColor(kConstants.SHADOW_COLOR);
+        g.translate(kConstants.SHADOW_OFFSETX,
+            kConstants.SHADOW_OFFSETY);
+        g.drawPolygon(polygon);
+        g.translate(-kConstants.SHADOW_OFFSETX,
+            -kConstants.SHADOW_OFFSETY);
+      }
+      if (penColor != null)
+      {
+        g.setColor(penColor);
+        g.drawPolygon(polygon);
+      }
+      g.setStroke(originalStroke);
+    }
+  }
+  /**
+   * @param linked Boolean indicating if it should be painted in the linked style.
+   */
+  protected void drawPath(GeneralPath path, Color fillColor, Paint fillPaint,
+      Color penColor, boolean shadow, boolean linked)
+  {
+    if (linked) {
+      if (fillColor != null || fillPaint != null)
+      {
+        if (shadow)
+        {
+          g.setColor(kConstants.SHADOW_COLOR);
+          g.translate(kConstants.SHADOW_OFFSETX,
+              kConstants.SHADOW_OFFSETY);
+          g.fill(path);
+          g.translate(-kConstants.SHADOW_OFFSETX,
+              -kConstants.SHADOW_OFFSETY);
+        }
+  
+        if (fillPaint != null)
+        {
+          g.setPaint(fillPaint);
+        }
+        else
+        {
+          g.setColor(fillColor);
+        }
+  
+        g.fill(path);
+      }
+  
+      if (penColor != null)
+      {
+        g.setColor(penColor);
+        g.draw(path);
+      }
+    } else if (!linked && linkLighterStyleEnabled) {
+      System.out.println("kCanvas >> drawing not linked path");
+      if (shadow)
+      {
+        g.setColor(kConstants.SHADOW_COLOR);
+        g.translate(kConstants.SHADOW_OFFSETX,
+            kConstants.SHADOW_OFFSETY);
+        g.fill(path);
+        g.translate(-kConstants.SHADOW_OFFSETX,
+            -kConstants.SHADOW_OFFSETY);
+      }
+      if (penColor != null)
+      {
+        g.setColor(penColor.darker());
+//        g.setColor(penColor.brighter().brighter());
+//        g.setColor(new Color(penColor.getRed(),penColor.getBlue(),penColor.getGreen(),70));
+        g.fill(path);
+      }
+    } else if (!linked && linkDottedStyleEnabled) {
+      System.out.println("kCanvas >> drawing not linked path");
+      Stroke originalStroke = g.getStroke();
+      g.setStroke(kConstants.SHAPE_DOTTED_STROKE);
+      if (shadow)
+      {
+        g.setColor(kConstants.SHADOW_COLOR);
+        g.translate(kConstants.SHADOW_OFFSETX,
+            kConstants.SHADOW_OFFSETY);
+        g.draw(path);
+        g.translate(-kConstants.SHADOW_OFFSETX,
+            -kConstants.SHADOW_OFFSETY);
+      }
+      if (penColor != null)
+      {
+        g.setColor(penColor);
+        g.draw(path);
+      }
+      g.setStroke(originalStroke);
+    }
+  }
+  /**
+   * @param linked Boolean indicating if it should be painted in the linked style.
+   */
+  protected void drawRect(int x, int y, int w, int h, Color fillColor,
+      Paint fillPaint, Color penColor, boolean shadow, boolean rounded, boolean linked)
+  {
+    int radius = (rounded) ? getArcSize(w, h) : 0;
+
+    if (linked) {
+      if (fillColor != null || fillPaint != null)
+      {
+        if (shadow)
+        {
+          g.setColor(kConstants.SHADOW_COLOR);
+  
+          if (rounded)
+          {
+            g.fillRoundRect(x + kConstants.SHADOW_OFFSETX, y
+                + kConstants.SHADOW_OFFSETY, w, h, radius, radius);
+          }
+          else
+          {
+            g.fillRect(x + kConstants.SHADOW_OFFSETX, y
+                + kConstants.SHADOW_OFFSETY, w, h);
+          }
+        }
+  
+        if (fillPaint != null)
+        {
+          g.setPaint(fillPaint);
+        }
+        else
+        {
+          g.setColor(fillColor);
+        }
+  
+        if (rounded)
+        {
+          g.fillRoundRect(x, y, w, h, radius, radius);
+        }
+        else
+        {
+          // Only draws the filled region within the clipping bounds
+          if (g.getClipBounds() != null)
+          {
+            Rectangle rect = new Rectangle(x, y, w, h);
+            g.fill(rect.intersection(g.getClipBounds()));
+          }
+          else
+          {
+            g.fillRect(x, y, w, h);
+          }
+        }
+      }
+  
+      if (penColor != null)
+      {
+        g.setColor(penColor);
+  
+        if (rounded)
+        {
+          g.drawRoundRect(x, y, w, h, radius, radius);
+        }
+        else
+        {
+          g.drawRect(x, y, w, h);
+        }
+      }
+    } else if (!linked && linkDottedStyleEnabled) {
+      System.out.println("kCanvas >> drawing not linked rect");
+      Stroke originalStroke = g.getStroke();
+      g.setStroke(kConstants.SHAPE_DOTTED_STROKE);
+      if (fillColor != null || fillPaint != null)
+      {
+        if (shadow)
+        {
+          g.setColor(kConstants.SHADOW_COLOR);
+
+          if (rounded)
+          {
+            g.drawRoundRect(x + kConstants.SHADOW_OFFSETX, y
+                + kConstants.SHADOW_OFFSETY, w, h, radius, radius);
+          }
+          else
+          {
+            g.drawRect(x + kConstants.SHADOW_OFFSETX, y
+                + kConstants.SHADOW_OFFSETY, w, h);
+          }
+        }
+      }
+      if (penColor != null)
+      {
+        g.setColor(penColor);
+
+        if (rounded)
+        {
+          g.drawRoundRect(x, y, w, h, radius, radius);
+        }
+        else
+        {
+          g.drawRect(x, y, w, h);
+        }
+      }
+      g.setStroke(originalStroke);
+    }
+  }
+  
+  /**
+   * Same as original, just modified shadow parameters.
+   */
+  protected void drawPolygon(Polygon polygon, Color fillColor,
+      Paint fillPaint, Color penColor, boolean shadow)
+  {
+    if (fillColor != null || fillPaint != null)
+    {
+      if (shadow)
+      {
+        g.setColor(kConstants.SHADOW_COLOR);
+        g.translate(kConstants.SHADOW_OFFSETX,
+            kConstants.SHADOW_OFFSETY);
+        g.fillPolygon(polygon);
+        g.translate(-kConstants.SHADOW_OFFSETX,
+            -kConstants.SHADOW_OFFSETY);
+      }
+
+      if (fillPaint != null)
+      {
+        g.setPaint(fillPaint);
+      }
+      else
+      {
+        g.setColor(fillColor);
+      }
+
+      g.fillPolygon(polygon);
+    }
+
+    if (penColor != null)
+    {
+      g.setColor(penColor);
+      g.drawPolygon(polygon);
+    }
+  } 
+  /**
+   * Same as original, just modified shadow parameters.
+   */
+  protected void drawPath(GeneralPath path, Color fillColor, Paint fillPaint,
+      Color penColor, boolean shadow)
+  {
+    if (fillColor != null || fillPaint != null)
+    {
+      if (shadow)
+      {
+        g.setColor(kConstants.SHADOW_COLOR);
+        g.translate(kConstants.SHADOW_OFFSETX,
+            kConstants.SHADOW_OFFSETY);
+        g.fill(path);
+        g.translate(-kConstants.SHADOW_OFFSETX,
+            -kConstants.SHADOW_OFFSETY);
+      }
+
+      if (fillPaint != null)
+      {
+        g.setPaint(fillPaint);
+      }
+      else
+      {
+        g.setColor(fillColor);
+      }
+
+      g.fill(path);
+    }
+
+    if (penColor != null)
+    {
+      g.setColor(penColor);
+      g.draw(path);
+    }
+  }
+  /**
+   * Same as original, just modified shadow parameters.
+   */
+  protected void drawRect(int x, int y, int w, int h, Color fillColor,
+      Paint fillPaint, Color penColor, boolean shadow, boolean rounded)
+  {
+    int radius = (rounded) ? getArcSize(w, h) : 0;
+
+    if (fillColor != null || fillPaint != null)
+    {
+      if (shadow)
+      {
+        g.setColor(kConstants.SHADOW_COLOR);
+
+        if (rounded)
+        {
+          g.fillRoundRect(x + kConstants.SHADOW_OFFSETX, y
+              + kConstants.SHADOW_OFFSETY, w, h, radius, radius);
+        }
+        else
+        {
+          g.fillRect(x + kConstants.SHADOW_OFFSETX, y
+              + kConstants.SHADOW_OFFSETY, w, h);
+        }
+      }
+
+      if (fillPaint != null)
+      {
+        g.setPaint(fillPaint);
+      }
+      else
+      {
+        g.setColor(fillColor);
+      }
+
+      if (rounded)
+      {
+        g.fillRoundRect(x, y, w, h, radius, radius);
+      }
+      else
+      {
+        // Only draws the filled region within the clipping bounds
+        if (g.getClipBounds() != null)
+        {
+          Rectangle rect = new Rectangle(x, y, w, h);
+          g.fill(rect.intersection(g.getClipBounds()));
+        }
+        else
+        {
+          g.fillRect(x, y, w, h);
+        }
+      }
+    }
+
+    if (penColor != null)
+    {
+      g.setColor(penColor);
+
+      if (rounded)
+      {
+        g.drawRoundRect(x, y, w, h, radius, radius);
+      }
+      else
+      {
+        g.drawRect(x, y, w, h);
+      }
+    }
+  }
+  /**
+   * Same as original, just modified shadow parameters.
+   */
+  protected void drawOval(int x, int y, int w, int h, Color fillColor,
+      Paint fillPaint, Color penColor, boolean shadow)
+  {
+    if (fillColor != null || fillPaint != null)
+    {
+      if (shadow)
+      {
+        g.setColor(kConstants.SHADOW_COLOR);
+        g.fillOval(x + kConstants.SHADOW_OFFSETX, y
+            + kConstants.SHADOW_OFFSETY, w, h);
+      }
+
+      if (fillPaint != null)
+      {
+        g.setPaint(fillPaint);
+      }
+      else
+      {
+        g.setColor(fillColor);
+      }
+
+      g.fillOval(x, y, w, h);
+    }
+
+    if (penColor != null)
+    {
+      g.setColor(penColor);
+      g.drawOval(x, y, w, h);
+    }
+  }
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
   
   /**
    * Overriding superclass method that dictates which shape to draw.
@@ -43,6 +483,8 @@ public class kCanvas extends mxInteractiveCanvas {
     boolean locked = mxUtils.isTrue(style, kConstants.STYLE_LOCKED,
                                      false);
     style.put(mxConstants.STYLE_SHADOW, (!locked) ? "true" : "false");
+    boolean linked = mxUtils.isTrue(style, kConstants.STYLE_LINKED,
+                                    false);
     
     if (shape.equals(kConstants.SHAPE_AUDIO)
         || shape.equals(kConstants.SHAPE_KEYBOARD)
@@ -71,7 +513,7 @@ public class kCanvas extends mxInteractiveCanvas {
           
         if (shape.equals(kConstants.SHAPE_AUDIO))
         {
-          drawAudio(x, y, w, h, fillColor, fillPaint, penColor, shadow);
+          drawAudio(x, y, w, h, fillColor, fillPaint, penColor, shadow, linked);
         }
         else if (shape.equals(kConstants.SHAPE_KEYBOARD))
         {  
@@ -79,11 +521,11 @@ public class kCanvas extends mxInteractiveCanvas {
         }
         else if (shape.equals(kConstants.SHAPE_PERSON))
         {
-          drawPerson(x, y, w, h, fillColor, fillPaint, penColor, shadow);
+          drawPerson(x, y, w, h, fillColor, fillPaint, penColor, shadow, linked);
         }
         else if (shape.equals(kConstants.SHAPE_STAR))
         {
-          drawStar(x, y, w, h, fillColor, fillPaint, penColor, shadow);
+          drawStar(x, y, w, h, fillColor, fillPaint, penColor, shadow, linked);
         }
       } // end if hitClip
     }
@@ -106,7 +548,7 @@ public class kCanvas extends mxInteractiveCanvas {
    * @param shadow Boolean indicating if a shadow should be painted.
    */
   protected void drawStar(int x, int y, int w, int h, Color fillColor,
-      Paint fillPaint, Color penColor, boolean shadow)
+      Paint fillPaint, Color penColor, boolean shadow, boolean linked)
   {
     int vertexCount = 5;
     double startAngle = 0-(Math.PI/2); //start with point to the top
@@ -132,7 +574,7 @@ public class kCanvas extends mxInteractiveCanvas {
     
     Polygon star = new Polygon(xcoords, ycoords, vertexCount*2);
 
-    drawPolygon(star, fillColor, fillPaint, penColor, shadow);
+    drawPolygon(star, fillColor, fillPaint, penColor, shadow, linked);
   }
   
   /**
@@ -148,7 +590,7 @@ public class kCanvas extends mxInteractiveCanvas {
    * @param shadow Boolean indicating if a shadow should be painted.
    */
   protected void drawPerson(int x, int y, int w, int h, Color fillColor,
-      Paint fillPaint, Color penColor, boolean shadow)
+      Paint fillPaint, Color penColor, boolean shadow, boolean linked)
   {
     GeneralPath path = new GeneralPath();
 
@@ -172,7 +614,7 @@ public class kCanvas extends mxInteractiveCanvas {
     
     path.closePath();
 
-    drawPath(path, fillColor, fillPaint, penColor, shadow);
+    drawPath(path, fillColor, fillPaint, penColor, shadow, linked);
   }
   
   /**
@@ -231,7 +673,7 @@ public class kCanvas extends mxInteractiveCanvas {
    * @param shadow Boolean indicating if a shadow should be painted.
    */
   protected void drawAudio(int x, int y, int w, int h, Color fillColor,
-      Paint fillPaint, Color penColor, boolean shadow)
+      Paint fillPaint, Color penColor, boolean shadow, boolean linked)
   {
     GeneralPath path = new GeneralPath();
 
@@ -243,7 +685,7 @@ public class kCanvas extends mxInteractiveCanvas {
     path.lineTo(x + w*2/3, y + h*3/4);
     path.lineTo(x + w/3, y + h);
     path.closePath();
-    drawPath(path, fillColor, fillPaint, penColor, shadow);
+    drawPath(path, fillColor, fillPaint, penColor, shadow, linked);
     
     //inner sound curve:
     path = new GeneralPath();
@@ -252,7 +694,7 @@ public class kCanvas extends mxInteractiveCanvas {
     path.lineTo(x + w*6/24 - w/20, y + h*5/6);
     path.curveTo(x + w*4/24 - w/20, y + h*5/12 + h/7, x + w*4/24 - w/20, y + h*7/12 - h/7, x + w*6/24 - w/20, y + h/6);
     path.closePath();
-    drawPath(path, fillColor, fillPaint, penColor, shadow);
+    drawPath(path, fillColor, fillPaint, penColor, shadow, linked);
     
     //outer sound curve:
     path = new GeneralPath();
@@ -261,7 +703,7 @@ public class kCanvas extends mxInteractiveCanvas {
     path.lineTo(x + w*4/24 - w/20, y + h);
     path.curveTo(x, y + h*2/3 + h/20, x, y + h/3 - h/20, x + w*4/24 - w/20, y);
     path.closePath();
-    drawPath(path, fillColor, fillPaint, penColor, shadow);
+    drawPath(path, fillColor, fillPaint, penColor, shadow, linked);
   }
    
   /**
