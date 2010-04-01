@@ -9,6 +9,7 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
 import java.awt.Stroke;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 
@@ -69,6 +70,42 @@ public class kGraphComponent extends mxGraphComponent {
     // graphOutline background color; we're using the same color as the
     // background color of inactive buttons
     setPageBackgroundColor(kConstants.UI_COLOR_BUTTONFILL); 
+    
+    graphControl.addMouseListener(new MouseAdapter()
+    {
+      public void mouseClicked(MouseEvent e)
+      {
+        if (!e.isConsumed() && !isCodeWindowEvent(e))
+        {
+          Object cell = getCellAt(e.getX(), e.getY(), false);
+
+          if (cell != null && getGraph().getSelectionModel().isSelected(cell) && getGraph().isCellEditable(cell))
+          {
+            startEditingAtCell(cell, e);
+          }
+        }
+        else
+        {
+          // Other languages use focus traversal here, in Java
+          // we explicitly stop editing after a click elsewhere
+          stopEditing(!invokesStopCellEditing);
+        }
+      }
+    });
+  }
+  
+  /**
+   * This is the only way to disable the anonymous mouseListener in the
+   * superclass constructor
+   */
+  public boolean isEditEvent(MouseEvent e)
+  {
+//    return (e != null) ? (e.getClickCount() == 1 && getGraph().getSelectionModel().isSelected(getCellAt(e.getX(), e.getY(), false))) : false;
+    return false;
+  }
+  public boolean isCodeWindowEvent(MouseEvent e)
+  {
+    return (e != null) ? e.getClickCount() == 2 : false;
   }
   
   /**

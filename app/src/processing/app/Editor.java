@@ -2627,7 +2627,18 @@ public class Editor extends JFrame implements RunnerListener {
       }
     });
   }
-  
+
+  /**
+   * Called by colorToolband to request repaint of line marker of cell whose
+   * color was just changed
+   * 
+   * @param startMark
+   * @param stopMark
+   */
+  public void repaintLinesOfOffset(int startMark, int stopMark) {
+    System.out.println("editor >> repainting lines of offset");
+    textarea.getPainter().invalidateLineRange(textarea.getLineOfOffset(startMark), textarea.getLineOfOffset(stopMark));
+  }
 
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
@@ -2742,7 +2753,7 @@ public class Editor extends JFrame implements RunnerListener {
     drawarea.addListener(kEvent.TOOL_BEGIN, new mxIEventListener() {
       public void invoke(Object source, mxEventObject evt) {
         String toolMode = (String) evt.getProperty("tool");
-        if (kUtils.stringLinearSearch(kConstants.SHAPE_KEYS, toolMode) >= 0
+        if (kUtils.arrayLinearSearch(kConstants.SHAPE_KEYS, toolMode) >= 0
             && textarea.getSelectedText() != null) {
           //user select some text and clicks to create a new shape
           System.out.println("link >> user selected text and now to create new shape so set link button active");
@@ -2878,4 +2889,5 @@ public class Editor extends JFrame implements RunnerListener {
     drawingHeader.getLinkButton().setLinkMode();
     statusNotice("Code-visual link disconnected.");
   }
+
 }

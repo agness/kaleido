@@ -4,9 +4,11 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Stroke;
+import java.awt.Toolkit;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -156,6 +158,22 @@ public class DrawingArea extends JDesktopPane {
           if (cw != null) {
             System.out.println("drawarea >> cell removed, removing code window id="+cw.getId());
             codeWindows.remove(cw);
+          }
+        }
+      }
+    });
+    // mouse listener for double-click to open code windows
+    graphComponent.getGraphControl().addMouseListener(new MouseAdapter()
+    {
+      public void mouseReleased(MouseEvent e)
+      {
+        if (!e.isConsumed() && ((kGraphComponent) graphComponent).isCodeWindowEvent(e))
+        {
+          Object cell = graphComponent.getCellAt(e.getX(), e.getY(), false);
+
+          if (cell != null && ((mxICell) cell).getValue() instanceof kCellValue && ((kCellValue) ((mxICell) cell).getValue()).hasValidCodeMarks())
+          {
+            showCodeWindow(cell);
           }
         }
       }
@@ -429,10 +447,10 @@ public class DrawingArea extends JDesktopPane {
     setCursor(TOOL_CURSOR);
     toolMode = toolName;
 //TODO enable the ESCAPE_KEY listener that endsToolMode
-    if (kUtils.stringLinearSearch(kConstants.SHAPE_KEYS, toolName) >= 0
+    if (kUtils.arrayLinearSearch(kConstants.SHAPE_KEYS, toolName) >= 0
         || toolName.equals(kConstants.SHAPE_TEXT))
       shapeToolband.setEnabled(true);
-    else if (kUtils.stringLinearSearch(kConstants.CONNECTOR_KEYS, toolName) >= 0)
+    else if (kUtils.arrayLinearSearch(kConstants.CONNECTOR_KEYS, toolName) >= 0)
       connectorToolband.setEnabled(true);
     else {
       // update the FillColor
@@ -734,7 +752,7 @@ public class DrawingArea extends JDesktopPane {
   /**
    * Makes visible the associated code window of each selected cell.
    */
-  public void openCodeWindowOnSelected() {
+  public void showCodeWindowOnSelected() {
     if (codeWindowsEnabled) {
       Object[] selected = graphComponent.getGraph().getSelectionCells();
       for (int i = 0; i < selected.length; i++)
@@ -745,7 +763,7 @@ public class DrawingArea extends JDesktopPane {
   /**
    * Makes visible the associated code window of each selected cell.
    */
-  public void closeCodeWindowOnSelected() {
+  public void hideCodeWindowOnSelected() {
     if (codeWindowsEnabled) {
       Object[] selected = graphComponent.getGraph().getSelectionCells();
       for (int i = 0; i < selected.length; i++)
@@ -768,7 +786,7 @@ public class DrawingArea extends JDesktopPane {
   /**
    * Closes all code windows.
    */
-  public void closeAllCodeWindows() {
+  public void hideAllCodeWindows() {
     if (codeWindowsEnabled && codeWindows != null) {
       Iterator it = codeWindows.iterator();
       while (it.hasNext())
@@ -1136,7 +1154,7 @@ public class DrawingArea extends JDesktopPane {
     for (int i = 0; i < cells.length; i++) {
 
       mxCellState state = graphComponent.getGraph().getView().getState(cells[i]);
-      System.out.println("     "+mxUtils.getColor(state.getStyle(),mxConstants.STYLE_FILLCOLOR));
+//      System.out.println("     "+mxUtils.getColor(state.getStyle(),mxConstants.STYLE_FILLCOLOR));
       result.add(mxUtils.getColor(state.getStyle(),mxConstants.STYLE_FILLCOLOR));
     }
     
@@ -1255,9 +1273,6 @@ public class DrawingArea extends JDesktopPane {
     }
 
     // TODO minor: implement shiftkey = square boundary
-    // TODO our lovely cellmarker is pretty forkin' ugly
-    // TODO public void paintRubberband() could use kConstants.PREVIEW_STROKE for visual consistency?
-    // or the other way around...
 
     /**
      * TODO we can tell graphcomponent to set its cursor in beginToolMode (and
@@ -1292,6 +1307,7 @@ public class DrawingArea extends JDesktopPane {
       Rectangle rect = bounds;
       // super.reset(); //task performed later with this.reset()
       boolean success = false;
+      boolean openCellEditor = false;
       
       if (!e.isConsumed() && rect != null && drawingArea.getToolMode() != null
           && graphComponent.isSignificant(rect.width, rect.height)) {
@@ -1308,15 +1324,6 @@ public class DrawingArea extends JDesktopPane {
                                                     drawingArea
                                                         .getCurrentFillColorKey())
                 .getRGB()));
-        style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
-            .toHexString(kUtils.getFontColorFromKey(
-                                                    drawingArea
-                                                        .getCurrentFillColorKey())
-                .getRGB()));
-        style = mxUtils.setStyle(style, mxConstants.STYLE_FONTFAMILY,
-                                 kConstants.DEFAULT_FONTFAMILY);
-//        style = mxUtils.setStyle(style, mxConstants.STYLE_ALIGN,
-//                                 mxConstants.ALIGN_LEFT);
        
         if (toolMode.equals(kConstants.SHAPE_KEYS[1])) {
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
@@ -1341,6 +1348,8 @@ public class DrawingArea extends JDesktopPane {
           // set style=junk
           // note this also overrides the earlier assignment of colors
           style = kConstants.SHAPE_TEXT;
+          style = mxUtils.setStyle(style, kConstants.SHAPE_TEXT, "true");
+          openCellEditor = true;
         } else if (!toolMode.equals(kConstants.SHAPE_KEYS[0])) // no style means
                                                                // rectangles
         {
@@ -1348,25 +1357,30 @@ public class DrawingArea extends JDesktopPane {
               .println("Ut oh! You managed to select a tool that doesn't exist! Please report this bug: class=ShapeToolband, toolMode="
                        + toolMode);
         }
+        
+        //set font styles here so we include text areas
+        style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
+                                 .toHexString(kUtils.getFontColorFromKey(
+                                                                         drawingArea
+                                                                             .getCurrentFillColorKey())
+                                     .getRGB()));
+                             style = mxUtils.setStyle(style, mxConstants.STYLE_FONTFAMILY,
+                                                      kConstants.DEFAULT_FONTFAMILY);
+//                             style = mxUtils.setStyle(style, mxConstants.STYLE_ALIGN,
+//                                                      mxConstants.ALIGN_LEFT);
 
         // ----------------
-        mxGraph graph = graphComponent.getGraph();
-        Object parent = graph.getDefaultParent();
-        graph.getModel().beginUpdate();
-        try {
-          // System.out.println("style="+style);
-
-          Object cell = graph.insertVertex(parent, null, new kCellValue(), rect.x,
-                                           rect.y, rect.width, rect.height,
-                                           style);
-
-          // System.out.println("cell.style="+graph.getModel().getStyle(cell));
-        } finally {
-          graph.getModel().endUpdate();
-          success = true;
-        }
+        graphComponent.getGraph()
+            .setSelectionCell(
+                              graphComponent.getGraph()
+                                  .insertVertex(null, null, new kCellValue(),
+                                                rect.x, rect.y, rect.width,
+                                                rect.height, style));
+        if (openCellEditor)
+          graphComponent.startEditingAtCell(graphComponent.getGraph().getSelectionCell());
+        success = true;
         // ----------------
-
+    
         e.consume();
 
         // reset and stop editing when done
@@ -1409,6 +1423,8 @@ public class DrawingArea extends JDesktopPane {
      * A cell marker to highlight then mouseOver cells
      */
     protected mxCellMarker marker;
+    
+    protected Cursor paintCursor;
 
     /**
      * Constructor.
@@ -1419,6 +1435,11 @@ public class DrawingArea extends JDesktopPane {
       this.graphComponent = drawingArea.getGraphComponent();
       this.drawingArea = drawingArea;
       this.enabled = false;
+      Toolkit toolkit = Toolkit.getDefaultToolkit();
+      Image pb = Base.getThemeImage("paintbucket_cursor.png", drawingArea);
+      paintCursor = toolkit.createCustomCursor(pb, new Point(15,11), "paintCursor");
+      System.out.println("toolkit.bestcursorsize="+toolkit.getBestCursorSize(pb.getWidth(null), pb.getHeight(null)));
+      
       marker = new mxCellMarker(drawingArea.getGraphComponent()) {
         /**
          * Don't mark edges because we don't want to allow coloring of edges
@@ -1470,7 +1491,7 @@ public class DrawingArea extends JDesktopPane {
      */
     public void mouseMoved(MouseEvent e) {
       if (!e.isConsumed() && isEnabled() && !e.isPopupTrigger()) {
-        graphComponent.getGraphControl().setCursor(TOOL_CURSOR);
+        graphComponent.getGraphControl().setCursor(paintCursor);
         marker.process(e);
         e.consume();
       }
@@ -1480,7 +1501,7 @@ public class DrawingArea extends JDesktopPane {
       boolean success = false;
 
       if (!e.isConsumed() && isEnabled() && !e.isPopupTrigger()) {
-        graphComponent.getGraphControl().setCursor(TOOL_CURSOR);
+        graphComponent.getGraphControl().setCursor(paintCursor);
         // getting cell from the marker ensures that we don't grab edges
         mxCell cell = (mxCell) ((marker.hasValidState()) ? marker
             .getValidState().getCell() : null);
@@ -1499,7 +1520,14 @@ public class DrawingArea extends JDesktopPane {
           style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
               .toHexString(kUtils
                   .getFontColorFromKey(drawingArea.getToolMode()).getRGB()));
+          
           graph.setCellStyle(style, new Object[] { cell });
+          
+          if (drawingArea.hasValidCodeMarks(cell)) {
+            kCellValue val = (kCellValue) ((mxICell) cell).getValue();
+            drawingArea.editor.repaintLinesOfOffset(val.getStartMark(),val.getStopMark());
+          }
+          
           success = true;
         }
         e.consume();
