@@ -17,6 +17,7 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 
@@ -179,13 +180,7 @@ public class kCodeWindow {
 
     installFocusHandlers(buttonPanel);
     
-    // hide code window when close button is clicked
-    closeButton.addActionListener(new ActionListener() {
-      public void actionPerformed(ActionEvent e) {
-        System.out.println("kCodeWindow >> closeButton actionPerformed");
-        setVisible(false);
-      }
-    });
+    // hide code window when escape key is hit
     textarea.addKeyListener(new KeyAdapter() {
       public void keyPressed(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
@@ -201,6 +196,7 @@ public class kCodeWindow {
     mxMouseControl moveListener = createMoveListener();
     moveButton.addMouseListener(moveListener);
     moveButton.addMouseMotionListener(moveListener);
+    closeButton.addMouseListener(createCloseListener());
     // listens to resizing of editFrame and adjusts the position of the
     // buttons and the shape of the triangle accordingly
     editFrame.addComponentListener(createResizeListener());
@@ -250,6 +246,19 @@ public class kCodeWindow {
     buttonPanel.addFocusListener(focusListener);
     moveButton.addFocusListener(focusListener);
     closeButton.addFocusListener(focusListener);
+  }
+  
+  /**
+   * Add close function for the close button because of focus issues the
+   * normal ActionPerformed route requires too many clicks.
+   */
+  protected MouseAdapter createCloseListener() {
+    return new MouseAdapter() {
+      public void mouseReleased(MouseEvent e) {
+//        System.out.println("kCW >> mouse clicked on close window");
+        setVisible(false);
+      }
+    };
   }
 
   /**

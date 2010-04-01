@@ -1127,6 +1127,9 @@ public class JEditTextArea extends JComponent
   public final void selectAll()
   {
     select(0,getDocumentLength());
+    if (eventSource.isEventsEnabled()) System.out.println("JEditTextArea >> select all >> fire kEvent.TEXT_SELECTION_CHANGE newStart="+selectionStart+" newEnd="+selectionEnd);
+    eventSource.fireEvent(new mxEventObject(kEvent.TEXTAREA_SELECTION_CHANGE,
+                                            "newStart", selectionStart, "newEnd", selectionEnd));
   }
 
   /**
@@ -1135,6 +1138,9 @@ public class JEditTextArea extends JComponent
   public final void selectNone()
   {
     select(getCaretPosition(),getCaretPosition());
+    if (eventSource.isEventsEnabled()) System.out.println("JEditTextArea >> select none >> fire kEvent.TEXT_SELECTION_CHANGE newStart="+selectionStart+" newEnd="+selectionEnd);
+    eventSource.fireEvent(new mxEventObject(kEvent.TEXTAREA_SELECTION_CHANGE,
+                                            "newStart", selectionStart, "newEnd", selectionEnd));
   }
 
   /**
