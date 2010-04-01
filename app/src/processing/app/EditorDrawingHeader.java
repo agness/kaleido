@@ -214,9 +214,9 @@ public class EditorDrawingHeader extends JPanel {
       public void actionPerformed(ActionEvent e) {
         AbstractButton source = (AbstractButton) e.getSource();
         if (source.isSelected())
-          drawingArea.openCodeWindowOnSelected();
+          drawingArea.showCodeWindowOnSelected();
         else
-          drawingArea.closeCodeWindowOnSelected();
+          drawingArea.hideCodeWindowOnSelected();
       }
     });
     codeWindowButton.setEnabled(false); //start false, assuming nothing is selected at the beginning

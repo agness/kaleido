@@ -14,7 +14,7 @@ public class kUtils {
    * than that java.Arrays.binarySearch crap.
    * TODO this probably should go into some sort of kUtil class
    */
-  public static int stringLinearSearch(String [] a, String s) {
+  public static int arrayLinearSearch(Object [] a, Object s) {
     for (int i = 0; i < a.length; i++) {
       if (s.equals(a[i]))
         return i;
@@ -29,7 +29,7 @@ public class kUtils {
    * @return
    */
   public static Color getFillColorFromKey(String s){
-    int index = stringLinearSearch(kConstants.COLOR_KEYS, s);
+    int index = arrayLinearSearch(kConstants.COLOR_KEYS, s);
     if (index >= 0)
       return kConstants.FILL_COLORS[0][index];
     else
@@ -43,7 +43,7 @@ public class kUtils {
    * @return
    */
   public static Color getFontColorFromKey(String s){
-    int index = stringLinearSearch(kConstants.COLOR_KEYS, s);
+    int index = arrayLinearSearch(kConstants.COLOR_KEYS, s);
     if (index >= 0)
       return kConstants.FILL_COLORS[1][index];
     else
