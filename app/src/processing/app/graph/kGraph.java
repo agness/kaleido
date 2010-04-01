@@ -40,7 +40,7 @@ public class kGraph extends mxGraph {
     if (cell != null && (model.getParent(cell) != model.getRoot()))
     {
       mxCellState state = view.getState(cell);
-      if (state != null && !model.isEdge(cell))
+      if (state != null && !model.isEdge(cell) && !mxUtils.isTrue(state.getStyle(), kConstants.SHAPE_TEXT))
       {
         return true;
       }
