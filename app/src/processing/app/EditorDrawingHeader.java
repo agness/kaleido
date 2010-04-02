@@ -72,9 +72,7 @@ public class EditorDrawingHeader extends JSplitPane {
 
   private static final int BUTTON_GAP = EditorToolbar.BUTTON_GAP;
 
-  private static final int GRAPH_OUTLINE_WIDTH = HEADER_HEIGHT*2;
-
-  private static final int MINIMUM_WIDTH = 250;
+  private static final int GRAPH_OUTLINE_WIDTH = HEADER_HEIGHT*4/3;
 
   /**
    * We make all the image objects beforehand for efficiency a matrix of bags
