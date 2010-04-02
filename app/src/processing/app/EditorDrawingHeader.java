@@ -97,14 +97,14 @@ public class EditorDrawingHeader extends JSplitPane {
 
   ButtonGroup toolButtons;
 
-  DrawingArea drawingArea;
+  DrawingArea drawarea;
 
   public EditorDrawingHeader(DrawingArea dory) {
 
-    drawingArea = dory;
+    drawarea = dory;
 
     // drawarea tool end listener
-    drawingArea.addListener(kEvent.TOOL_END, new mxIEventListener() {
+    drawarea.addListener(kEvent.TOOL_END, new mxIEventListener() {
       public void invoke(Object source, mxEventObject evt) {
         // deselect all the tool buttons
         // TODO really don't know why this is not working in the case of "text"
@@ -117,22 +117,16 @@ public class EditorDrawingHeader extends JSplitPane {
     });
 
     // graph selection change listener
-    drawingArea.getGraphComponent().getGraph().getSelectionModel()
+    drawarea.getGraphComponent().getGraph().getSelectionModel()
         .addListener(mxEvent.CHANGE, new mxIEventListener() {
           public void invoke(Object sender, mxEventObject evt) {
-            mxGraphSelectionModel model = (mxGraphSelectionModel) sender;
-            if (model.isEmpty()) {
-              lockButton.setEnabled(false);
-            } else {
-              lockButton.setEnabled(true);
-              lockButton.setSelected(!drawingArea.isSelectionLocked());
-            }
+            updateLockButton();
             updateCodeWindowButton();
           }
         });
 
     // code window change listener
-    drawingArea.addListener(kEvent.CODE_WINDOW_VISIBILITY_CHANGE, new mxIEventListener() {
+    drawarea.addListener(kEvent.CODE_WINDOW_VISIBILITY_CHANGE, new mxIEventListener() {
       public void invoke(Object source, mxEventObject evt) {
         updateCodeWindowButton();
       }
@@ -158,7 +152,7 @@ public class EditorDrawingHeader extends JSplitPane {
                                 true);
         // ^--- we technically don't need to do this for every tool select
         // event, but it's easier to code
-        drawingArea.beginToolMode(((AbstractButton) e.getSource()).getModel()
+        drawarea.beginToolMode(((AbstractButton) e.getSource()).getModel()
             .getActionCommand());
       }
     };
@@ -232,9 +226,9 @@ public class EditorDrawingHeader extends JSplitPane {
       public void actionPerformed(ActionEvent e) {
         AbstractButton source = (AbstractButton) e.getSource();
         if (source.isSelected())
-          drawingArea.showCodeWindowOnSelected();
+          drawarea.showCodeWindowOnSelected();
         else
-          drawingArea.hideCodeWindowOnSelected();
+          drawarea.hideCodeWindowOnSelected();
       }
     });
     codeWindowButton.setEnabled(false); //start false, assuming nothing is selected at the beginning
@@ -261,9 +255,9 @@ public class EditorDrawingHeader extends JSplitPane {
                            + ((AbstractButton) e.getSource()).isSelected());
         AbstractButton source = (AbstractButton) e.getSource();
         if (source.isSelected())
-          drawingArea.unlockSelected();
+          drawarea.unlockSelected();
         else
-          drawingArea.lockSelected();
+          drawarea.lockSelected();
       }
     });
     lockButton.setEnabled(false); //start false, assuming nothing is selected at the beginning
@@ -331,7 +325,7 @@ public class EditorDrawingHeader extends JSplitPane {
      */
     // note that the graphOutline background color is determined by the
     // graphComponent.pageBackgroundColor (which we have set in kGraphComponent)
-    graphOutline = new mxGraphOutline(drawingArea.getGraphComponent()) {
+    graphOutline = new mxGraphOutline(drawarea.getGraphComponent()) {
       /**
        * @see com.mxgraph.swing.mxGraphOutline#paintForeground
        */
@@ -380,9 +374,34 @@ public class EditorDrawingHeader extends JSplitPane {
     setMaximumSize(new Dimension(3000,HEADER_HEIGHT));
   }
 
+  /**
+   * Refreshes all buttons whose state depends on the graph selection
+   * (link button, which also depends on the text selection, is handled
+   * by editor)
+   */
+  public void updateGraphButtons() {
+    updateLockButton();
+    updateCodeWindowButton();
+  }
+  
+  /**
+   * Refreshes the lock button state depending on the graph selection
+   */
+  private void updateLockButton() {
+    if (drawarea.getGraphComponent().getGraph().getSelectionCount() == 0) {
+      lockButton.setEnabled(false);
+    } else {
+      lockButton.setEnabled(true);
+      lockButton.setSelected(!drawarea.isSelectionLocked());
+    }
+  }
+
+  /**
+   * Refreshes the code window button state depending on the graph selection
+   */
   private void updateCodeWindowButton() {
-    codeWindowButton.setEnabled(drawingArea.isSelectionLinked());
-    codeWindowButton.setSelected(drawingArea.isCodeWindowOpenOnSelected());
+    codeWindowButton.setEnabled(drawarea.isSelectionLinked());
+    codeWindowButton.setSelected(drawarea.isCodeWindowOpenOnSelected());
   }
 
   public LinkButton getLinkButton() {
@@ -500,9 +519,9 @@ public class EditorDrawingHeader extends JSplitPane {
           String command = ((AbstractButton) e.getSource()).getModel()
               .getActionCommand();
           if (command.equals("link")) {
-            drawingArea.editor.linkAction();
+            drawarea.editor.linkAction();
           } else if (command.equals("unlink")) {
-            drawingArea.editor.disconnectAction();
+            drawarea.editor.disconnectAction();
           }
         }
       });

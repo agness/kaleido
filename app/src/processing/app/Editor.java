@@ -24,6 +24,7 @@ package processing.app;
 
 import processing.app.debug.*;
 import processing.app.graph.kCellValue;
+import processing.app.graph.kGraphComponent;
 import processing.app.syntax.*;
 import processing.app.tools.*;
 import processing.app.util.kConstants;
@@ -133,6 +134,7 @@ public class Editor extends JFrame implements RunnerListener {
   
   // event handling
   TextAreaListener listener;
+  FocusHandler focusHandler = new FocusHandler();
   
   // runtime information and window placement
   Point sketchWindowLocation;
@@ -216,7 +218,7 @@ public class Editor extends JFrame implements RunnerListener {
     textHeader = new EditorTextHeader(this);
     textarea = new JEditTextArea(new PdeTextAreaDefaults(), drawarea);
     textarea.setRightClickPopup(new TextAreaPopup()); //TODO popupFocusHandler
-//    textarea.setHorizontalOffset(6); //set inside JEditTextArea to give space for kTextAreaPainter
+    // textarea.setHorizontalOffset(6); set inside JEditTextArea to give space for kTextAreaPainter
     Box textEditorBox = Box.createVerticalBox();
     textEditorBox.add(textHeader);
     textEditorBox.add(textarea);
@@ -280,8 +282,8 @@ public class Editor extends JFrame implements RunnerListener {
     
     
     // SET FOCUS LISTENERS
-//    graphComponent.addFocusListener(focusHandler);
-//    textarea.addFocusListener(focusHandler);
+    drawarea.getGraphComponent().addFocusListener(focusHandler);
+    textarea.addFocusListener(focusHandler);
     // hopefully these are no longer needed w/ swing
     // (har har har.. that was wishful thinking)
     listener = new TextAreaListener(this, textarea);
@@ -2580,6 +2582,55 @@ public class Editor extends JFrame implements RunnerListener {
       }
       super.show(component, x, y);
     }
+  }  
+ 
+  
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+  
+  /**
+   * Receives focus events so we can do repaints (otherwise events like
+   * mxEvent.CHANGE fires mid-process, before the focus actually changes, and
+   * so some states won't been completely processed)
+   */
+  class FocusHandler implements FocusListener
+  {
+    public void focusGained(FocusEvent e) {
+   
+      System.out.println("Focus Gained >> source= " + e.getSource().getClass().getName());
+      
+      if (e.getSource() instanceof JEditTextArea)
+      {
+          syncGraphSelectionToText();
+      }
+      else if (e.getSource() instanceof kGraphComponent)
+      {
+        // redraw the cell handles to reflect the focused state since it also
+        // listens for mxEvent.CHANGE so it paints before focus is gained
+        ((kGraphComponent) e.getSource()).getSubHandler().refresh();
+        syncTextSelectionToGraph();
+        drawingHeader.updateGraphButtons();        
+      }
+      
+      updateLinkButton(); // call this every time there's a focus swap
+    }
+    
+    public void focusLost(FocusEvent e) {
+          
+      System.out.println("Focus Lost >> source= " + e.getSource().getClass().getName());
+      
+      if (e.getSource() instanceof JEditTextArea)
+      {
+        // don't need to do anything?
+      }
+      else if (e.getSource() instanceof kGraphComponent)
+      {
+        // redraw the cell handles to reflect the focused state since it also
+        // listens for mxEvent.CHANGE so it paints before focus is gained
+        ((kGraphComponent) e.getSource()).getSubHandler().refresh();
+        drawingHeader.updateGraphButtons();
+      }
+    }
   }
   
 
@@ -2593,40 +2644,101 @@ public class Editor extends JFrame implements RunnerListener {
     drawarea.getGraphComponent().getGraph().getSelectionModel()
         .addListener(mxEvent.CHANGE, new mxIEventListener() {
           public void invoke(Object sender, mxEventObject evt) {
-            
-//            System.out.println("editor >> graph listener selection sync, graphComponent.focusowner="+drawarea.getGraphComponent().isFocusOwner());
-            
-            if (drawarea.getGraphComponent().isFocusOwner()) { //then force text selection to sync with us
-              Object cell = ((mxGraphSelectionModel) sender).getCell();
-              if (cell instanceof mxICell
-                  && ((mxICell) cell).getValue() instanceof kCellValue
-                  && ((kCellValue) ((mxICell) cell).getValue())
-                      .hasValidCodeMarks())
-              {
-                kCellValue val = (kCellValue) ((mxICell) cell).getValue();
-                sketch.setCurrentCode(val.getCodeIndex());
-                setSelection(val.getStartMark(), val.getStopMark());
-                // textarea.repaint();//might not need this
-                System.out.println("editor >> graph listener selection sync "
-                                   + ((kCellValue) ((mxICell) cell).getValue())
-                                       .toPrettyString());
-              }
-              else
-                textarea.selectNone();
-            }
+            syncTextSelectionToGraph();
+            updateLinkButton(); //update the link button for any selection change
           }
         });
     textarea.addListener(kEvent.TEXTAREA_SELECTION_CHANGE, new mxIEventListener() {
       public void invoke(Object sender, mxEventObject evt) {
-
-//        System.out.println("editor >> text listener selection sync, textarea.focusowner="+textarea.isFocusOwner());
-        
-        if (textarea.isFocusOwner()) // then force graph selection to sync with us
-          drawarea.selectCellsIntersectCode(textarea.getSelectionStart(),
-                                          textarea.getSelectionStop());
+        syncGraphSelectionToText();
+        updateLinkButton(); //update the link button for any selection change
       }
     });
   }
+  
+  /**
+   * Checks current focus owner and its selection status, and changes the 
+   * selection status of the out-of-focus component to match.
+   * Called on focus change as well as fired selection change events (since
+   * selection change events always fire in-progress of focus change)
+   */
+  public void syncGraphSelectionToText() {
+    if (textarea.isFocusOwner()) {
+      // then force graph selection to sync with us
+        
+        //crap we can't actually diable it!#&$*!#&$(# because other things depend on the firings
+        //temporarily disable event firing while we make changes so we don't get an endless cycle of selection events
+        drawarea.getGraphComponent().setEventsEnabled(false);
+        
+        drawarea.selectCellsIntersectCode(textarea.getSelectionStart(), textarea
+            .getSelectionStop());
+        
+        drawarea.getGraphComponent().setEventsEnabled(true);
+      }
+  }
+  
+  /**
+   * Checks current focus owner and its selection status, and changes the 
+   * selection status of the out-of-focus component to match.
+   * Called on focus change as well as fired selection change events (since
+   * selection change events always fire in-progress of focus change)
+   */
+  public void syncTextSelectionToGraph() {
+    
+    if (drawarea.getGraphComponent().isFocusOwner()) { 
+      // then force text selection to sync with us
+      
+
+      textarea.setEventsEnabled(false);
+        
+        Object cell = drawarea.getGraphComponent().getGraph().getSelectionCell();
+        
+        if (cell instanceof mxICell
+            && ((mxICell) cell).getValue() instanceof kCellValue
+            && ((kCellValue) ((mxICell) cell).getValue())
+                .hasValidCodeMarks())
+        {
+          kCellValue val = (kCellValue) ((mxICell) cell).getValue();
+          sketch.setCurrentCode(val.getCodeIndex());
+          setSelection(val.getStartMark(), val.getStopMark());
+          System.out.println("editor >> graph listener selection sync "
+                             + ((kCellValue) ((mxICell) cell).getValue())
+                                 .toPrettyString());
+        }
+        else { // cell does not or cannot have a valid link
+          textarea.selectNone();
+        }
+        
+        textarea.setEventsEnabled(true);
+      }
+  }
+  
+  /**
+   * Checks current focus owner and its selection's link status, and updates the
+   * appearance of the link button appropriately.
+   */
+  public void updateLinkButton() {
+    if (textarea.isFocusOwner())
+      if (textarea.getSelectedText() == null) {
+      System.out.println("updateLinkButton >> selected text == null so disabling linkbutton");
+        drawingHeader.getLinkButton().setEnabled(false);
+      } else {
+        System.out.println("updateLinkButton >> text selection eligible for linking");
+        drawingHeader.getLinkButton().setLinkMode();
+      }
+    // CASE 4  
+    else if (drawarea.getGraphComponent().isFocusOwner())
+      if (drawarea.isSelectionLinked()) {
+        System.out.println("updateLinkButton >> graph selection has link, changing buttons");
+        drawingHeader.getLinkButton().setUnlinkMode();
+      } else if (!drawarea.isSelectionContainEdge() && drawarea.getGraphComponent().getGraph().getSelectionCount() > 0) {
+        System.out.println("updateLinkButton >> graph selection doesn't have link");
+        drawingHeader.getLinkButton().setLinkMode();
+      } else { //case where selection is null
+        System.out.println("updateLinkButton >> nothing selected");
+        drawingHeader.getLinkButton().setEnabled(false);
+      }
+  }  
 
   /**
    * Called by colorToolband to request repaint of line marker of cell whose
@@ -2639,9 +2751,11 @@ public class Editor extends JFrame implements RunnerListener {
     System.out.println("editor >> repainting lines of offset");
     textarea.getPainter().invalidateLineRange(textarea.getLineOfOffset(startMark), textarea.getLineOfOffset(stopMark));
   }
-
+  
+  
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
+  
   /**
    * Declares and installs document listeners for synchronizing edits between
    * the main textarea and code windows
@@ -2772,19 +2886,7 @@ public class Editor extends JFrame implements RunnerListener {
               //user has selected some text and clicked the link button, and now selected the cells
               System.out.println("link >> link active, text selected, now graph selected");
               codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
-              
-            // CASE 4  
-            } else if (drawarea.getGraphComponent().isFocusOwner())
-              if (drawarea.isSelectionLinked()) {
-                System.out.println("link >> graph selection has link, changing buttons");
-                drawingHeader.getLinkButton().setUnlinkMode();
-              } else if (!drawarea.isSelectionContainEdge() && drawarea.getGraphComponent().getGraph().getSelectionCount() > 0) {
-                System.out.println("link >> graph selection doesn't have link");
-                drawingHeader.getLinkButton().setLinkMode();
-              } else { //case where selection is null
-                System.out.println("link >> nothing selected");
-                drawingHeader.getLinkButton().setEnabled(false);
-              }
+            }
           }
         });
     // CASE 3
@@ -2804,14 +2906,6 @@ public class Editor extends JFrame implements RunnerListener {
           else
             codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
         }
-        else if (textarea.isFocusOwner())
-          if (textarea.getSelectedText() == null) {
-          System.out.println("link >> selected text == null so disabling linkbutton");
-            drawingHeader.getLinkButton().setEnabled(false);
-          } else {
-            System.out.println("link >> text selection eligible for linking");
-            drawingHeader.getLinkButton().setLinkMode();
-          }
       }
     });
     // CASE 2 & 3
