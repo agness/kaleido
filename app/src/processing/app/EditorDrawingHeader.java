@@ -9,9 +9,12 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.Rectangle;
 import java.awt.Stroke;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.Enumeration;
@@ -49,7 +52,9 @@ import com.mxgraph.view.mxGraphSelectionModel;
 /**
  * Graph-editing toolbar at the top of the drawing window.
  */
-public class EditorDrawingHeader extends JPanel {
+public class EditorDrawingHeader extends JSplitPane {
+
+  private static final Color HEADER_BACKGROUND = Theme.getColor("header.bgcolor");
 
   static final int INACTIVE = 0;
 
@@ -62,8 +67,14 @@ public class EditorDrawingHeader extends JPanel {
   static final String[] mouseState = { "rollo", "activ", "inact" };
 
   static final String[] flagState = { "flag", "noflag" };
+  
+  private static final int HEADER_HEIGHT = EditorToolbar.BUTTON_HEIGHT;
 
-  private static final int GRAPH_OUTLINE_WIDTH = 100;
+  private static final int BUTTON_GAP = EditorToolbar.BUTTON_GAP;
+
+  private static final int GRAPH_OUTLINE_WIDTH = HEADER_HEIGHT*2;
+
+  private static final int MINIMUM_WIDTH = 250;
 
   /**
    * We make all the image objects beforehand for efficiency a matrix of bags
@@ -128,11 +139,19 @@ public class EditorDrawingHeader extends JPanel {
         updateCodeWindowButton();
       }
     });
-
-    setOpaque(true);
-    setBackground(Theme.getColor("header.bgcolor")); //TODO dunno why this doesn't work when packaged
-    setLayout(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-    setBorder(null);
+    
+    //TODO not working
+    KeyAdapter escapeKeyListener = new KeyAdapter() {
+      public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
+          System.out.println("drawHeader >> i hear escape pressed");
+      }
+    };
+    
+    
+    /*
+     * Initialize the tool button group stuff
+     */
     toolButtons = new ButtonGroup();
     initializeIconBag();
     toolActionListener = new ActionListener() {
@@ -157,6 +176,7 @@ public class EditorDrawingHeader extends JPanel {
     // ^--- here the displayedButton is added instead of the list directly
     // because we want the button group to toggle the display button
     toolButtons.add(shapeList.getDisplayedButton());
+//    addKeyListener(escapeKeyListener);
 
     /*
      * CONNECTORS drop-down
@@ -188,9 +208,9 @@ public class EditorDrawingHeader extends JPanel {
      */
     JPanel layoutSpacer = new JPanel();
     layoutSpacer.setBorder(null);
-    layoutSpacer
-        .setSize(EditorToolbar.BUTTON_GAP * 2, EditorToolbar.BUTTON_GAP);
-    layoutSpacer.setBackground(this.getBackground());
+    layoutSpacer.setSize(BUTTON_GAP * 2, BUTTON_GAP);
+    layoutSpacer.setOpaque(true);
+    layoutSpacer.setBackground(HEADER_BACKGROUND);
 
     /*
      * OPEN/CLOSE CODE WINDOW:
@@ -275,9 +295,10 @@ public class EditorDrawingHeader extends JPanel {
      */
     JPanel layoutSpacerJr = new JPanel();
     layoutSpacerJr.setBorder(null);
-    layoutSpacerJr.setSize(EditorToolbar.BUTTON_GAP * 2,
-                           EditorToolbar.BUTTON_GAP);
-    layoutSpacerJr.setBackground(this.getBackground());
+    layoutSpacerJr.setSize(BUTTON_GAP * 2,
+                           BUTTON_GAP);
+    layoutSpacerJr.setOpaque(true);
+    layoutSpacerJr.setBackground(HEADER_BACKGROUND);
 
     /*
      * LINK (partially responsible as a status indicator, partially responsible
@@ -290,12 +311,8 @@ public class EditorDrawingHeader extends JPanel {
      * BUTTON PANEL add everything
      */
     JPanel buttonPanel = new JPanel();
-    buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING,
-        EditorToolbar.BUTTON_GAP,
-        (EditorToolbar.BUTTON_HEIGHT - BUTTON_WIDTH) / 2 + 1));
-    buttonPanel
-        .setPreferredSize(new Dimension(500, EditorToolbar.BUTTON_HEIGHT));
-    // TODO minor: width here ------^ should be fluid
+    buttonPanel.setLayout(new FlowLayout(FlowLayout.LEADING, BUTTON_GAP,
+        (HEADER_HEIGHT - BUTTON_WIDTH) / 2 + 1));
     buttonPanel.setOpaque(false);
     buttonPanel.setBorder(null);
     buttonPanel.add(shapeList);
@@ -306,7 +323,7 @@ public class EditorDrawingHeader extends JPanel {
     buttonPanel.add(codeWindowButton);
     buttonPanel.add(lockButton);
     // buttonPanel.add(zoomInButton); //temporarily removing these because it
-    // feels less important
+                                        // feels less important
     // buttonPanel.add(zoomOutButton); //and our toolbar is getting too long
     buttonPanel.add(linkButton);
     buttonPanel.add(layoutSpacerJr);
@@ -325,21 +342,28 @@ public class EditorDrawingHeader extends JPanel {
           Graphics2D g2 = (Graphics2D) g;
 
           Stroke stroke = g2.getStroke();
-          g.setColor(Color.WHITE);
+          g.setColor(kConstants.OUTLINE_HANDLE_COLOR);
           g2.setStroke(new BasicStroke(1));
           g.drawRect(finderBounds.x, finderBounds.y, finderBounds.width,
                      finderBounds.height);
 
           g2.setStroke(stroke);
-          // g.setColor(kConstants.UI_COLOR_ACTIVE);
-          g.setColor(Color.white);
+          g.setColor(kConstants.OUTLINE_HANDLE_COLOR);
           g.fillRect(finderBounds.x + finderBounds.width - 2,
                      finderBounds.y + finderBounds.height - 2, 5, 5);
         }
       }
+      /**
+       * Returns true if the scale or translate has changed.
+       */
+      public boolean updateScaleAndTranslate()
+      {
+        outlineBorder = kConstants.OUTLINE_BORDER_WIDTH;
+        return super.updateScaleAndTranslate();
+      }
     };
-    // System.out.println("drawHeader >> graphOutline >> graphComponent.getSize="+drawingArea.getGraphComponent().getGraphControl().getSize());
-    // TODO fit graphOutline to size of graph instead of size of graphComponent
+    graphOutline.setPreferredSize(new Dimension(GRAPH_OUTLINE_WIDTH, HEADER_HEIGHT));
+    graphOutline.setMinimumSize(new Dimension(GRAPH_OUTLINE_WIDTH, HEADER_HEIGHT));
 
     /*
      * SPLIT PANE: no clue why, but graphOutline only shows in JInternalFrames
@@ -347,15 +371,15 @@ public class EditorDrawingHeader extends JPanel {
      * JSplitPane that we've customized to look like it neither exists nor
      * functions
      */
-    JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
-        buttonPanel, graphOutline);
-    splitPane.setDividerSize(0);
-    splitPane.setBorder(null);
-    splitPane.setOpaque(false);
-    splitPane.setOneTouchExpandable(false);
-    splitPane.setDividerLocation(460); // TODO fix this # to be something
-                                       // meaningful in relation to width
-    add(splitPane);
+    setOrientation(JSplitPane.HORIZONTAL_SPLIT);
+    setLeftComponent(buttonPanel);
+    setRightComponent(graphOutline);
+    setOpaque(true);
+    setBackground(HEADER_BACKGROUND); //TODO dunno why this doesn't work when packaged
+    setBorder(null);
+    setDividerSize(0);
+    setResizeWeight(1.0);
+    setMaximumSize(new Dimension(3000,HEADER_HEIGHT));
   }
 
   private void updateCodeWindowButton() {
@@ -552,7 +576,6 @@ public class EditorDrawingHeader extends JPanel {
    */
   private class FillIcon implements Icon {
     Color fillcolor;
-
     Image overlay;
 
     public FillIcon(Color c, Image img) {
@@ -562,8 +585,11 @@ public class EditorDrawingHeader extends JPanel {
 
     public void paintIcon(Component c, Graphics g, int x, int y) {
       g.setColor(fillcolor);
-      g.fillRect(x, y, getIconWidth(), getIconHeight());
-      g.drawImage(overlay, 0, 0, null);
+      g.fillRect(x+1, y+1, getIconWidth()-2, getIconHeight()-2);
+      if (kConstants.BUILD_FOR_RELEASE)
+        g.drawImage(overlay, 1, 1, null); //for release
+      else
+        g.drawImage(overlay, 0, 0, null); //for development
     }
 
     public int getIconWidth() {
@@ -698,6 +724,8 @@ public class EditorDrawingHeader extends JPanel {
         // change our mouse listeners to add longclick->opentray functionality:
         unconfigureArrowButton();
         arrowButton.addMouseListener(new TrayHandler());
+        ((JPopupMenu) popup).setOpaque(true);
+        ((JPopupMenu) popup).setBackground(kConstants.UI_COLOR_BUTTONFILL);
         ((JPopupMenu) popup).setBorder(null);
         // ^--setting borderPainted to 0 is not enough, must remove border
         // completely
