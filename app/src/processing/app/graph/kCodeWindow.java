@@ -309,7 +309,7 @@ public class kCodeWindow {
         Point windowloc = new Point(editFrame.getLocation());
         Dimension windowsize = new Dimension(editFrame.getSize());
 
-        buttonFrame.setLocation(windowloc.x + windowsize.width - buttonFrame.getWidth(),
+        buttonFrame.setLocation(windowloc.x + windowsize.width - buttonFrame.getWidth() + 1,
                                 windowloc.y - buttonFrame.getHeight());
       }
 

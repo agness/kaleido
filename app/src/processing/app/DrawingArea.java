@@ -693,7 +693,9 @@ public class DrawingArea extends JDesktopPane {
             .getDocument().getText(val.getStartMark(),
                                    val.getStopMark() - val.getStartMark());
 //        System.out.println("drawarea.refreshCodeWindowContent >> cw="+getCodeWindow(cell).getId()+" textarea="+getCodeWindow(cell).getTextArea().getClass().getName() + '@' + Integer.toHexString(hashCode()));
-        getCodeWindow(cell).getTextArea().setText(content);
+        kCodeWindow cw = getCodeWindow(cell);
+        if (cw != null)
+          cw.getTextArea().setText(content);
       } catch (BadLocationException bl) {
 //        System.err.println("drawarea.refreshCodeWindowContent error with cell "+val.toPrettyString());
         bl.printStackTrace();
@@ -877,7 +879,7 @@ public class DrawingArea extends JDesktopPane {
           
           //if the insertion point falls into the range of the cell,
           //then expand the code mark range to include the edit
-          if ((val.getStartMark() <= sketchOffset) && (val.getStopMark() >= sketchOffset)) {
+          if ((val.getStartMark() <= sketchOffset) && (val.getStopMark() > sketchOffset)) {
             val.setStopMark(val.getStopMark()+e.getLength());
             refreshCodeWindowContent(cells[i]);
             
