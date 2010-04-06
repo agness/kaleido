@@ -30,6 +30,22 @@ import com.mxgraph.view.mxStylesheet;
  * @author achang
  */
 public class kGraph extends mxGraph {
+  
+  /**
+   * Returns whether or not the given cell is styled as a text box
+   */
+  public boolean isTextBoxShape(Object cell)
+  {
+    if (cell != null && (model.getParent(cell) != model.getRoot()))
+    {
+      mxCellState state = view.getState(cell);
+      if (state != null && state.getStyle().get(mxConstants.STYLE_SHAPE).equals(kConstants.SHAPE_TEXT))
+      {
+        return true;
+      }
+    }
+    return false;
+  }
 
   /**
    * Override the isSwimlane function to make everything that is not an edge
@@ -40,7 +56,7 @@ public class kGraph extends mxGraph {
     if (cell != null && (model.getParent(cell) != model.getRoot()))
     {
       mxCellState state = view.getState(cell);
-      if (state != null && !model.isEdge(cell) && !mxUtils.isTrue(state.getStyle(), kConstants.SHAPE_TEXT))
+      if (state != null && !model.isEdge(cell) && !isTextBoxShape(cell))
       {
         return true;
       }
@@ -291,5 +307,98 @@ public class kGraph extends mxGraph {
     }
 
     return result;
+  }
+  
+  //========BEGIN YIFAN CELL RESIZING METHODS===========================
+  /**
+   * Keeps the given cell inside the bounds returned by
+   * getCellContainmentArea for its parent, according to the rules defined by
+   * getOverlap and isConstrainChild. This modifies the cell's geometry
+   * in-place and does not clone it.
+   * 
+   * @param cell Cell which should be constrained.
+   */
+  public void constrainChild(Object cell)
+  {
+    if (cell != null)
+    {
+      mxGeometry geo = model.getGeometry(cell);
+      mxRectangle area = (isConstrainChild(cell)) ? getCellContainmentArea(cell)
+          : getMaximumGraphBounds();
+
+      if (geo != null && area != null)
+      {
+        // Keeps child within the content area of the parent
+        if (!geo.isRelative()
+            && (geo.getX() < area.getX()
+                || geo.getY() < area.getY()
+                || area.getWidth() < geo.getX()
+                    + geo.getWidth() || area.getHeight() < geo
+                .getY()
+                + geo.getHeight()))
+        {
+          double overlap = getOverlap(cell);
+
+          if (area.getWidth() > 0)
+          {
+            geo.setX(Math.min(geo.getX(), area.getX()
+                + area.getWidth() - (1 - overlap)
+                * geo.getWidth()));
+          }
+
+          if (area.getHeight() > 0)
+          {
+            geo.setY(Math.min(geo.getY(), area.getY()
+                + area.getHeight() - (1 - overlap)
+                * geo.getHeight()));
+          }
+         
+          //begin kEdits--->
+          geo.setX(Math.max(geo.getX(), area.getX() + kConstants.CELL_NESTING_PADDING - geo.getWidth()
+              * overlap));
+          geo.setY(Math.max(geo.getY(), area.getY() + kConstants.CELL_NESTING_PADDING - geo.getHeight()
+              * overlap));
+          
+          extendParent(cell);
+          //<---end kEdits
+        }
+      }
+    }
+  }
+  /**
+   * Resizes the parents recursively so that they contain the complete area
+   * of the resized child cell.
+   * 
+   * @param cell <mxCell> that has been resized.
+   */
+  public void extendParent(Object cell)
+  {
+    if (cell != null)
+    {
+      Object parent = model.getParent(cell);
+      mxGeometry p = model.getGeometry(parent);
+
+      if (parent != null && p != null && !isCellCollapsed(parent))
+      {
+        mxGeometry geo = model.getGeometry(cell);
+
+        if (geo != null
+            && (p.getWidth() < geo.getX() + geo.getWidth() || p
+                .getHeight() < geo.getY() + geo.getHeight()))
+        {
+          p = (mxGeometry) p.clone();
+
+          //begin kEdits--->
+          p.setWidth(Math.max(p.getWidth(), geo.getX()
+              + geo.getWidth() + kConstants.CELL_NESTING_PADDING));
+          p.setHeight(Math.max(p.getHeight(), geo.getY()
+              + geo.getHeight() + kConstants.CELL_NESTING_PADDING));
+          //<---end kEdits
+          
+          cellsResized(new Object[] { parent },
+              new mxRectangle[] { p });
+        }
+      }
+    }
   }
 }

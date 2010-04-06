@@ -24,14 +24,20 @@ import com.mxgraph.util.mxUtils;
 public class kCanvas extends mxInteractiveCanvas {
 
   /**
-   * Quick way to turn off the dotted-empty style of for not-linked shapes
+   * Quick way to turn off the darker style of for not-linked shapes
    */
-  protected boolean linkDottedStyleEnabled = false;
-  protected boolean linkLighterStyleEnabled = true;
+  protected boolean linkStyleEnabled = true;
   
   public kCanvas() {
     // TODO Auto-generated constructor stub
   }
+  
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+  /*
+   * Overriding existing superclass shapes to take linked/not option
+   */
   
   /**
    * @param linked Boolean indicating if it should be painted in the linked style.
@@ -39,7 +45,6 @@ public class kCanvas extends mxInteractiveCanvas {
   protected void drawPolygon(Polygon polygon, Color fillColor,
       Paint fillPaint, Color penColor, boolean shadow, boolean linked)
   {
-    if (linked) {
       if (fillColor != null || fillPaint != null)
       {
         if (shadow)
@@ -56,9 +61,13 @@ public class kCanvas extends mxInteractiveCanvas {
         {
           g.setPaint(fillPaint);
         }
-        else
+        else if (linked || !linkStyleEnabled)
         {
           g.setColor(fillColor);
+        }
+        else //not linked && linkStyleEnabled
+        {
+          g.setColor(fillColor.darker());
         }
   
         g.fillPolygon(polygon);
@@ -66,46 +75,16 @@ public class kCanvas extends mxInteractiveCanvas {
   
       if (penColor != null)
       {
-        g.setColor(penColor);
+        if (linked || !linkStyleEnabled)
+        {
+          g.setColor(penColor);
+        }
+        else //not linked && linkStyleEnabled
+        {
+          g.setColor(penColor.darker());
+        }
         g.drawPolygon(polygon);
       }
-    } else if (!linked && linkLighterStyleEnabled) {
-      System.out.println("kCanvas >> drawing not linked polygon");
-      if (shadow)
-      {
-        g.setColor(kConstants.SHADOW_COLOR);
-        g.translate(kConstants.SHADOW_OFFSETX,
-            kConstants.SHADOW_OFFSETY);
-        g.fillPolygon(polygon);
-        g.translate(-kConstants.SHADOW_OFFSETX,
-            -kConstants.SHADOW_OFFSETY);
-      }
-      if (penColor != null)
-      {
-//        g.setColor(penColor.brighter().brighter());
-        g.setColor(new Color(penColor.getRed(),penColor.getBlue(),penColor.getGreen(),70));
-        g.fillPolygon(polygon);
-      }
-    } else if (!linked && linkDottedStyleEnabled) {
-      System.out.println("kCanvas >> drawing not linked polygon");
-      Stroke originalStroke = g.getStroke();
-      g.setStroke(kConstants.SHAPE_DOTTED_STROKE);
-      if (shadow)
-      {
-        g.setColor(kConstants.SHADOW_COLOR);
-        g.translate(kConstants.SHADOW_OFFSETX,
-            kConstants.SHADOW_OFFSETY);
-        g.drawPolygon(polygon);
-        g.translate(-kConstants.SHADOW_OFFSETX,
-            -kConstants.SHADOW_OFFSETY);
-      }
-      if (penColor != null)
-      {
-        g.setColor(penColor);
-        g.drawPolygon(polygon);
-      }
-      g.setStroke(originalStroke);
-    }
   }
   /**
    * @param linked Boolean indicating if it should be painted in the linked style.
@@ -113,38 +92,8 @@ public class kCanvas extends mxInteractiveCanvas {
   protected void drawPath(GeneralPath path, Color fillColor, Paint fillPaint,
       Color penColor, boolean shadow, boolean linked)
   {
-    if (linked) {
-      if (fillColor != null || fillPaint != null)
-      {
-        if (shadow)
-        {
-          g.setColor(kConstants.SHADOW_COLOR);
-          g.translate(kConstants.SHADOW_OFFSETX,
-              kConstants.SHADOW_OFFSETY);
-          g.fill(path);
-          g.translate(-kConstants.SHADOW_OFFSETX,
-              -kConstants.SHADOW_OFFSETY);
-        }
-  
-        if (fillPaint != null)
-        {
-          g.setPaint(fillPaint);
-        }
-        else
-        {
-          g.setColor(fillColor);
-        }
-  
-        g.fill(path);
-      }
-  
-      if (penColor != null)
-      {
-        g.setColor(penColor);
-        g.draw(path);
-      }
-    } else if (!linked && linkLighterStyleEnabled) {
-      System.out.println("kCanvas >> drawing not linked path");
+    if (fillColor != null || fillPaint != null)
+    {
       if (shadow)
       {
         g.setColor(kConstants.SHADOW_COLOR);
@@ -154,32 +103,34 @@ public class kCanvas extends mxInteractiveCanvas {
         g.translate(-kConstants.SHADOW_OFFSETX,
             -kConstants.SHADOW_OFFSETY);
       }
-      if (penColor != null)
+
+      if (fillPaint != null)
+      {
+        g.setPaint(fillPaint);
+      }
+      else if (linked || !linkStyleEnabled)
+      {
+        g.setColor(fillColor);
+      }
+      else //not linked && linkStyleEnabled
+      {
+        g.setColor(fillColor.darker());
+      }
+
+      g.fill(path);
+    }
+
+    if (penColor != null)
+    {
+      if (linked || !linkStyleEnabled)
+      {
+        g.setColor(penColor);
+      }
+      else //not linked && linkStyleEnabled
       {
         g.setColor(penColor.darker());
-//        g.setColor(penColor.brighter().brighter());
-//        g.setColor(new Color(penColor.getRed(),penColor.getBlue(),penColor.getGreen(),70));
-        g.fill(path);
       }
-    } else if (!linked && linkDottedStyleEnabled) {
-      System.out.println("kCanvas >> drawing not linked path");
-      Stroke originalStroke = g.getStroke();
-      g.setStroke(kConstants.SHAPE_DOTTED_STROKE);
-      if (shadow)
-      {
-        g.setColor(kConstants.SHADOW_COLOR);
-        g.translate(kConstants.SHADOW_OFFSETX,
-            kConstants.SHADOW_OFFSETY);
-        g.draw(path);
-        g.translate(-kConstants.SHADOW_OFFSETX,
-            -kConstants.SHADOW_OFFSETY);
-      }
-      if (penColor != null)
-      {
-        g.setColor(penColor);
-        g.draw(path);
-      }
-      g.setStroke(originalStroke);
+      g.draw(path);
     }
   }
   /**
@@ -190,7 +141,6 @@ public class kCanvas extends mxInteractiveCanvas {
   {
     int radius = (rounded) ? getArcSize(w, h) : 0;
 
-    if (linked) {
       if (fillColor != null || fillPaint != null)
       {
         if (shadow)
@@ -213,9 +163,13 @@ public class kCanvas extends mxInteractiveCanvas {
         {
           g.setPaint(fillPaint);
         }
-        else
+        else if (linked || !linkStyleEnabled)
         {
           g.setColor(fillColor);
+        }
+        else //not linked && linkStyleEnabled
+        {
+          g.setColor(fillColor.darker());
         }
   
         if (rounded)
@@ -239,7 +193,14 @@ public class kCanvas extends mxInteractiveCanvas {
   
       if (penColor != null)
       {
-        g.setColor(penColor);
+        if (linked || !linkStyleEnabled)
+        {
+          g.setColor(penColor);
+        }
+        else //not linked && linkStyleEnabled
+        {
+          g.setColor(penColor.darker());
+        }
   
         if (rounded)
         {
@@ -250,51 +211,76 @@ public class kCanvas extends mxInteractiveCanvas {
           g.drawRect(x, y, w, h);
         }
       }
-    } else if (!linked && linkDottedStyleEnabled) {
-      System.out.println("kCanvas >> drawing not linked rect");
-      Stroke originalStroke = g.getStroke();
-      g.setStroke(kConstants.SHAPE_DOTTED_STROKE);
-      if (fillColor != null || fillPaint != null)
-      {
-        if (shadow)
-        {
-          g.setColor(kConstants.SHADOW_COLOR);
-
-          if (rounded)
-          {
-            g.drawRoundRect(x + kConstants.SHADOW_OFFSETX, y
-                + kConstants.SHADOW_OFFSETY, w, h, radius, radius);
-          }
-          else
-          {
-            g.drawRect(x + kConstants.SHADOW_OFFSETX, y
-                + kConstants.SHADOW_OFFSETY, w, h);
-          }
-        }
-      }
-      if (penColor != null)
-      {
-        g.setColor(penColor);
-
-        if (rounded)
-        {
-          g.drawRoundRect(x, y, w, h, radius, radius);
-        }
-        else
-        {
-          g.drawRect(x, y, w, h);
-        }
-      }
-      g.setStroke(originalStroke);
-    }
   }
   
   /**
+   * @param linked Boolean indicating if it should be painted in the linked style.
+   */
+  protected void drawOval(int x, int y, int w, int h, Color fillColor,
+                          Paint fillPaint, Color penColor, boolean shadow,
+                          boolean linked) {
+    if (fillColor != null || fillPaint != null) {
+      if (shadow) {
+        g.setColor(kConstants.SHADOW_COLOR);
+        g.fillOval(x + kConstants.SHADOW_OFFSETX,
+                   y + kConstants.SHADOW_OFFSETY, w, h);
+      }
+
+      if (fillPaint != null)
+      {
+        g.setPaint(fillPaint);
+      }
+      else if (linked || !linkStyleEnabled)
+      {
+        g.setColor(fillColor);
+      }
+      else //not linked && linkStyleEnabled
+      {
+        g.setColor(fillColor.darker());
+      }
+
+      g.fillOval(x, y, w, h);
+    }
+
+    if (penColor != null) {
+      if (linked || !linkStyleEnabled)
+      {
+        g.setColor(penColor);
+      }
+      else //not linked && linkStyleEnabled
+      {
+        g.setColor(penColor.darker());
+      }
+      g.drawOval(x, y, w, h);
+    }
+  }
+  /**
+   * @param linked Boolean indicating if it should be painted in the linked style.
+   */
+  protected void drawRhombus(int x, int y, int w, int h, Color fillColor,
+      Paint fillPaint, Color penColor, boolean shadow, boolean linked)
+  {
+    int halfWidth = w / 2;
+    int halfHeight = h / 2;
+
+    Polygon rhombus = new Polygon();
+    rhombus.addPoint(x + halfWidth, y);
+    rhombus.addPoint(x + w, y + halfHeight);
+    rhombus.addPoint(x + halfWidth, y + h);
+    rhombus.addPoint(x, y + halfHeight);
+
+    drawPolygon(rhombus, fillColor, fillPaint, penColor, shadow, linked);
+  }
+
+  
+  /**
    * Same as original, just modified shadow parameters.
+   * @deprecated
    */
   protected void drawPolygon(Polygon polygon, Color fillColor,
       Paint fillPaint, Color penColor, boolean shadow)
   {
+    System.err.println("kCanvas.drawPoly no linked >> make sure this isn't called");
     if (fillColor != null || fillPaint != null)
     {
       if (shadow)
@@ -327,10 +313,12 @@ public class kCanvas extends mxInteractiveCanvas {
   } 
   /**
    * Same as original, just modified shadow parameters.
+   * @deprecated
    */
   protected void drawPath(GeneralPath path, Color fillColor, Paint fillPaint,
       Color penColor, boolean shadow)
   {
+    System.err.println("kCanvas.drawPath no linked >> make sure this isn't called");
     if (fillColor != null || fillPaint != null)
     {
       if (shadow)
@@ -363,10 +351,12 @@ public class kCanvas extends mxInteractiveCanvas {
   }
   /**
    * Same as original, just modified shadow parameters.
+   * @deprecated
    */
   protected void drawRect(int x, int y, int w, int h, Color fillColor,
       Paint fillPaint, Color penColor, boolean shadow, boolean rounded)
   {
+    System.err.println("kCanvas.drawRect no linked >> make sure this isn't called");
     int radius = (rounded) ? getArcSize(w, h) : 0;
 
     if (fillColor != null || fillPaint != null)
@@ -431,10 +421,12 @@ public class kCanvas extends mxInteractiveCanvas {
   }
   /**
    * Same as original, just modified shadow parameters.
+   * @deprecated
    */
   protected void drawOval(int x, int y, int w, int h, Color fillColor,
       Paint fillPaint, Color penColor, boolean shadow)
   {
+    System.err.println("kCanvas.drawOval no linked >> make sure this isn't called");
     if (fillColor != null || fillPaint != null)
     {
       if (shadow)
@@ -463,9 +455,10 @@ public class kCanvas extends mxInteractiveCanvas {
     }
   }
 
+  
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
-  
+
   /**
    * Overriding superclass method that dictates which shape to draw.
    * @see {@link com.mxgraph.canvas.mxGraphics2DCanvas#drawShape}
@@ -479,60 +472,143 @@ public class kCanvas extends mxInteractiveCanvas {
    */
   public void drawShape(int x, int y, int w, int h, Map<String, Object> style)
   {
-    String shape = mxUtils.getString(style, mxConstants.STYLE_SHAPE, "");
+    //Kaleido prep: linked? locked?
     boolean locked = mxUtils.isTrue(style, kConstants.STYLE_LOCKED,
                                      false);
     style.put(mxConstants.STYLE_SHADOW, (!locked) ? "true" : "false");
     boolean linked = mxUtils.isTrue(style, kConstants.STYLE_LINKED,
                                     false);
     
-    if (shape.equals(kConstants.SHAPE_AUDIO)
-        || shape.equals(kConstants.SHAPE_KEYBOARD)
-        || shape.equals(kConstants.SHAPE_PERSON)
-        || shape.equals(kConstants.SHAPE_STAR))
+    // Same procedures of preparation as super class
+    Color penColor = mxUtils.getColor(style, mxConstants.STYLE_STROKECOLOR);
+    float penWidth = mxUtils.getFloat(style, mxConstants.STYLE_STROKEWIDTH, 1);
+    int pw = (int) Math.ceil(penWidth * scale);
+
+    // Same
+    if (g.hitClip(x - pw, y - pw, w + 2 * pw, h + 2 * pw))
     {
-      // Same procedures of preparation as super class
-      Color penColor = mxUtils.getColor(style, mxConstants.STYLE_STROKECOLOR);
-      float penWidth = mxUtils.getFloat(style, mxConstants.STYLE_STROKEWIDTH, 1);
-      int pw = (int) Math.ceil(penWidth * scale);
+      // Prepares the background
+      boolean shadow = mxUtils.isTrue(style, mxConstants.STYLE_SHADOW,
+                                      false);
+      Color fillColor = mxUtils.getColor(style,
+          mxConstants.STYLE_FILLCOLOR);
+      Paint fillPaint = getFillPaint(new Rectangle(x, y, w, h),
+          fillColor, style);
 
-      if (g.hitClip(x - pw, y - pw, w + 2 * pw, h + 2 * pw))
+      if (penWidth > 0)
       {
-        // Prepares the background
-        boolean shadow = mxUtils.isTrue(style, mxConstants.STYLE_SHADOW,
-                                        false);
-        Color fillColor = mxUtils.getColor(style,
-            mxConstants.STYLE_FILLCOLOR);
-        Paint fillPaint = getFillPaint(new Rectangle(x, y, w, h),
-            fillColor, style);
+        setStroke(penWidth, style);
+      }
+      
+      // Draws the shape
+      String shape = mxUtils
+          .getString(style, mxConstants.STYLE_SHAPE, "");
+        
+      // Omits some image and line super class fancy stuff that we don't need 
+      if (shape.equals(kConstants.SHAPE_AUDIO))
+      {
+        drawAudio(x, y, w, h, fillColor, fillPaint, penColor, shadow, linked);
+      }
+      else if (shape.equals(kConstants.SHAPE_KEYBOARD))
+      {  
+        drawKeyboard(x, y, w, h, fillColor, fillPaint, penColor, shadow, linked);
+      }
+      else if (shape.equals(kConstants.SHAPE_PERSON))
+      {
+        drawPerson(x, y, w, h, fillColor, fillPaint, penColor, shadow, linked);
+      }
+      else if (shape.equals(kConstants.SHAPE_STAR))
+      {
+        drawStar(x, y, w, h, fillColor, fillPaint, penColor, shadow, linked);
+      }
+      else if (shape.equals(kConstants.SHAPE_TEXT))
+      {
+        System.out.println("kCanvas >> shape='text'! let's not draw anything");
+      }
+      
+      // Begin shapes from superclass that we actually need
+      else if (shape.equals(mxConstants.SHAPE_ELLIPSE))
+      {
+        drawOval(x, y, w, h, fillColor, fillPaint, penColor, shadow, linked);
+      }
+      else if (shape.equals(mxConstants.SHAPE_RHOMBUS))
+      {
+        drawRhombus(x, y, w, h, fillColor, fillPaint, penColor, shadow, linked);
+      }
+      else
+      {
+        drawRect(x, y, w, h, fillColor, fillPaint, penColor, shadow,
+            mxUtils.isTrue(style, mxConstants.STYLE_ROUNDED), linked);
 
-        if (penWidth > 0)
+        // Draws the image inside the label shape
+        if (shape.equals(mxConstants.SHAPE_LABEL))
         {
-          setStroke(penWidth, style);
+          String img = getImageForStyle(style);
+
+          if (img != null)
+          {
+            String imgAlign = mxUtils.getString(style,
+                mxConstants.STYLE_IMAGE_ALIGN,
+                mxConstants.ALIGN_CENTER);
+            String imgValign = mxUtils.getString(style,
+                mxConstants.STYLE_IMAGE_VERTICAL_ALIGN,
+                mxConstants.ALIGN_MIDDLE);
+            int imgWidth = (int) (mxUtils.getInt(style,
+                mxConstants.STYLE_IMAGE_WIDTH,
+                mxConstants.DEFAULT_IMAGESIZE) * scale);
+            int imgHeight = (int) (mxUtils.getInt(style,
+                mxConstants.STYLE_IMAGE_HEIGHT,
+                mxConstants.DEFAULT_IMAGESIZE) * scale);
+            int spacing = (int) (mxUtils.getInt(style,
+                mxConstants.STYLE_SPACING, 2) * scale);
+
+            int imgX = x;
+
+            if (imgAlign.equals(mxConstants.ALIGN_LEFT))
+            {
+              imgX += spacing;
+            }
+            else if (imgAlign.equals(mxConstants.ALIGN_RIGHT))
+            {
+              imgX += w - imgWidth - spacing;
+            }
+            else
+            // CENTER
+            {
+              imgX += (w - imgWidth) / 2;
+            }
+
+            int imgY = y;
+
+            if (imgValign.equals(mxConstants.ALIGN_TOP))
+            {
+              imgY += spacing;
+            }
+            else if (imgValign.equals(mxConstants.ALIGN_BOTTOM))
+            {
+              imgY += h - imgHeight - spacing;
+            }
+            else
+            // MIDDLE
+            {
+              imgY += (h - imgHeight) / 2;
+            }
+
+            drawImage(imgX, imgY, imgWidth, imgHeight, img);
+          }
         }
-          
-        if (shape.equals(kConstants.SHAPE_AUDIO))
-        {
-          drawAudio(x, y, w, h, fillColor, fillPaint, penColor, shadow, linked);
-        }
-        else if (shape.equals(kConstants.SHAPE_KEYBOARD))
-        {  
-          drawKeyboard(x, y, w, h, fillColor, fillPaint, penColor, shadow);
-        }
-        else if (shape.equals(kConstants.SHAPE_PERSON))
-        {
-          drawPerson(x, y, w, h, fillColor, fillPaint, penColor, shadow, linked);
-        }
-        else if (shape.equals(kConstants.SHAPE_STAR))
-        {
-          drawStar(x, y, w, h, fillColor, fillPaint, penColor, shadow, linked);
-        }
-      } // end if hitClip
-    }
-    else
-      super.drawShape(x, y, w, h, style);
+      }      
+    } // end if hitClip
+
   }
 
+  
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+  /*
+   * Custom Kaleido shapes
+   */
   
   /**
    * Draws a star shape for the given parameters.
@@ -614,6 +690,8 @@ public class kCanvas extends mxInteractiveCanvas {
     
     path.closePath();
 
+    System.out.println("draw person?");
+    
     drawPath(path, fillColor, fillPaint, penColor, shadow, linked);
   }
   
@@ -630,7 +708,7 @@ public class kCanvas extends mxInteractiveCanvas {
    * @param shadow Boolean indicating if a shadow should be painted.
    */
   protected void drawKeyboard(int x, int y, int w, int h, Color fillColor,
-      Paint fillPaint, Color penColor, boolean shadow)
+      Paint fillPaint, Color penColor, boolean shadow, boolean linked)
   {
     //TODO purrty ugly keyboard in both filled and unfilled mode
     fillPaint = null;
@@ -642,9 +720,9 @@ public class kCanvas extends mxInteractiveCanvas {
     path.lineTo(x + w*7/15, y + h/3); //go left
     path.curveTo(x + w*6/10 - w/15, y + h*3/16, x + w*2/5 - w/15, y + h/6, x + w*2/5 - w/30, y); //weave back up    
     path.closePath();
-    drawPath(path, fillColor, fillPaint, penColor, shadow);
+    drawPath(path, fillColor, fillPaint, penColor, shadow, linked);
     
-    drawRect(x, y + h/3, w, h*2/3, fillColor, fillPaint, penColor, shadow, false);
+    drawRect(x, y + h/3, w, h*2/3, fillColor, fillPaint, penColor, shadow, false, linked);
     
     //draw keys as empty white boxes
     final int cols = 7, rows = 3;
@@ -717,6 +795,7 @@ public class kCanvas extends mxInteractiveCanvas {
    * @param w Width of the text.
    * @param h Height of the text.
    * @param style Style to be used for painting the text.
+   * @deprecated
    */
   protected void drawPlainTextEllipsis(String text, int x, int y, int w, int h,
       Hashtable style)
@@ -868,6 +947,10 @@ public class kCanvas extends mxInteractiveCanvas {
     } 
   }
 
+  /**
+   * Are we gonna use this?
+   * @deprecated
+   */
   private static String wordwrap(int width,String st) {
     StringBuffer buf = new StringBuffer(st);
     int lastspace = -1;

@@ -2599,18 +2599,25 @@ public class Editor extends JFrame implements RunnerListener {
    
       System.out.println("Focus Gained >> source= " + e.getSource().getClass().getName());
       
-      if (e.getSource() instanceof JEditTextArea)
-      {
-          syncGraphSelectionToText();
-      }
-      else if (e.getSource() instanceof kGraphComponent)
-      {
-        // redraw the cell handles to reflect the focused state since it also
-        // listens for mxEvent.CHANGE so it paints before focus is gained
-        ((kGraphComponent) e.getSource()).getSubHandler().refresh();
-        syncTextSelectionToGraph();
-        drawingHeader.updateGraphButtons();        
-      }
+      if (drawingHeader.getLinkButton().isLinkActiveMode()) {
+        System.out.println("selectionSync >> we're in linking mode so not sync-ing");
+      } else
+        if (e.getSource() instanceof JEditTextArea)
+        {
+            syncGraphSelectionToText();
+            
+            // if was in tool mode (but not link mode), end it
+            if (drawarea.getToolMode() != null)
+              drawarea.endToolMode(false);
+        }
+        else if (e.getSource() instanceof kGraphComponent)
+        {
+          // redraw the cell handles to reflect the focused state since it also
+          // listens for mxEvent.CHANGE so it paints before focus is gained
+          ((kGraphComponent) e.getSource()).getSubHandler().refresh();
+          syncTextSelectionToGraph();
+          drawingHeader.updateGraphButtons();
+        }
       
       updateLinkButton(); // call this every time there's a focus swap
     }
@@ -2644,14 +2651,22 @@ public class Editor extends JFrame implements RunnerListener {
     drawarea.getGraphComponent().getGraph().getSelectionModel()
         .addListener(mxEvent.CHANGE, new mxIEventListener() {
           public void invoke(Object sender, mxEventObject evt) {
+//            if (drawarea.getToolMode() != null) {
+//              System.out.println("we're in tool mode -- not sync-ing");
+//            } else {
             syncTextSelectionToGraph();
             updateLinkButton(); //update the link button for any selection change
+//            }
           }
         });
     textarea.addListener(kEvent.TEXTAREA_SELECTION_CHANGE, new mxIEventListener() {
       public void invoke(Object sender, mxEventObject evt) {
+//        if (drawarea.getToolMode() != null) {
+//          System.out.println("we're in tool mode -- not sync-ing");
+//        } else {
         syncGraphSelectionToText();
         updateLinkButton(); //update the link button for any selection change
+//        }
       }
     });
   }
@@ -2738,6 +2753,11 @@ public class Editor extends JFrame implements RunnerListener {
         System.out.println("updateLinkButton >> nothing selected");
         drawingHeader.getLinkButton().setEnabled(false);
       }
+    else { // case where drawHeader is focus owner
+      System.out.println("updateLinkButton >> not-text-not-graph is focus owner");
+      drawingHeader.getLinkButton().setLinkMode();
+      drawingHeader.getLinkButton().setEnabled(false);
+    }
   }  
 
   /**
@@ -2857,10 +2877,14 @@ public class Editor extends JFrame implements RunnerListener {
         // if linkButton.isSelected&&vertexTool was successful, then
         // connect(text.sel, graph.sel) this works b/c newly created
         // vertex is always the graph current selection
-        if (drawingHeader.getLinkButton().isLinkActiveMode() && (Boolean) evt.getProperty("success")) {
-          System.out.println("link >> link active and shape successful, so connect them");
-          codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
-        }
+        if (drawingHeader.getLinkButton().isLinkActiveMode())
+          if ((Boolean) evt.getProperty("success")) {
+            System.out.println("link >> link active and shape successful, so connect them");
+            codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
+          } else {
+            // user must have cancelled out of linking so reset the link button
+            updateLinkButton();
+          }
       }
     });
     // CASE 1

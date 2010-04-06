@@ -9,12 +9,16 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.KeyboardFocusManager;
 import java.awt.Rectangle;
 import java.awt.Stroke;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.Enumeration;
@@ -37,6 +41,8 @@ import javax.swing.Timer;
 import javax.swing.border.LineBorder;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 
+import processing.app.graph.kGraphComponent;
+import processing.app.syntax.JEditTextArea;
 import processing.app.util.kConstants;
 import processing.app.util.kEvent;
 import processing.app.util.kUtils;
@@ -99,6 +105,14 @@ public class EditorDrawingHeader extends JSplitPane {
 
   DrawingArea drawarea;
 
+  protected TrayComboBox shapeList;
+
+  protected TrayComboBox connectorList;
+
+  protected TrayComboBox colorList;
+
+  protected JToggleButton textButton;
+
   public EditorDrawingHeader(DrawingArea dory) {
 
     drawarea = dory;
@@ -107,12 +121,15 @@ public class EditorDrawingHeader extends JSplitPane {
     drawarea.addListener(kEvent.TOOL_END, new mxIEventListener() {
       public void invoke(Object source, mxEventObject evt) {
         // deselect all the tool buttons
-        // TODO really don't know why this is not working in the case of "text"
-        // tool
-        // System.out.println("resetting on TOOL_END: "+toolButtons.getSelection().getActionCommand());
-        if (toolButtons.getSelection() != null)
-          toolButtons.getSelection().setSelected(false);
-        // spitButtonStates();
+        // BUG: this does not work in the case of "text" although it should,
+        // so we are forcing selection of the shape button instead and 
+        // deselecting that to get the result of none being selected
+//         System.out.println("resetting on TOOL_END: "+toolButtons.getSelection().getActionCommand());
+        if (toolButtons.getSelection() != null) {
+        toolButtons.setSelected(shapeList.getDisplayedButton().getModel(), true);
+        toolButtons.getSelection().setSelected(false);
+        }
+//         spitButtonStates();
       }
     });
 
@@ -131,16 +148,8 @@ public class EditorDrawingHeader extends JSplitPane {
         updateCodeWindowButton();
       }
     });
-    
-    //TODO not working
-    KeyAdapter escapeKeyListener = new KeyAdapter() {
-      public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
-          System.out.println("drawHeader >> i hear escape pressed");
-      }
-    };
-    
-    
+        
+
     /*
      * Initialize the tool button group stuff
      */
@@ -148,33 +157,70 @@ public class EditorDrawingHeader extends JSplitPane {
     initializeIconBag();
     toolActionListener = new ActionListener() {
       public void actionPerformed(ActionEvent e) {
+        
+        // put focus here so we can deal with escape events
+        // (graphComponent deals with tool mode escape events separately)
+        requestFocusInWindow();
+        
+//        closeButtonTrays();
+        
+        drawarea.beginToolMode(((AbstractButton) e.getSource()).getModel()
+            .getActionCommand());
+        
         toolButtons.setSelected(((AbstractButton) e.getSource()).getModel(),
                                 true);
         // ^--- we technically don't need to do this for every tool select
         // event, but it's easier to code
-        drawarea.beginToolMode(((AbstractButton) e.getSource()).getModel()
-            .getActionCommand());
+        //TODO something else is turning this off???? only SOMETIMES?
+//        spitButtonStates();
+        System.out.println("drawHeader >> set tool button selected");
       }
     };
+    
+    //===================TESTING=======================
+    addKeyListener(new KeyAdapter() {
+      public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
+          System.out.println("drawHeader >> i hear escape pressed");
+
+        closeButtonTrays();
+        
+        if (drawarea.getToolMode() != null)
+          drawarea.endToolMode(false);
+      }
+    });
+//    addFocusListener(new FocusListener() {
+//      public void focusGained(FocusEvent e) {
+//        System.out.println("drawHeader >> focus gained");
+//      }
+//      public void focusLost(FocusEvent e) {
+//        System.out.println("drawHeader >> focus lost");
+//      }
+//    });
+//    addMouseListener(new MouseAdapter() {
+//      public void mouseReleased(MouseEvent e) {
+//        System.out.println("buttonPanel mouse released");
+//      }
+//    });
+    //===================TESTING=======================
+    
 
     // TODO implement grab when I'm grabbing on canvas instead of mouseOverCell
 
     /*
      * SHAPES drop-down
      */
-    TrayComboBox shapeList = new TrayComboBox(kConstants.SHAPE_KEYS);
+    shapeList = new TrayComboBox(kConstants.SHAPE_KEYS);
     shapeList.setSelectedIndex(0);
     shapeList.getDisplayedButton().addActionListener(toolActionListener);
     // ^--- here the displayedButton is added instead of the list directly
     // because we want the button group to toggle the display button
     toolButtons.add(shapeList.getDisplayedButton());
-//    addKeyListener(escapeKeyListener);
 
     /*
      * CONNECTORS drop-down
      */
-    // TODO when the mx-auto-make connectors thing is on, highlight this button
-    TrayComboBox connectorList = new TrayComboBox(kConstants.CONNECTOR_KEYS);
+    connectorList = new TrayComboBox(kConstants.CONNECTOR_KEYS);
     connectorList.setSelectedIndex(0);
     connectorList.getDisplayedButton().addActionListener(toolActionListener);
     toolButtons.add(connectorList.getDisplayedButton());
@@ -182,7 +228,7 @@ public class EditorDrawingHeader extends JSplitPane {
     /*
      * TEXT
      */
-    JToggleButton textButton = makeToolButton(kConstants.SHAPE_TEXT,
+    textButton = makeToolButton(kConstants.SHAPE_TEXT,
                                               "Text tool");
     textButton.addActionListener(toolActionListener);
     toolButtons.add(textButton);
@@ -190,7 +236,7 @@ public class EditorDrawingHeader extends JSplitPane {
     /*
      * COLORS drop-down
      */
-    TrayComboBox colorList = new TrayComboBox(kConstants.COLOR_KEYS);
+    colorList = new TrayComboBox(kConstants.COLOR_KEYS);
     colorList.setSelectedIndex(0);
     colorList.getDisplayedButton().addActionListener(toolActionListener);
     toolButtons.add(colorList.getDisplayedButton());
@@ -371,9 +417,19 @@ public class EditorDrawingHeader extends JSplitPane {
     setBorder(null);
     setDividerSize(0);
     setResizeWeight(1.0);
-    setMaximumSize(new Dimension(3000,HEADER_HEIGHT));
+    setMaximumSize(new Dimension(3000,HEADER_HEIGHT));    
   }
+ 
 
+  /**
+   * Simply forces all JComboBox popups to hide; used when escape key or button is selected
+   */
+  private void closeButtonTrays() {
+    shapeList.hidePopup();
+    colorList.hidePopup();
+    connectorList.hidePopup();
+  }
+  
   /**
    * Refreshes all buttons whose state depends on the graph selection
    * (link button, which also depends on the text selection, is handled
@@ -459,7 +515,7 @@ public class EditorDrawingHeader extends JSplitPane {
     AbstractButton b;
     while (e.hasMoreElements()) {
       b = (AbstractButton) e.nextElement();
-      System.out.println(b.isSelected());
+      System.out.println(b.getModel()+" "+b.isSelected());
     }
     System.out.println();
   }
@@ -487,11 +543,11 @@ public class EditorDrawingHeader extends JSplitPane {
     bob.setToolTipText(tooltip);
     bob.setActionCommand(name);
     bob.setBorder(null); // need this for proper spacing between buttons (lord
-                         // knows why)
+    // knows why)
     bob.setBorderPainted(false); // borderPainted seems the only one necessary
-                                 // for a mac
+    // for a mac
     bob.setFocusPainted(false); // TODO minor: test these when going
-                                // cross-platform
+    // cross-platform
     bob.setMargin(new Insets(0, 0, 0, 0));
     bob.setContentAreaFilled(false);
     return bob;

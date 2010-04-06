@@ -6,6 +6,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
+import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.Stroke;
 import java.awt.Toolkit;
@@ -24,6 +25,7 @@ import javax.swing.JDesktopPane;
 import javax.swing.JInternalFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.WindowConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.DocumentEvent.EventType;
@@ -157,6 +159,7 @@ public class DrawingArea extends JDesktopPane {
           cw = getCodeWindow(cells[i]);
           if (cw != null) {
             System.out.println("drawarea >> cell removed, removing code window id="+cw.getId());
+            cw.setVisible(false);
             codeWindows.remove(cw);
           }
         }
@@ -178,6 +181,10 @@ public class DrawingArea extends JDesktopPane {
         }
       }
     });
+    // key listener
+    installEscapeKeyListener();
+    // part of the system to synchronize codewindows-textarea
+    codeWindowDocListener = new CodeWindowDocListener();
     
     // tool handling
     rubberband = new mxRubberband(graphComponent) {
@@ -207,8 +214,6 @@ public class DrawingArea extends JDesktopPane {
     colorToolband = new ColorToolband(this);
     colorToolband.setEnabled(false);
     
-    codeWindowDocListener = new CodeWindowDocListener();
-
     // compose the swing components
     graphPanel = new JInternalFrame("Graph", false, // resizable
         false, // not closable
@@ -286,6 +291,26 @@ public class DrawingArea extends JDesktopPane {
         }
       }
     });
+      
+//      final int TRIANGLE_BASE = 25;
+//      final int TRIANGLE_DEFAULT_HEIGHT = 12;
+//      JPanel triangleFrame = new JPanel() {
+//        protected void paintComponent(Graphics g) {
+//          System.out.println("painting triangle");
+//           g.setColor(Color.cyan);
+//           int[] xs = { 0, 0, TRIANGLE_BASE };
+//           int[] ys = { 0, TRIANGLE_DEFAULT_HEIGHT, TRIANGLE_DEFAULT_HEIGHT };
+//           Polygon triangle = new Polygon(xs, ys, xs.length);
+//           g.fillPolygon(triangle);
+//        }
+//      };
+//      triangleFrame.setOpaque(false);
+//      triangleFrame.setSize(TRIANGLE_BASE, TRIANGLE_DEFAULT_HEIGHT);
+//      triangleFrame.setBorder(null);
+//      triangleFrame.setLocation(150,150);
+//      triangleFrame.setVisible(true);
+//      this.add(triangleFrame);
+
   }
   /**
    * @deprecated
@@ -422,6 +447,19 @@ public class DrawingArea extends JDesktopPane {
     this.currentFillColor = currentFillColor;
   }
   
+  public void installEscapeKeyListener() {
+    graphComponent.addKeyListener(new KeyAdapter() {
+      public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_ESCAPE
+            && graphComponent.isEscapeEnabled()) {
+          System.out.println("drawarea >> i hear escape pressed");
+          if (getToolMode() != null)
+            endToolMode(false);
+        }
+      }
+    });
+  }
+  
   /**
    * Fires TOOL_BEGIN event, sets the cursor, and enables toolband mouse drawing
    * instead of rubberband selection.
@@ -437,16 +475,16 @@ public class DrawingArea extends JDesktopPane {
     graphComponent.getGraphHandler().setCloneEnabled(false);
     graphComponent.getGraphHandler().setMoveEnabled(false);
     graphComponent.getGraphHandler().setSelectEnabled(false);
-//    graphComponent.getConnectionHandler().setEnabled(false); // gets ride of
-                                                             // cellMarkers
+
     // Notes on: cursor setting:
     // turns out we can't set the cursor here because it gets overridden
     // by graphControl's mouse listeners after the 2nd time
     // but we still need to do this to cover the first time we want to
     // change the cursor. Why? Dun ask me. @author achang
     setCursor(TOOL_CURSOR);
+    graphComponent.getGraphControl().setCursor(TOOL_CURSOR);
     toolMode = toolName;
-//TODO enable the ESCAPE_KEY listener that endsToolMode
+
     if (kUtils.arrayLinearSearch(kConstants.SHAPE_KEYS, toolName) >= 0
         || toolName.equals(kConstants.SHAPE_TEXT))
       shapeToolband.setEnabled(true);
@@ -457,8 +495,6 @@ public class DrawingArea extends JDesktopPane {
       setCurrentFillColor(toolName);
       System.out.println("currentFillColor = " + currentFillColor);
       colorToolband.setEnabled(true);
-//      graphComponent.getConnectionHandler().setEnabled(true); // TODO put highlights
-                                                              // back
     }
 
   }
@@ -477,8 +513,9 @@ public class DrawingArea extends JDesktopPane {
     graphComponent.getGraphHandler().setCloneEnabled(true);
     graphComponent.getGraphHandler().setMoveEnabled(true);
     graphComponent.getGraphHandler().setSelectEnabled(true);
-//    graphComponent.getConnectionHandler().setEnabled(true);
-    setCursor(null); // clean up
+    // reset cursor to default
+    setCursor(null);
+    graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
     eventSource.fireEvent(new mxEventObject(kEvent.TOOL_END, "tool", toolMode, "success", (success ? Boolean.TRUE : Boolean.FALSE)));
     toolMode = null;
     System.out.println("ENDtoolmode "+toolMode+" >> success="+success);
@@ -1315,16 +1352,19 @@ public class DrawingArea extends JDesktopPane {
         String style = "";
         String toolMode = drawingArea.getToolMode();
         style = mxUtils.setStyle(style, mxConstants.STYLE_FILLCOLOR, Integer
-            .toHexString(kUtils.getFillColorFromKey(
-                                                    drawingArea
-                                                        .getCurrentFillColorKey())
+            .toHexString(kUtils
+                .getFillColorFromKey(drawingArea.getCurrentFillColorKey())
                 .getRGB()));
         style = mxUtils.setStyle(style, mxConstants.STYLE_STROKECOLOR, Integer
-            .toHexString(kUtils.getFillColorFromKey(
-                                                    drawingArea
-                                                        .getCurrentFillColorKey())
+            .toHexString(kUtils
+                .getFillColorFromKey(drawingArea.getCurrentFillColorKey())
+                .getRGB()));
+        style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
+            .toHexString(kUtils
+                .getFontColorFromKey(drawingArea.getCurrentFillColorKey())
                 .getRGB()));
        
+        //TODO refactor out all this style setting to make my life easier to find
         if (toolMode.equals(kConstants.SHAPE_KEYS[1])) {
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
                                    mxConstants.SHAPE_ELLIPSE);
@@ -1347,27 +1387,27 @@ public class DrawingArea extends JDesktopPane {
           // this works because the canvas will draw nothing but the label if we
           // set style=junk
           // note this also overrides the earlier assignment of colors
-          style = kConstants.SHAPE_TEXT;
-          style = mxUtils.setStyle(style, kConstants.SHAPE_TEXT, "true");
+//          style = kConstants.SHAPE_TEXT;
+          style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
+                                   kConstants.SHAPE_TEXT);
+          style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
+              .toHexString(kConstants.SHAPE_TEXT_FONT_COLOR.getRGB()));
           openCellEditor = true;
-        } else if (!toolMode.equals(kConstants.SHAPE_KEYS[0])) // no style means
-                                                               // rectangles
+        } else if (!toolMode.equals(kConstants.SHAPE_KEYS[0])) // no style should
+                                                               // mean rectangles
         {
           System.err
               .println("Ut oh! You managed to select a tool that doesn't exist! Please report this bug: class=ShapeToolband, toolMode="
                        + toolMode);
         }
         
-        //set font styles here so we include text areas
-        style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
-                                 .toHexString(kUtils.getFontColorFromKey(
-                                                                         drawingArea
-                                                                             .getCurrentFillColorKey())
-                                     .getRGB()));
-                             style = mxUtils.setStyle(style, mxConstants.STYLE_FONTFAMILY,
-                                                      kConstants.DEFAULT_FONTFAMILY);
-//                             style = mxUtils.setStyle(style, mxConstants.STYLE_ALIGN,
-//                                                      mxConstants.ALIGN_LEFT);
+        // set font styles here so we include text areas
+        style = mxUtils.setStyle(style, mxConstants.STYLE_FONTFAMILY,
+                                 kConstants.DEFAULT_FONTFAMILY);
+        // style = mxUtils.setStyle(style, mxConstants.STYLE_ALIGN,
+        // mxConstants.ALIGN_LEFT);
+//        style = mxUtils.setStyle(style, mxConstants.STYLE_OVERFLOW,
+//                                 "fill");
 
         // ----------------
         graphComponent.getGraph()
@@ -1385,19 +1425,19 @@ public class DrawingArea extends JDesktopPane {
 
         // reset and stop editing when done
         super.reset();
-        graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
+//        graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
         drawingArea.endToolMode(success);
       }
     }
 
-    /**
-     * the superclass's KeyListener handles escape keystrokes and performs this
-     */
-    public void reset() {
-      super.reset();
-      graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
-      drawingArea.endToolMode(false);
-    }
+//    /**
+//     * the superclass's KeyListener handles escape keystrokes and performs this
+//     */
+//    public void reset() {
+//      super.reset();
+//      graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
+//      drawingArea.endToolMode(false);
+//    }
 
   }
 
@@ -1442,14 +1482,20 @@ public class DrawingArea extends JDesktopPane {
       
       marker = new mxCellMarker(drawingArea.getGraphComponent()) {
         /**
-         * Don't mark edges because we don't want to allow coloring of edges
+         * Don't mark edges or textareas because we don't want to allow coloring of either
          * This returns null if cell is not found or cell is an edge.
          */
         protected Object getCell(MouseEvent e)
         {
           mxICell cell = (mxICell) graphComponent.getCellAt(e.getX(), e.getY(),
               swimlaneContentEnabled);
-          return ((cell != null) ? ((!cell.isEdge()) ? cell : null) : null);
+          return ((cell != null) ? 
+                     ((!cell.isEdge() 
+                         && graphComponent.getGraph() instanceof kGraph 
+                         && !((kGraph) graphComponent.getGraph()).isTextBoxShape(cell)) ?
+                               cell 
+                               : null)
+                     : null);
         }
       };
       marker.setValidColor(kConstants.DEFAULT_VALID_COLOR);
@@ -1459,14 +1505,14 @@ public class DrawingArea extends JDesktopPane {
       graphComponent.getGraphControl().addMouseListener(this);
       graphComponent.getGraphControl().addMouseMotionListener(this);
       // Handle escape keystrokes
-      graphComponent.addKeyListener(new KeyAdapter() {
-        public void keyPressed(KeyEvent e) {
-          if (e.getKeyCode() == KeyEvent.VK_ESCAPE
-              && graphComponent.isEscapeEnabled()) {
-            reset();
-          }
-        }
-      });
+//      graphComponent.addKeyListener(new KeyAdapter() {
+//        public void keyPressed(KeyEvent e) {
+//          if (e.getKeyCode() == KeyEvent.VK_ESCAPE
+//              && graphComponent.isEscapeEnabled()) {
+//            reset();
+//          }
+//        }
+//      });
     }
 
     /**
@@ -1534,16 +1580,16 @@ public class DrawingArea extends JDesktopPane {
 
         // end tool when success done
         marker.reset();
-        graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
+//        graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
         drawingArea.endToolMode(success);
       }
     }
 
-    public void reset() {
-      marker.reset();
-      graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
-      drawingArea.endToolMode(false);
-    }
+//    public void reset() {
+//      marker.reset();
+//      graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
+//      drawingArea.endToolMode(false);
+//    }
 
     public void mouseDragged(MouseEvent e) {
       // do nothing, but need this stub since we implement MouseMotionListener
@@ -1649,14 +1695,14 @@ public class DrawingArea extends JDesktopPane {
     /**
      * 
      */
-    public void reset()
-    {
-      super.reset();
-      graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
-      //if success didn't already reset the toolmode first
-      if (drawingArea.getToolMode() != null)
-        drawingArea.endToolMode(false);
-    }
+//    public void reset()
+//    {
+//      super.reset();
+//      graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
+//      //if success didn't already reset the toolmode first
+//      if (drawingArea.getToolMode() != null)
+//        drawingArea.endToolMode(false);
+//    }
     /**
      * Override to be able to create edges that start with a dangling point
      * rather than a source cell, by adding the store start point as source
@@ -1670,6 +1716,7 @@ public class DrawingArea extends JDesktopPane {
 
       Object newTarget = null;
       Object edge = null;
+      boolean success = false;
 
       if (target == null && createTarget)
       {
@@ -1720,6 +1767,7 @@ public class DrawingArea extends JDesktopPane {
           }
 
           edge = insertEdge(parent, null, "", source, target);
+          success = true;
 
           if (edge != null)
           {
@@ -1760,7 +1808,7 @@ public class DrawingArea extends JDesktopPane {
       }
       
       // end tool when success done
-      drawingArea.endToolMode(true);
+      drawingArea.endToolMode(success);
     }
     /**
      * Overriding just to make sure that the cursor is in tool mode (i.e. crosshair)

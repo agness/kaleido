@@ -63,9 +63,13 @@ public class kGraphComponent extends mxGraphComponent {
     //Use Kaleido cell editor
     setCellEditor(new kCellEditor(this));
     
-    //Set the background (must first clear viewport)
-    getViewport().setOpaque(false);
-    setBackground(kConstants.UI_COLOR_CANVAS);//Color.white);//kConstants.UI_COLOR_BACKGROUND);
+    //Set the background
+    getViewport().setBorder(null);
+    getViewport().setBackground(kConstants.UI_COLOR_CANVAS);
+    setBorder(null);
+    // redundant with setting the viewport background since it's not visible
+    // under an opaque viewport, but just to make sure references
+    setBackground(kConstants.UI_COLOR_CANVAS);
     // the following setting doesn't affect the graphComponent, but affects the
     // graphOutline background color; we're using the same color as the
     // background color of inactive buttons
@@ -107,6 +111,19 @@ public class kGraphComponent extends mxGraphComponent {
   {
     return (e != null) ? e.getClickCount() == 2 : false;
   }
+  /**
+   * Note: This is not used during drag and drop operations due to
+   * limitations of the underlying API. To enable this for move
+   * operations set dragEnabled to false.
+   * 
+   * @param event
+   * @return Returns true if the given event is constrained.
+   */
+  public boolean isConstrainedEvent(MouseEvent event)
+  {
+//    System.out.println("testing isConstrainedEvent? returning="+((event != null) ? event.isShiftDown() : false));
+    return (event != null) ? event.isShiftDown() : false;
+  }
   
   /**
    * Overridden to use our custom canvas.
@@ -119,9 +136,6 @@ public class kGraphComponent extends mxGraphComponent {
   /**
    * Overridden to override mxGraphHandler's mxCellMarker to
    * change the color of swimlane cell markers.
-   * 
-   * if gaudenz does his thing, this could be 1 line in the kGComp constructor:
-   * getGraphHandler().getMarker().setValidColor();
    */
   protected mxGraphHandler createGraphHandler()
   {
@@ -133,7 +147,7 @@ public class kGraphComponent extends mxGraphComponent {
       
       /**
        * We need a marker that will mark one color for swimlane drag-drops
-       * and one color for regular mouseOver for selection
+       * but we need to preserve the overrides that the superclass implemented
        */
       protected mxCellMarker createMarker()
       {
@@ -174,7 +188,7 @@ public class kGraphComponent extends mxGraphComponent {
           }
         }
       }
-
+      
     };
   }
   
@@ -278,7 +292,10 @@ public class kGraphComponent extends mxGraphComponent {
       return new mxVertexHandler(this, state) {
         protected Color getSelectionColor()
         {
-          return kConstants.VERTEX_SELECTION_COLOR;
+          if (!isFocusOwner())
+            return kConstants.SECONDARY_SELECTION_COLOR;
+          else
+            return kConstants.VERTEX_SELECTION_COLOR;
         }
         protected Stroke getSelectionStroke()
         {
@@ -286,6 +303,8 @@ public class kGraphComponent extends mxGraphComponent {
         }
         protected Color getHandleFillColor(int index)
         {
+          if (!isFocusOwner())
+            return kConstants.SECONDARY_SELECTION_COLOR;
           if (isLabel(index))
           {
             return kConstants.LABEL_HANDLE_FILLCOLOR;
@@ -294,7 +313,10 @@ public class kGraphComponent extends mxGraphComponent {
         }
         protected Color getHandleBorderColor(int index)
         {
-          return kConstants.HANDLE_BORDERCOLOR;
+          if (!isFocusOwner())
+            return kConstants.SECONDARY_SELECTION_COLOR;
+          else
+            return kConstants.HANDLE_BORDERCOLOR;
         }
         protected JComponent createPreview()
         {

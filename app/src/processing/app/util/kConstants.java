@@ -29,6 +29,15 @@ public class kConstants
    */
   public static final String VERSION_NAME = "001";
   
+  /**
+   * Which version to compile, for versions of code that are different
+   */  
+  public static final boolean BUILD_FOR_RELEASE = false;
+  
+  
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+  
   /*
    * Private library of color palettes that can be used in these settings.
    */
@@ -96,7 +105,7 @@ public class kConstants
   private static Color UI_COLOR_ACTIVETAB = new Color(0xd3d3d3); //the color of selected text tab, light gray
   private static Color UI_COLOR_OFFWHITE = new Color(0xeeeeee); //very nearly white
   private static Color UI_COLOR_BUTTONBAR = new Color(0x686868); //equals Theme.getColor(buttons.bgcolor)
-//  private static Color UI_COLOR_HEADERBKGD = new Color(0x989898); //equals Theme.getColor(header.bgcolor)
+  public static Color UI_COLOR_HEADERBKGD = new Color(0x989898); //equals Theme.getColor(header.bgcolor)
   private static Stroke UI_DOTTED_STROKE = new BasicStroke(1,
       BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f,
       new float[] { 1, 3 }, 0.0f);
@@ -164,10 +173,25 @@ public class kConstants
   public static final Color EDGE_FONT_COLOR = UI_COLOR_OFFWHITE;
   
   /**
+   * The font color of text areas (should be decided upon depending on color of canvas)
+   */
+  public static final Color SHAPE_TEXT_FONT_COLOR = UI_COLOR_OFFWHITE;
+  
+  /**
    * The color of triangles and text area of code windows (no control over
    * scroll bars or move/close buttons)
    */
   public static final Color CODE_WINDOW_COLOR = Color.white;
+  
+  /**
+   * Graph outline viewfinder handle color & stroke color
+   */
+  public static final Color OUTLINE_HANDLE_COLOR = UI_COLOR_ACTIVE;
+
+  /**
+   * Padding between graph outline image and the component it's in
+   */
+  public static final int OUTLINE_BORDER_WIDTH = 3;
   
   public static final Color SHADOW_COLOR = Color.black;
 
@@ -175,6 +199,10 @@ public class kConstants
 
   public static final int SHADOW_OFFSETY = 4;
 
+  /**
+   * Amount of padding between cells dropped into other cells (swimlanes)
+   */
+  public static final int CELL_NESTING_PADDING = 10;
 
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
@@ -251,6 +279,10 @@ public class kConstants
   public static final Color LINK_MARKER_BACKGROUND_COLOR = Color.white;
 
   public static final int LINK_MARKER_WIDTH = 10;
+
+
+
+
 
 
 }

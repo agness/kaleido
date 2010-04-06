@@ -123,7 +123,7 @@ public class kCodeWindow {
     setShortcutKeystrokes();
     JScrollPane scrollPane = new JScrollPane(textarea);
     scrollPane.setBorder(null);
-    scrollPane.setOpaque(true);
+//    scrollPane.setOpaque(true);
 
     editFrame = new JInternalFrame(label, true, false, false, false);
     editFrame.setContentPane(textarea);
@@ -139,8 +139,9 @@ public class kCodeWindow {
         TRIANGLE_DEFAULT_HEIGHT, TRIANGLE_BASE));
     triangleFrame.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
     triangleFrame.setSize(TRIANGLE_BASE, TRIANGLE_DEFAULT_HEIGHT);
-//    triangleFrame.setBorder(new LineBorder(Color.cyan, 1)); //for debugging
     triangleFrame.setBorder(null);
+    triangleFrame.getContentPane().setBackground(new Color(0,0,0,0));
+    triangleFrame.setBackground(new Color(0,0,0,0));
 
     // remove the ability to move the triangle iframe
     MouseMotionListener[] actions = (MouseMotionListener[]) triangleFrame
@@ -164,7 +165,6 @@ public class kCodeWindow {
     JPanel buttonPanel = new JPanel();
     buttonPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 1, 0));
     buttonPanel.setBorder(null);
-//    buttonPanel.setBackground(Color.blue); //for debugging
     buttonPanel.setOpaque(false);
     buttonPanel.add(moveButton);
     buttonPanel.add(closeButton);
@@ -173,7 +173,6 @@ public class kCodeWindow {
     buttonFrame.setContentPane(buttonPanel);
     buttonFrame.setOpaque(false);
     buttonFrame.setSize(BUTTON_ICON_WIDTH*2+BUTTON_GAP, BUTTON_ICON_HEIGHT);
-//    buttonFrame.setBorder(new LineBorder(Color.magenta, 1)); //for debugging
     buttonFrame.setBorder(null);
 
     // myriad event handling
@@ -687,6 +686,7 @@ public class kCodeWindow {
    * @param b
    */
   public void setVisible(boolean b) {
+    System.out.println("kCodeWindow opaque >> editFrame="+editFrame.isOpaque()+ " buttonFrame="+buttonFrame.isOpaque()+" triangleFrame="+triangleFrame.isOpaque());
     editFrame.setVisible(b);
     buttonFrame.setVisible(b);
     triangleFrame.setVisible(b);
@@ -1051,7 +1051,7 @@ public class kCodeWindow {
    * 
    * @author susiefu
    */
-  protected class Triangle extends JComponent {
+  private class Triangle extends JComponent {
 
     private String triDirection;
 
@@ -1062,7 +1062,6 @@ public class kCodeWindow {
 
       setGeometry(direction, tilt, width, height, tribase);
       setOpaque(false);
-
     }
     
     public void setGeometry(String direction, int tilt, int width, int height,
