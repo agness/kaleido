@@ -131,7 +131,7 @@ public class kCellValue implements Serializable {
     setStopMark(stop);
     setCodeIndex(ind);
   }
-  public boolean hasValidCodeMarks() {
+  public boolean isValidCodeMarks() {
     return (isValidCodeIndex() && (startMark != -1) && (stopMark != -1));
   }
   public boolean isValidCodeIndex() {

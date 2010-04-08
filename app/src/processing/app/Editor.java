@@ -53,6 +53,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -102,11 +103,13 @@ import processing.app.tools.Tool;
 import processing.app.util.kConstants;
 import processing.app.util.kEvent;
 import processing.app.util.kUndoManager;
+import processing.app.util.kUndoableEdit;
 import processing.app.util.kUtils;
 import processing.core.PApplet;
 
 import com.mxgraph.io.mxCodec;
 import com.mxgraph.model.mxICell;
+import com.mxgraph.model.mxGraphModel.mxValueChange;
 import com.mxgraph.swing.mxGraphComponent;
 import com.mxgraph.swing.util.mxGraphActions;
 import com.mxgraph.util.mxEvent;
@@ -380,18 +383,25 @@ public class Editor extends JFrame implements RunnerListener {
     // Adds the command history to the model and view (although I'm not sure that we use the view at all)
     drawarea.getGraphComponent().getGraph().getModel().addListener(mxEvent.UNDO, graphUndoHandler);
     drawarea.getGraphComponent().getGraph().getView().addListener(mxEvent.UNDO, graphUndoHandler);    
-    // Keeps the selection in sync with the command history
+    // Keeps the selection and the link markers in sync with the command history
     mxIEventListener undoSelectionSyncHandler = new mxIEventListener() {
       public void invoke(Object source, mxEventObject evt) 
       {
+        //TODO have the undoManager throw java.UndoableEdit-friendly
+        //undo events so we can sync the text selection as well
+        
         List<mxUndoableChange> changes = ((mxUndoableEdit) evt
             .getProperty("edit")).getChanges();
         drawarea.getGraphComponent().getGraph()
             .setSelectionCells(
                                drawarea.getGraphComponent().getGraph()
                                    .getSelectionCellsForChanges(changes));
+        // if it's a kUndoableEdit, meaning possibly a linkEdit undo,
+        // then repaint the lines of the old and new links
+        if (evt.getProperty("edit") instanceof kUndoableEdit)
+          repaintLinesOfChanges(changes);
       }
-    }; //TODO do this for textarea too, and handle the repaint (in case of kEdits) here
+    };
     undoManager.addListener(mxEvent.UNDO, undoSelectionSyncHandler);
     undoManager.addListener(mxEvent.REDO, undoSelectionSyncHandler);
 
@@ -3096,7 +3106,7 @@ public class Editor extends JFrame implements RunnerListener {
         if (cell instanceof mxICell
             && ((mxICell) cell).getValue() instanceof kCellValue
             && ((kCellValue) ((mxICell) cell).getValue())
-                .hasValidCodeMarks())
+                .isValidCodeMarks())
         {
           kCellValue val = (kCellValue) ((mxICell) cell).getValue();
           sketch.setCurrentCode(val.getCodeIndex());
@@ -3143,7 +3153,7 @@ public class Editor extends JFrame implements RunnerListener {
       drawingHeader.getLinkButton().setLinkMode();
       drawingHeader.getLinkButton().setEnabled(false);
     }
-  }  
+  }
 
   /**
    * Called by colorToolband to request repaint of line marker of cell whose
@@ -3153,10 +3163,41 @@ public class Editor extends JFrame implements RunnerListener {
    * @param stopMark
    */
   public void repaintLinesOfOffset(int startMark, int stopMark) {
-//    System.out.println("editor >> repainting lines of offset");
+    System.out.println("editor >> repainting lines of offset >> "+startMark+" "+stopMark);
     textarea.getPainter().invalidateLineRange(textarea.getLineOfOffset(startMark), textarea.getLineOfOffset(stopMark));
   }
-  
+
+  /**
+   * Used in undo management to request repaint of line marker of cells affected
+   * in last undo/redo
+   */
+  public void repaintLinesOfChanges(List<mxUndoableChange> changes) {
+
+    System.out.println("editor >> repainting lines of changes");
+
+    Iterator<mxUndoableChange> it = changes.iterator();
+    while (it.hasNext())
+    {
+      Object change = it.next();
+
+      if (change instanceof mxValueChange)
+      {
+        // repaint both the old and new lines of code if they are in the current text view
+        if (((mxValueChange) change).getValue() instanceof kCellValue) {
+          kCellValue val = (kCellValue) ((mxValueChange) change).getValue();
+          System.out.println("editor >> repainting lines of changes >> val="+val.toPrettyString());
+          if (val.isValidCodeMarks() && val.getCodeIndex() == sketch.getCurrentCodeIndex())
+            repaintLinesOfOffset(val.getStartMark(), val.getStopMark());
+        }
+        if (((mxValueChange) change).getPrevious() instanceof kCellValue) {
+          kCellValue old = (kCellValue) ((mxValueChange) change).getPrevious();
+          System.out.println("editor >> repainting lines of changes >> old="+old.toPrettyString());
+          if (old.isValidCodeMarks() && old.getCodeIndex() == sketch.getCurrentCodeIndex())
+            repaintLinesOfOffset(old.getStartMark(), old.getStopMark());
+        }
+      }
+    }
+  }
   
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
   /*

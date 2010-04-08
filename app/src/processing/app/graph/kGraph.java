@@ -74,14 +74,6 @@ public class kGraph extends mxGraph {
   }
   
   /**
-   * Essentially an override of {@link mxIGraphModel#endUpdate()}
-   * in order to fire "kaleido events", namely a compound mxUndoableEdit with
-   * a recognizable human name instead of a mashup name of its component changes.
-   * Used for linking and locking
-   */
-
-  
-  /**
    * Returns true if the given cell is selectable. The original mxGraph
    * implementation returns whether or not the global setting is true. This
    * Kaleido implementation additionally checks if the cell exists in this

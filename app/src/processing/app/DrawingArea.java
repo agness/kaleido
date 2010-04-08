@@ -197,7 +197,7 @@ public class DrawingArea extends JDesktopPane {
           Object cell = graphComponent.getCellAt(e.getX(), e.getY(), false);
 
           if (cell != null && ((mxICell) cell).getValue() instanceof kCellValue
-              && ((kCellValue) ((mxICell) cell).getValue()).hasValidCodeMarks()) {
+              && ((kCellValue) ((mxICell) cell).getValue()).isValidCodeMarks()) {
             showCodeWindow(cell);
           }
         }
@@ -662,7 +662,7 @@ public class DrawingArea extends JDesktopPane {
 
   /**
    * Shortcut method to determine if a given cell has valid code marks and can
-   * therefore have a valid code window
+   * therefore have a valid code window.  Does not check code index.
    * 
    * @param cell
    * @return
@@ -670,7 +670,7 @@ public class DrawingArea extends JDesktopPane {
   protected boolean hasValidCodeMarks(Object cell) {
     if ((cell instanceof mxCell)
         && (((mxCell) cell).getValue() instanceof kCellValue)
-        && (((kCellValue) ((mxCell) cell).getValue()).hasValidCodeMarks()))
+        && (((kCellValue) ((mxCell) cell).getValue()).isValidCodeMarks()))
       return true;
     else
       return false;
@@ -966,7 +966,7 @@ public class DrawingArea extends JDesktopPane {
     for (int i = 0; i < cells.length; i++)
       if (cells[i] instanceof mxICell
           && ((mxICell) cells[i]).getValue() instanceof kCellValue
-          && ((kCellValue) ((mxICell) cells[i]).getValue()).hasValidCodeMarks()
+          && ((kCellValue) ((mxICell) cells[i]).getValue()).isValidCodeMarks()
           && ((kCellValue) ((mxICell) cells[i]).getValue()).getCodeIndex() == sketchInd
           && getCodeWindow(cells[i]).getTextArea().getDocument() != e
               .getDocument()) {
@@ -1186,29 +1186,18 @@ public class DrawingArea extends JDesktopPane {
         kCellValue newVal = new kCellValue(old.getLabel(), old.getNotes(), ind,
             start, stop);
         graphComponent.labelChanged(cells[i], newVal, null);
-        /*
-         * use mxValueChange mxStyleChange execute them (I guess we can
-         * completely sidetrack the graphmodel parts although should probably
-         * fire being & end update nonetheless since painting probably depends
-         * on them) and add all these changes to a kUndoableEdit called edit
-         * then fireEvent(new mxEventObject(mxEvent.UNDO, "edit", edit));
-         * 
-         * finally double-check to make sure code windows are being
-         * cleared/deleted in a way that isn't affected, or rather will update
-         * live with undo and redo of this
-         */
-        // I could just put a beginUpdate+endUpdate clause around these to make
-        // them all one big mxUndoableEdit, the only problem is that the name
-        // will be wrong
-        // after each kUndo, gotta repaint the main textarea
-        // TODO should I also fire a kEvent somewhere to indicate that a kEdit
-        // has occurred and the textarea needs to be repainted?
+        
+        // repaint both old and new linked code if they are in the front tab
+        if (old.isValidCodeMarks() && editor.sketch.getCurrentCodeIndex() == old.getCodeIndex())
+          editor.repaintLinesOfOffset(old.getStartMark(), old.getStopMark());
+        if (newVal.isValidCodeMarks() && editor.sketch.getCurrentCodeIndex() == newVal.getCodeIndex())
+          editor.repaintLinesOfOffset(newVal.getStartMark(), newVal.getStopMark());
 
-        String value = newVal.hasValidCodeMarks() ? "true" : "false";
+        String value = newVal.isValidCodeMarks() ? "true" : "false";
         graphComponent.getGraph().setCellStyles(kConstants.STYLE_LINKED, value,
                                                 new Object[] { cells[i] });
       }
-
+    
     if (graphComponent.getGraph().getModel() instanceof kGraphModel)
       ((kGraphModel) graphComponent.getGraph().getModel())
           .endUpdate("code-visual link");
@@ -1302,7 +1291,7 @@ public class DrawingArea extends JDesktopPane {
       if (cells[i] instanceof mxICell
           && ((mxICell) cells[i]).getValue() instanceof kCellValue) {
         kCellValue val = ((kCellValue) ((mxICell) cells[i]).getValue());
-        if (val.hasValidCodeMarks()
+        if (val.isValidCodeMarks()
             && val.getCodeIndex() == ind
             && ((start > val.getStartMark() && start < val.getStopMark())
                 || (stop > val.getStartMark() && stop < val.getStopMark())
@@ -1680,8 +1669,11 @@ public class DrawingArea extends JDesktopPane {
 
           graph.setCellStyle(style, new Object[] { cell });
 
+          // if the newly painted cell links to currently visible code,
+          // then repaint link markers
           if (drawarea.hasValidCodeMarks(cell)) {
             kCellValue val = (kCellValue) ((mxICell) cell).getValue();
+            if (drawarea.editor.sketch.getCurrentCodeIndex() == val.getCodeIndex())
             drawarea.editor.repaintLinesOfOffset(val.getStartMark(), val
                 .getStopMark());
           }
