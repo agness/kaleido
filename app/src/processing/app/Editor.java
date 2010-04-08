@@ -3287,6 +3287,7 @@ public class Editor extends JFrame implements RunnerListener {
             codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
           } else {
             // user must have cancelled out of linking so reset the link button
+            statusNotice("Code-visual link canceled.");
             updateLinkButton();
           }
       }
@@ -3300,6 +3301,7 @@ public class Editor extends JFrame implements RunnerListener {
           //user select some text and clicks to create a new shape
 //          System.out.println("link >> user selected text and now to create new shape so set link button active");
           drawingHeader.getLinkButton().setLinkActiveMode();
+          statusNotice("Create a shape to link it to the selected code, or press the escape key to cancel.");
           // TODO beginCompoundEdit();
         }
       }
@@ -3342,6 +3344,7 @@ public class Editor extends JFrame implements RunnerListener {
         // if while in linking mode user hits escape, cancel out of it
         if (drawingHeader.getLinkButton().isLinkActiveMode() && e.getKeyCode() == KeyEvent.VK_ESCAPE)
 //          System.out.println("link >> user hit escape, cancelling link active mode");
+          statusNotice("Code-visual link canceled.");
           drawingHeader.getLinkButton().setLinkMode();
       }
     });
@@ -3360,9 +3363,11 @@ public class Editor extends JFrame implements RunnerListener {
       // only when linkbutton is in some sort of active mode
 //      System.out.println("link >> only text is selected and link button clicked, so set active mode");
       drawingHeader.getLinkButton().setLinkActiveMode();
+      statusNotice("Click on a shape to link it to the selected code, or press the escape key to cancel.");
     } else if (drawarea.getGraphComponent().getGraph().getSelectionCount() > 0) {
       // enable graphSelection change listener on action performed codeDrawLink
       drawingHeader.getLinkButton().setLinkActiveMode();
+      statusNotice("Select a body of code to link it to the selected shape, or press the escape key to cancel.");
 //      System.out.println("link >> only cell is selected and link button clicked, so set active mode");
     }
   }
@@ -3401,7 +3406,7 @@ public class Editor extends JFrame implements RunnerListener {
 //                       + cells.length);
     drawarea.unlinkCells(cells);
     drawingHeader.getLinkButton().setLinkMode();
-    statusNotice("Code-visual link disconnected.");
+    statusNotice("Code-visual link removed.");
     // this makes the selection active again and forces the selection sync
     // listener to repaint the link markers in textarea
     drawarea.getGraphComponent().requestFocusInWindow();

@@ -40,6 +40,7 @@ import com.mxgraph.swing.handler.mxVertexHandler;
 import com.mxgraph.swing.view.mxInteractiveCanvas;
 import com.mxgraph.util.mxCellRenderer;
 import com.mxgraph.util.mxConstants;
+import com.mxgraph.util.mxPoint;
 import com.mxgraph.util.mxUtils;
 import com.mxgraph.view.mxCellState;
 import com.mxgraph.view.mxEdgeStyle;
@@ -108,6 +109,7 @@ public class kGraphComponent extends mxGraphComponent {
   {
     return false;
   }
+  
   /**
    * Defines the mouse event (double-click) to trigger show code window
    */
@@ -115,6 +117,7 @@ public class kGraphComponent extends mxGraphComponent {
   {
     return (e != null) ? e.getClickCount() == 2 : false;
   }
+  
   /**
    * Note: This is not used during drag and drop operations due to
    * limitations of the underlying API. To enable this for move
@@ -128,6 +131,7 @@ public class kGraphComponent extends mxGraphComponent {
 //    System.out.println("testing isConstrainedEvent? returning="+((event != null) ? event.isShiftDown() : false)+" isShiftDown="+event.isShiftDown());
     return (event != null) ? event.isShiftDown() : false;
   }
+  
   /**
 	 * Modified from original to use cross-platform key mask definitions
 	 * Original: event.isShiftDown() && event.isControlDown()
@@ -137,6 +141,24 @@ public class kGraphComponent extends mxGraphComponent {
     return (event != null) ? ((event.getModifiers() & Editor.SHORTCUT_SHIFT_KEY_MASK) == Editor.SHORTCUT_SHIFT_KEY_MASK)
                           : false;
 	}
+	
+	 /**
+   * Returns an mxPoint representing the given point in the unscaled,
+   * non-translated coordinate space and applies the grid.
+   * (Exact same calculations as mxGraphComponent.getPointForEvent)
+   */
+  public mxPoint getPointForPoint(Point p)
+  {
+    double s = graph.getView().getScale();
+    mxPoint tr = graph.getView().getTranslate();
+
+    double x = graph.snap(p.getX() / s - tr.getX() - graph.getGridSize()
+        / 2);
+    double y = graph.snap(p.getY() / s - tr.getY() - graph.getGridSize()
+        / 2);
+
+    return new mxPoint(x, y);
+  }
 
   /**
    * Overridden to use our custom canvas.

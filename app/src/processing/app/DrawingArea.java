@@ -1396,10 +1396,17 @@ public class DrawingArea extends JDesktopPane {
     }
 
     public void mouseReleased(MouseEvent e) {
-      Rectangle rect = bounds;
+//      Rectangle rect = bounds;
       // super.reset(); //task performed later with this.reset()
       boolean success = false;
       boolean openCellEditor = false;
+      
+      Rectangle rect = new Rectangle();
+      
+      if (first != null) {
+        rect.setLocation(((kGraphComponent) graphComponent).getPointForPoint(first).getPoint());
+        rect.add(graphComponent.getPointForEvent(e).getPoint());
+      }
       
       if (!e.isConsumed() && rect != null && drawingArea.getToolMode() != null
           && graphComponent.isSignificant(rect.width, rect.height)) {
@@ -1839,7 +1846,7 @@ public class DrawingArea extends JDesktopPane {
             
             if (source == null)
             {
-              mxPoint pt = new mxPoint(start);
+              mxPoint pt = ((kGraphComponent) graphComponent).getPointForPoint(start);
               geo.setSourcePoint(pt);
             }
             
