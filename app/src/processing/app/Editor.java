@@ -388,7 +388,7 @@ public class Editor extends JFrame implements RunnerListener {
       public void invoke(Object source, mxEventObject evt) 
       {
         //TODO have the undoManager throw java.UndoableEdit-friendly
-        //undo events so we can sync the text selection as well
+        //undo events so maybe we can sync the text selection as well?
         
         List<mxUndoableChange> changes = ((mxUndoableEdit) evt
             .getProperty("edit")).getChanges();

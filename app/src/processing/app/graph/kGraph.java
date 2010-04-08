@@ -279,7 +279,6 @@ public class kGraph extends mxGraph {
           y = (int) Math.round(bounds.getY()+bounds.getHeight());
           h = (int) Math.round(bounds.getHeight()*2 - y + bounds.getY());
           
-          //at minimum reset the font style TODO make monospace like before?
           state.getStyle().remove(mxConstants.STYLE_FONTSTYLE);
           
           canvas.drawLabel(notes, x, y, w, h, state.getStyle(),
