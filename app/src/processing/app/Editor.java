@@ -391,7 +391,7 @@ public class Editor extends JFrame implements RunnerListener {
                                drawarea.getGraphComponent().getGraph()
                                    .getSelectionCellsForChanges(changes));
       }
-    };
+    }; //TODO do this for textarea too, and handle the repaint (in case of kEdits) here
     undoManager.addListener(mxEvent.UNDO, undoSelectionSyncHandler);
     undoManager.addListener(mxEvent.REDO, undoSelectionSyncHandler);
 

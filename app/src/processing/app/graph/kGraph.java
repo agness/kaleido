@@ -18,7 +18,10 @@ import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
 import com.mxgraph.model.mxIGraphModel;
 import com.mxgraph.util.mxConstants;
+import com.mxgraph.util.mxEvent;
+import com.mxgraph.util.mxEventObject;
 import com.mxgraph.util.mxRectangle;
+import com.mxgraph.util.mxUndoableEdit;
 import com.mxgraph.util.mxUtils;
 import com.mxgraph.view.mxCellState;
 import com.mxgraph.view.mxGraph;
@@ -31,6 +34,53 @@ import com.mxgraph.view.mxStylesheet;
  */
 public class kGraph extends mxGraph {
 
+  /**
+   * This constructor replaces superclass' model to be a kGraphModel instead of
+   * mxGraphModel; all other constructions are identical.
+   */
+  public kGraph() {
+    this(null,null);
+  }
+
+  /**
+   * This constructor uses the superclass implementation.
+   * @param model
+   */
+  public kGraph(mxIGraphModel model) {
+    super(model, null);
+  }
+
+  /**
+   * This constructor replaces superclass' model to be a kGraphModel instead of
+   * mxGraphModel; all other constructions are identical.
+   * @param stylesheet
+   */
+  public kGraph(mxStylesheet stylesheet) {
+    this(null, stylesheet);
+  }
+
+  /**
+   * This constructor replaces superclass' model to be a kGraphModel instead of
+   * mxGraphModel; all other constructions are identical.
+   * 
+   * @param model
+   * @param stylesheet
+   */
+  public kGraph(mxIGraphModel model, mxStylesheet stylesheet) {
+    selectionModel = createSelectionModel();
+    setModel((model != null) ? model : new kGraphModel());
+    setStylesheet((stylesheet != null) ? stylesheet : createStylesheet());
+    setView(createGraphView());
+  }
+  
+  /**
+   * Essentially an override of {@link mxIGraphModel#endUpdate()}
+   * in order to fire "kaleido events", namely a compound mxUndoableEdit with
+   * a recognizable human name instead of a mashup name of its component changes.
+   * Used for linking and locking
+   */
+
+  
   /**
    * Returns true if the given cell is selectable. The original mxGraph
    * implementation returns whether or not the global setting is true. This
@@ -324,7 +374,11 @@ public class kGraph extends mxGraph {
     return result;
   }
   
-  //========BEGIN YIFAN CELL RESIZING METHODS===========================
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  /*
+   * Yifan cell resizing methods
+   */
+
   /**
    * Keeps the given cell inside the bounds returned by
    * getCellContainmentArea for its parent, according to the rules defined by

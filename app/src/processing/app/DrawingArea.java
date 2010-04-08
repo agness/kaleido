@@ -40,6 +40,7 @@ import processing.app.graph.kCellValue;
 import processing.app.graph.kCodeWindow;
 import processing.app.graph.kGraph;
 import processing.app.graph.kGraphComponent;
+import processing.app.graph.kGraphModel;
 import processing.app.util.kConstants;
 import processing.app.util.kEvent;
 import processing.app.util.kUtils;
@@ -89,8 +90,9 @@ public class DrawingArea extends JDesktopPane {
   /**
    * Making this beforehand so we don't make infinite new objects when swapping
    * between this and the default cursor.
-   */ 
+   */
   static final Cursor TOOL_CURSOR = new Cursor(Cursor.CROSSHAIR_CURSOR);
+  final Cursor PAINT_CURSOR;
 
   /**
    * Stores which graph editing tool (e.g. "rect [shape]", "dotted [connector]",
@@ -116,15 +118,19 @@ public class DrawingArea extends JDesktopPane {
    * Tool and selection handling.
    */
   mxRubberband rubberband;
+
   ShapeToolband shapeToolband;
+
   kConnectionHandler connectorToolband;
+
   ColorToolband colorToolband;
-  
+
   /**
-   * Code window document listener, used to mirror edits between code windows and main textarea
+   * Code window document listener, used to mirror edits between code windows
+   * and main textarea
    */
   CodeWindowDocListener codeWindowDocListener;
-  
+
   /**
    * 
    * @param editor
@@ -135,16 +141,20 @@ public class DrawingArea extends JDesktopPane {
     super();
     this.editor = editor;
     codeWindows = new ArrayList<kCodeWindow>();
+    PAINT_CURSOR = Toolkit.getDefaultToolkit()
+        .createCustomCursor(Base.getThemeImage("paintbucket_cursor.png", this),
+                            new Point(15, 11), "paintCursor");
     mxGraph graph = new kGraph();
-    graph.setEdgeLabelsMovable(false); //vertexLabels are by default not movable
-//    graph.setVertexLabelsMovable(true);//DEBUGGING
+    graph.setEdgeLabelsMovable(false); // vertexLabels are by default not
+                                       // movable
+    // graph.setVertexLabelsMovable(true);//DEBUGGING
 
     // <!------------- hello world crap TODO remove
     helloWorld(graph);
     // hello world crap -------------<
 
     graphComponent = new kGraphComponent(graph);
-    
+
     // helloWorld2();
 
     // change tracker: updates the modified flag if anything in the graph model
@@ -170,7 +180,9 @@ public class DrawingArea extends JDesktopPane {
         for (int i = 0; i < cells.length; i++) {
           cw = getCodeWindow(cells[i]);
           if (cw != null) {
-            System.out.println("drawarea >> cell removed, removing code window id="+cw.getId());
+            System.out
+                .println("drawarea >> cell removed, removing code window id="
+                         + cw.getId());
             cw.setVisible(false);
             codeWindows.remove(cw);
           }
@@ -178,34 +190,30 @@ public class DrawingArea extends JDesktopPane {
       }
     });
     // mouse listener for double-click to open code windows
-    graphComponent.getGraphControl().addMouseListener(new MouseAdapter()
-    {
-      public void mouseReleased(MouseEvent e)
-      {
-        if (!e.isConsumed() && ((kGraphComponent) graphComponent).isCodeWindowEvent(e))
-        {
+    graphComponent.getGraphControl().addMouseListener(new MouseAdapter() {
+      public void mouseReleased(MouseEvent e) {
+        if (!e.isConsumed()
+            && ((kGraphComponent) graphComponent).isCodeWindowEvent(e)) {
           Object cell = graphComponent.getCellAt(e.getX(), e.getY(), false);
 
-          if (cell != null && ((mxICell) cell).getValue() instanceof kCellValue && ((kCellValue) ((mxICell) cell).getValue()).hasValidCodeMarks())
-          {
+          if (cell != null && ((mxICell) cell).getValue() instanceof kCellValue
+              && ((kCellValue) ((mxICell) cell).getValue()).hasValidCodeMarks()) {
             showCodeWindow(cell);
           }
         }
       }
     });
     // mouse listener for right-click to open popup menu on the graph component
-    graphComponent.getGraphControl().addMouseListener(new MouseAdapter()
-    {
-      public void mousePressed(MouseEvent e)
-      {
+    graphComponent.getGraphControl().addMouseListener(new MouseAdapter() {
+      public void mousePressed(MouseEvent e) {
         // Handles context menu on the Mac where the trigger is on mousepressed
         mouseReleased(e);
       }
-      public void mouseReleased(MouseEvent e)
-      {
-        if (e.isPopupTrigger()) { //right-click
-          Point pt = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(),
-              graphComponent);
+
+      public void mouseReleased(MouseEvent e) {
+        if (e.isPopupTrigger()) { // right-click
+          Point pt = SwingUtilities.convertPoint(e.getComponent(),
+                                                 e.getPoint(), graphComponent);
           popupMenu.show(graphComponent, pt.x, pt.y);
         }
       }
@@ -223,18 +231,16 @@ public class DrawingArea extends JDesktopPane {
     });
     // part of the system to synchronize codewindows-textarea
     codeWindowDocListener = new CodeWindowDocListener();
-    
+
     // tool handling
     rubberband = new mxRubberband(graphComponent) {
       /**
-       * Customized rubberband to take the universal selection color
-       * and no border
+       * Customized rubberband to take the universal selection color and no
+       * border
        */
-      public void paintRubberband(Graphics g)
-      {
+      public void paintRubberband(Graphics g) {
         if (first != null && bounds != null
-            && graphComponent.isSignificant(bounds.width, bounds.height))
-        {
+            && graphComponent.isSignificant(bounds.width, bounds.height)) {
           Rectangle rect = new Rectangle(bounds);
           g.setColor(kConstants.RUBBERBAND_COLOR);
           mxUtils.fillClippedRect(g, rect.x, rect.y, rect.width, rect.height);
@@ -246,12 +252,12 @@ public class DrawingArea extends JDesktopPane {
     shapeToolband.setEnabled(false);
     connectorToolband = new kConnectionHandler(this);
     connectorToolband.setEnabled(false);
-    //hereafter we won't reference graphComponent.connectionHandler 
-    //and instead will just treat it as "connectorToolband"
-    ((kGraphComponent) graphComponent).setConnectionHandler(connectorToolband); 
+    // hereafter we won't reference graphComponent.connectionHandler
+    // and instead will just treat it as "connectorToolband"
+    ((kGraphComponent) graphComponent).setConnectionHandler(connectorToolband);
     colorToolband = new ColorToolband(this);
     colorToolband.setEnabled(false);
-    
+
     // compose the swing components
     graphPanel = new JInternalFrame("Graph", false, // resizable
         false, // not closable
@@ -265,7 +271,8 @@ public class DrawingArea extends JDesktopPane {
 
     add(graphPanel);
     setVisible(true);
-    setBackground(kConstants.UI_COLOR_CANVAS); //so we don't see ugly residue when resizing
+    setBackground(kConstants.UI_COLOR_CANVAS); // so we don't see ugly residue
+                                               // when resizing
     try {
       graphPanel.setMaximum(true);
     } catch (PropertyVetoException e1) {
@@ -295,13 +302,12 @@ public class DrawingArea extends JDesktopPane {
               .getRGB()));
       style = mxUtils.setStyle(style, mxConstants.STYLE_FONTFAMILY,
                                kConstants.DEFAULT_FONTFAMILY);
-                           
 
       Object v1 = graph.insertVertex(parent, null, new kCellValue("superstar",
           "VCR"), 20, 20, 80, 30, style);
-      Object v2 = graph.insertVertex(parent, null, new kCellValue("hello",
-      ""), 50, 220, 80, 30, style);
-      
+      Object v2 = graph.insertVertex(parent, null, new kCellValue("hello", ""),
+                                     50, 220, 80, 30, style);
+
       style = "";
       style = mxUtils.setStyle(style, mxConstants.STYLE_STROKECOLOR, Integer
           .toHexString((kConstants.EDGE_STROKE_COLOR).getRGB()));
@@ -309,66 +315,88 @@ public class DrawingArea extends JDesktopPane {
           .toHexString((kConstants.EDGE_FONT_COLOR).getRGB()));
       style = mxUtils.setStyle(style, mxConstants.STYLE_FONTFAMILY,
                                kConstants.DEFAULT_FONTFAMILY);
-                           
 
       graph.insertEdge(parent, null, "happy edge", v1, v2, style);
     } finally {
       graph.getModel().endUpdate();
     }
 
-    graph.getSelectionModel().addListener(mxEvent.CHANGE, new mxIEventListener() {
-      public void invoke(Object sender, mxEventObject evt) {
-        Object[] cells = ((mxGraphSelectionModel) sender).getCells();
-        for (int i = 0; i < cells.length; i++) {
-          
-          //testing for whether cells are locked/lockable...
-//          System.out.println("drawingArea >> graph selection changed: isCellLocked="+graphComponent.getGraph().isCellLocked(cells[i]));
-//          System.out.println("drawingArea >> graph selection changed: isCellLinked="+((kGraph) graphComponent.getGraph()).isCellLinked(cells[i]));
-          System.out.println("drawingArea >> graph selection changed: cellCenter="+graphComponent.getGraph().getView().getState(cells[i]).getCenterX()+","+graphComponent.getGraph().getView().getState(cells[i]).getCenterY());
-          
-          if (cells[i] instanceof mxICell
-              && ((mxICell) cells[i]).getValue() instanceof kCellValue) {
-//            System.out.println("drawingArea >> graph selection changed: "+((kCellValue) ((mxICell) cells[i]).getValue()).toPrettyString());
-//            System.out.println("drawingArea >> graph selection bounsd: "+graphComponent.getGraph().getCellBounds(cells[i]).getRectangle());
-          }
-        }
-      }
-    });
-      
-//      final int TRIANGLE_BASE = 25;
-//      final int TRIANGLE_DEFAULT_HEIGHT = 12;
-//      JPanel triangleFrame = new JPanel() {
-//        protected void paintComponent(Graphics g) {
-//          System.out.println("painting triangle");
-//           g.setColor(Color.cyan);
-//           int[] xs = { 0, 0, TRIANGLE_BASE };
-//           int[] ys = { 0, TRIANGLE_DEFAULT_HEIGHT, TRIANGLE_DEFAULT_HEIGHT };
-//           Polygon triangle = new Polygon(xs, ys, xs.length);
-//           g.fillPolygon(triangle);
-//        }
-//      };
-//      triangleFrame.setOpaque(false);
-//      triangleFrame.setSize(TRIANGLE_BASE, TRIANGLE_DEFAULT_HEIGHT);
-//      triangleFrame.setBorder(null);
-//      triangleFrame.setLocation(150,150);
-//      triangleFrame.setVisible(true);
-//      this.add(triangleFrame);
+    graph.getSelectionModel().addListener(mxEvent.CHANGE,
+                                          new mxIEventListener() {
+                                            public void invoke(Object sender,
+                                                               mxEventObject evt) {
+                                              Object[] cells = ((mxGraphSelectionModel) sender)
+                                                  .getCells();
+                                              for (int i = 0; i < cells.length; i++) {
+
+                                                // testing for whether cells are
+                                                // locked/lockable...
+                                                // System.out.println("drawingArea >> graph selection changed: isCellLocked="+graphComponent.getGraph().isCellLocked(cells[i]));
+                                                // System.out.println("drawingArea >> graph selection changed: isCellLinked="+((kGraph)
+                                                // graphComponent.getGraph()).isCellLinked(cells[i]));
+                                                System.out
+                                                    .println("drawingArea >> graph selection changed: cellCenter="
+                                                             + graphComponent
+                                                                 .getGraph()
+                                                                 .getView()
+                                                                 .getState(
+                                                                           cells[i])
+                                                                 .getCenterX()
+                                                             + ","
+                                                             + graphComponent
+                                                                 .getGraph()
+                                                                 .getView()
+                                                                 .getState(
+                                                                           cells[i])
+                                                                 .getCenterY());
+
+                                                if (cells[i] instanceof mxICell
+                                                    && ((mxICell) cells[i])
+                                                        .getValue() instanceof kCellValue) {
+                                                  // System.out.println("drawingArea >> graph selection changed: "+((kCellValue)
+                                                  // ((mxICell)
+                                                  // cells[i]).getValue()).toPrettyString());
+                                                  // System.out.println("drawingArea >> graph selection bounsd: "+graphComponent.getGraph().getCellBounds(cells[i]).getRectangle());
+                                                }
+                                              }
+                                            }
+                                          });
+
+    // final int TRIANGLE_BASE = 25;
+    // final int TRIANGLE_DEFAULT_HEIGHT = 12;
+    // JPanel triangleFrame = new JPanel() {
+    // protected void paintComponent(Graphics g) {
+    // System.out.println("painting triangle");
+    // g.setColor(Color.cyan);
+    // int[] xs = { 0, 0, TRIANGLE_BASE };
+    // int[] ys = { 0, TRIANGLE_DEFAULT_HEIGHT, TRIANGLE_DEFAULT_HEIGHT };
+    // Polygon triangle = new Polygon(xs, ys, xs.length);
+    // g.fillPolygon(triangle);
+    // }
+    // };
+    // triangleFrame.setOpaque(false);
+    // triangleFrame.setSize(TRIANGLE_BASE, TRIANGLE_DEFAULT_HEIGHT);
+    // triangleFrame.setBorder(null);
+    // triangleFrame.setLocation(150,150);
+    // triangleFrame.setVisible(true);
+    // this.add(triangleFrame);
 
   }
+
   /**
    * @deprecated
    */
   private void helloWorld2() {
 
     mxGraphOutline graphOutline = new mxGraphOutline(graphComponent);
-//    System.out.println("drawingArea >> graphOutline is fit page >> "
-//                       + graphOutline.isFitPage());
+    // System.out.println("drawingArea >> graphOutline is fit page >> "
+    // + graphOutline.isFitPage());
     graphOutline.setFitPage(false);
     graphOutline.setFinderVisible(false);
     JInternalFrame newFrame = new JInternalFrame("tester", true, false, false,
         false);
     newFrame.setSize(100, 50); // graphOutline will fit itself into its
-                               // container...
+    // container...
     newFrame.setLocation(50, 50);
     newFrame.setVisible(true);
     newFrame.getContentPane().add(graphOutline);
@@ -385,35 +413,35 @@ public class DrawingArea extends JDesktopPane {
    */
   private String getToolTipForCell(Object cell) {
     NumberFormat numberFormat = NumberFormat.getInstance();
-  
+
     String tip = "<html>";
     mxGeometry geo = graphComponent.getGraph().getModel().getGeometry(cell);
     mxCellState state = graphComponent.getGraph().getView().getState(cell);
-  
+
     if (graphComponent.getGraph().getModel().isEdge(cell)) {
       tip += "points={";
-  
+
       if (geo != null) {
         List<mxPoint> points = geo.getPoints();
-  
+
         if (points != null) {
           Iterator<mxPoint> it = points.iterator();
-  
+
           while (it.hasNext()) {
             mxPoint point = it.next();
             tip += "[x=" + numberFormat.format(point.getX()) + ",y="
                    + numberFormat.format(point.getY()) + "],";
           }
-  
+
           tip = tip.substring(0, tip.length() - 1);
         }
       }
-  
+
       tip += "}<br>";
       tip += "absPoints={";
-  
+
       if (state != null) {
-  
+
         for (int i = 0; i < state.getAbsolutePointCount(); i++) {
           mxPoint point = state.getAbsolutePoint(i);
           tip += "[x=" + numberFormat.format(point.getX()) + ",y="
@@ -421,23 +449,23 @@ public class DrawingArea extends JDesktopPane {
         }
         tip = tip.substring(0, tip.length() - 1);
         tip += "style=[" + state.getStyle() + "]";
-  
+
       }
-  
+
       tip += "}";
     } else {
       tip += "geo=[";
-  
+
       if (geo != null) {
         tip += "x=" + numberFormat.format(geo.getX()) + ",y="
                + numberFormat.format(geo.getY()) + ",width="
                + numberFormat.format(geo.getWidth()) + ",height="
                + numberFormat.format(geo.getHeight());
       }
-  
+
       tip += "]<br>";
       tip += "state=[";
-  
+
       if (state != null) {
         tip += "x=" + numberFormat.format(state.getX()) + ",y="
                + numberFormat.format(state.getY()) + ",width="
@@ -445,19 +473,19 @@ public class DrawingArea extends JDesktopPane {
                + numberFormat.format(state.getHeight()) + ", style="
                + state.getStyle();
       }
-  
+
       tip += "]";
     }
-  
+
     mxPoint trans = graphComponent.getGraph().getView().getTranslate();
-  
+
     tip += "<br>scale="
-           + numberFormat.format(graphComponent.getGraph().getView()
-               .getScale()) + ", translate=[x="
-           + numberFormat.format(trans.getX()) + ",y="
+           + numberFormat
+               .format(graphComponent.getGraph().getView().getScale())
+           + ", translate=[x=" + numberFormat.format(trans.getX()) + ",y="
            + numberFormat.format(trans.getY()) + "]";
     tip += "</html>";
-  
+
     System.out.println(tip);
     return tip;
   }
@@ -466,16 +494,16 @@ public class DrawingArea extends JDesktopPane {
     return graphComponent;
   }
 
-
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
   /*
    * Tool handling
    */
-  
+
   /**
-   * Returns the current state of the color selection; used by ShapeToolband
-   * to determine what cell style to create
+   * Returns the current state of the color selection; used by ShapeToolband to
+   * determine what cell style to create
+   * 
    * @return
    */
   public String getCurrentFillColorKey() {
@@ -484,12 +512,13 @@ public class DrawingArea extends JDesktopPane {
 
   /**
    * Used only internally, so technically an unnecessary method.
+   * 
    * @deprecated
    */
   protected void setCurrentFillColor(String currentFillColor) {
     this.currentFillColor = currentFillColor;
   }
-  
+
   /**
    * Fires TOOL_BEGIN event, sets the cursor, and enables toolband mouse drawing
    * instead of rubberband selection.
@@ -506,33 +535,43 @@ public class DrawingArea extends JDesktopPane {
     graphComponent.getGraphHandler().setMoveEnabled(false);
     graphComponent.getGraphHandler().setSelectEnabled(false);
 
-    // Notes on: cursor setting:
-    // turns out we can't set the cursor here because it gets overridden
-    // by graphControl's mouse listeners after the 2nd time
-    // but we still need to do this to cover the first time we want to
-    // change the cursor. Why? Dun ask me. @author achang
-    setCursor(TOOL_CURSOR);
-    graphComponent.getGraphControl().setCursor(TOOL_CURSOR);
     toolMode = toolName;
 
     if (kUtils.arrayLinearSearch(kConstants.SHAPE_KEYS, toolName) >= 0
         || toolName.equals(kConstants.SHAPE_TEXT))
+    {
+      // Notes on Cursor Setting:
+      // turns out we can't only set the cursor here because it gets overridden
+      // by graphControl's mouse listeners after the 2nd time called
+      // but we still need to do this to cover the first time we want to
+      // change the cursor. Why? Dun ask me. @author achang
+      setCursor(TOOL_CURSOR);
+      graphComponent.getGraphControl().setCursor(TOOL_CURSOR);
       shapeToolband.setEnabled(true);
+    }
     else if (kUtils.arrayLinearSearch(kConstants.CONNECTOR_KEYS, toolName) >= 0)
+    {
+      // see notes on cursor setting
+      setCursor(TOOL_CURSOR);
+      graphComponent.getGraphControl().setCursor(TOOL_CURSOR);
       connectorToolband.setEnabled(true);
+    }
     else {
       // update the FillColor
       setCurrentFillColor(toolName);
       System.out.println("currentFillColor = " + currentFillColor);
+      // see notes on cursor setting
+      setCursor(PAINT_CURSOR);
+      graphComponent.getGraphControl().setCursor(PAINT_CURSOR);
       colorToolband.setEnabled(true);
     }
 
   }
 
   /**
-   * Fires TOOL_END event, sets all mouse event handling back to normal,
-   * and reports which tool just ended, as well as whether the tool ended because
-   * it was canceled or because the job completed
+   * Fires TOOL_END event, sets all mouse event handling back to normal, and
+   * reports which tool just ended, as well as whether the tool ended because it
+   * was canceled or because the job completed
    */
   public void endToolMode(boolean success) {
     shapeToolband.setEnabled(false);
@@ -546,9 +585,10 @@ public class DrawingArea extends JDesktopPane {
     // reset cursor to default
     setCursor(null);
     graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
-    eventSource.fireEvent(new mxEventObject(kEvent.TOOL_END, "tool", toolMode, "success", (success ? Boolean.TRUE : Boolean.FALSE)));
+    eventSource.fireEvent(new mxEventObject(kEvent.TOOL_END, "tool", toolMode,
+        "success", (success ? Boolean.TRUE : Boolean.FALSE)));
     toolMode = null;
-    System.out.println("ENDtoolmode "+toolMode+" >> success="+success);
+    System.out.println("ENDtoolmode " + toolMode + " >> success=" + success);
   }
 
   /**
@@ -565,20 +605,18 @@ public class DrawingArea extends JDesktopPane {
    * Sets the modified value for the drawarea
    */
   public void setModified(boolean state) {
-//    System.out.println("drawArea >> setModified >> oldVal = " + modified
-//                       + ", newVal = " + state);
+    // System.out.println("drawArea >> setModified >> oldVal = " + modified
+    // + ", newVal = " + state);
     modified = state;
-//    editor.updateTitle();
+    // editor.updateTitle();
   }
 
   public boolean isModified() {
     return modified;
   }
 
-
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
-  
   /*
    * Code window methods
    */
@@ -597,30 +635,28 @@ public class DrawingArea extends JDesktopPane {
   public boolean isCodeWindowsEnabled() {
     return codeWindowsEnabled;
   }
-   
+
   /**
-   * Repaints all currently open code windows.
-   * TODO not super efficient, since we have a way of knowing which cells were changed
-   * and only those code windows need to be repainted, not all...
+   * Repaints all currently open code windows. TODO not super efficient, since
+   * we have a way of knowing which cells were changed and only those code
+   * windows need to be repainted, not all...
    */
   protected void repaintCodeWindows() {
     if (codeWindows != null) {
-//      System.out.println("drawarea >> repainting code windows");
+      // System.out.println("drawarea >> repainting code windows");
       Iterator it = codeWindows.iterator();
-      while (it.hasNext())
-      {
+      while (it.hasNext()) {
         kCodeWindow next = (kCodeWindow) it.next();
         if (next.isVisible())
           next.updateTriangle();
       }
-    }    
+    }
   }
 
   /**
    * Shortcut method to get a cell when given a String id
    */
-  protected Object getCell(String id)
-  {
+  protected Object getCell(String id) {
     return ((mxGraphModel) graphComponent.getGraph().getModel()).getCell(id);
   }
 
@@ -634,7 +670,7 @@ public class DrawingArea extends JDesktopPane {
   protected boolean hasValidCodeMarks(Object cell) {
     if ((cell instanceof mxCell)
         && (((mxCell) cell).getValue() instanceof kCellValue)
-        && (((kCellValue) ((mxCell)cell).getValue()).hasValidCodeMarks()))
+        && (((kCellValue) ((mxCell) cell).getValue()).hasValidCodeMarks()))
       return true;
     else
       return false;
@@ -694,9 +730,10 @@ public class DrawingArea extends JDesktopPane {
    * @param locY
    */
   protected void showCodeWindow(Object cell, int locX, int locY) {
-//    System.out.println("drawarea.showCodeWindow >> id=" + cell.getId() + " val=" + cell.getValue());
+    // System.out.println("drawarea.showCodeWindow >> id=" + cell.getId() +
+    // " val=" + cell.getValue());
     if (hasValidCodeMarks(cell)) {
-//      System.out.println("drawarea.showCodeWindow >> hasValidCodeMarks");
+      // System.out.println("drawarea.showCodeWindow >> hasValidCodeMarks");
       kCodeWindow codewindow = getCodeWindow(((mxICell) cell).getId());
       if (codewindow == null)
         codewindow = addCodeWindow(cell);
@@ -706,7 +743,7 @@ public class DrawingArea extends JDesktopPane {
       codewindow.setVisible(true);
     }
   }
-  
+
   /**
    * Updates the content of the code window textarea to match the content of the
    * active sketch code regardless of whether the code window is currently
@@ -717,17 +754,19 @@ public class DrawingArea extends JDesktopPane {
   protected void refreshCodeWindowContent(Object cell) {
     if (((mxICell) cell).getValue() instanceof kCellValue) {
       kCellValue val = (kCellValue) ((mxICell) cell).getValue();
-//      System.out.println("drawarea.refreshCodeWindowContent >> id=" + cell.getId() + " val=" + cell.getValue());
+      // System.out.println("drawarea.refreshCodeWindowContent >> id=" +
+      // cell.getId() + " val=" + cell.getValue());
       try {
         String content = editor.getSketch().getCode(val.getCodeIndex())
             .getDocument().getText(val.getStartMark(),
                                    val.getStopMark() - val.getStartMark());
-//        System.out.println("drawarea.refreshCodeWindowContent >> cw="+getCodeWindow(cell).getId()+" textarea="+getCodeWindow(cell).getTextArea().getClass().getName() + '@' + Integer.toHexString(hashCode()));
+        // System.out.println("drawarea.refreshCodeWindowContent >> cw="+getCodeWindow(cell).getId()+" textarea="+getCodeWindow(cell).getTextArea().getClass().getName()
+        // + '@' + Integer.toHexString(hashCode()));
         kCodeWindow cw = getCodeWindow(cell);
         if (cw != null)
           cw.getTextArea().setText(content);
       } catch (BadLocationException bl) {
-//        System.err.println("drawarea.refreshCodeWindowContent error with cell "+val.toPrettyString());
+        // System.err.println("drawarea.refreshCodeWindowContent error with cell "+val.toPrettyString());
         bl.printStackTrace();
       }
     }
@@ -739,9 +778,10 @@ public class DrawingArea extends JDesktopPane {
    * @param cell
    */
   protected void hideCodeWindow(Object cell) {
-//    System.out.println("drawarea >> hideCodeWindow id="+cell.getId()+" val=" + cell.getValue());
+    // System.out.println("drawarea >> hideCodeWindow id="+cell.getId()+" val="
+    // + cell.getValue());
     if (hasValidCodeMarks(cell)) {
-//      System.out.println("drawarea >> hideCodeWindow >> hasValidCodeMarks");
+      // System.out.println("drawarea >> hideCodeWindow >> hasValidCodeMarks");
       kCodeWindow codewindow = getCodeWindow(((mxICell) cell).getId());
       if (codewindow != null)
         codewindow.setVisible(false);
@@ -756,26 +796,30 @@ public class DrawingArea extends JDesktopPane {
    */
   protected kCodeWindow addCodeWindow(Object cell) {
     kCodeWindow newWindow = new kCodeWindow(((mxICell) cell), this);
-//    System.out.println("drawarea >> addCodeWindow id="+cell.getId()+" val="+cell.getValue()+" textarea="+newWindow.getTextArea().getClass().getName() + '@' + Integer.toHexString(hashCode()));
+    // System.out.println("drawarea >> addCodeWindow id="+cell.getId()+" val="+cell.getValue()+" textarea="+newWindow.getTextArea().getClass().getName()
+    // + '@' + Integer.toHexString(hashCode()));
     codeWindows.add(newWindow);
-    newWindow.getTextArea().getDocument().addDocumentListener(codeWindowDocListener);
+    newWindow.getTextArea().getDocument()
+        .addDocumentListener(codeWindowDocListener);
     return newWindow;
   }
-  
+
   /**
-   * Given a swing document, this method returns the code window in which 
-   * the document is contained, if said code window exists and is open.
-   * It does a linear search, and returns null if not found.
+   * Given a swing document, this method returns the code window in which the
+   * document is contained, if said code window exists and is open. It does a
+   * linear search, and returns null if not found.
+   * 
    * @param document
    * @return
    */
-  protected kCodeWindow getCodeWindowOfDocument(javax.swing.text.Document document) {
+  protected kCodeWindow getCodeWindowOfDocument(
+                                                javax.swing.text.Document document) {
     if (codeWindows != null) {
       Iterator it = codeWindows.iterator();
       while (it.hasNext()) // System.out.println(it.next());
       {
         kCodeWindow next = (kCodeWindow) it.next();
-        if (next.getTextArea().getDocument() == document && next.isVisible()) 
+        if (next.getTextArea().getDocument() == document && next.isVisible())
           return next;
       }
     }
@@ -789,7 +833,7 @@ public class DrawingArea extends JDesktopPane {
    */
   protected boolean isCodeWindowOpen(Object cell) {
     if (hasValidCodeMarks(cell)) {
-//      System.out.println("drawingArea >> isCodeWindowOpen >> hasValidCodeMarks");
+      // System.out.println("drawingArea >> isCodeWindowOpen >> hasValidCodeMarks");
       kCodeWindow codewindow = getCodeWindow(((mxICell) cell).getId());
       if (codewindow != null)
         return codewindow.isVisible();
@@ -809,15 +853,14 @@ public class DrawingArea extends JDesktopPane {
     }
     return false;
   }
-  
+
   /**
    * Returns if any of the cells' code window exists and is open
    */
   public boolean isCodeWindowOpenOnAny() {
     if (codeWindowsEnabled) {
       Iterator it = codeWindows.iterator();
-      while (it.hasNext())
-      {
+      while (it.hasNext()) {
         kCodeWindow next = (kCodeWindow) it.next();
         if (next.isVisible())
           return true;
@@ -825,10 +868,10 @@ public class DrawingArea extends JDesktopPane {
     }
     return false;
   }
-  
+
   /**
-   * Returns if of the selected cells have valid code marks and therefore
-   * may have code windows
+   * Returns if of the selected cells have valid code marks and therefore may
+   * have code windows
    */
   public boolean isCodeWindowValidOnSelected() {
     if (codeWindowsEnabled) {
@@ -861,9 +904,10 @@ public class DrawingArea extends JDesktopPane {
         hideCodeWindow(selected[i]);
     }
   }
-  
+
   /**
    * Returns whether or not the current selection contains an edge
+   * 
    * @return
    */
   public boolean isSelectionContainEdge() {
@@ -890,164 +934,181 @@ public class DrawingArea extends JDesktopPane {
    * and thus update the codeWindowButton's status
    */
   public void fireCodeWindowEvent() {
-    eventSource.fireEvent(new mxEventObject(kEvent.CODE_WINDOW_VISIBILITY_CHANGE));
+    eventSource.fireEvent(new mxEventObject(
+        kEvent.CODE_WINDOW_VISIBILITY_CHANGE));
   }
 
   /**
    * Called by editor to have this drawingArea to find the relevant code
    * window(s) and mirror the given edit.
    * 
-   * General algorithm:
-   * go thru all cells
-   * if hasvalidCodeMarks && same sketch index
-   *    if intersects
-   *      update code marks
-   *    else if later in document than event
-   *      shift code marks
-   *    if either of these cases have have open windows
-   *      refresh code window content
+   * General algorithm: go thru all cells if hasvalidCodeMarks && same sketch
+   * index if intersects update code marks else if later in document than event
+   * shift code marks if either of these cases have have open windows refresh
+   * code window content
    */
   public void mirrorDocEdit(int sketchInd, int sketchOffset, DocumentEvent e,
                             String change) {
     System.out
-    .println("drawarea.mirrorDocEdit >> make sure we received everything sketchInd="
-             + sketchInd+" sketchOffset="+sketchOffset+" event="+e+" change="+change);
-    
+        .println("drawarea.mirrorDocEdit >> make sure we received everything sketchInd="
+                 + sketchInd
+                 + " sketchOffset="
+                 + sketchOffset
+                 + " event="
+                 + e
+                 + " change=" + change);
+
     EventType type = e.getType();
-    
+
     Object[] cells = mxGraphModel.getChildren(graphComponent.getGraph()
         .getModel(), graphComponent.getGraph().getDefaultParent());
-    
+
     for (int i = 0; i < cells.length; i++)
       if (cells[i] instanceof mxICell
           && ((mxICell) cells[i]).getValue() instanceof kCellValue
           && ((kCellValue) ((mxICell) cells[i]).getValue()).hasValidCodeMarks()
           && ((kCellValue) ((mxICell) cells[i]).getValue()).getCodeIndex() == sketchInd
-          && getCodeWindow(cells[i]).getTextArea().getDocument() != e.getDocument()) {
-        
+          && getCodeWindow(cells[i]).getTextArea().getDocument() != e
+              .getDocument()) {
+
         kCellValue val = ((kCellValue) ((mxICell) cells[i]).getValue());
-        
+
         if (type == EventType.INSERT) {
           System.out.println("drawarea.mirrorDocEdit >> type=INSERT");
-          
-          //if the insertion point falls into the range of the cell,
-          //then expand the code mark range to include the edit
-          if ((val.getStartMark() <= sketchOffset) && (val.getStopMark() > sketchOffset)) {
-            val.setStopMark(val.getStopMark()+e.getLength());
+
+          // if the insertion point falls into the range of the cell,
+          // then expand the code mark range to include the edit
+          if ((val.getStartMark() <= sketchOffset)
+              && (val.getStopMark() > sketchOffset)) {
+            val.setStopMark(val.getStopMark() + e.getLength());
             refreshCodeWindowContent(cells[i]);
-            
-          //else if the insertion point is before the cell
-          //shift both code marks to accommodate the extra characters
+
+            // else if the insertion point is before the cell
+            // shift both code marks to accommodate the extra characters
           } else if (val.getStartMark() > sketchOffset) {
             val.shiftCodeMarks(e.getLength());
             refreshCodeWindowContent(cells[i]);
           }
         } else if (type == EventType.REMOVE) {
-          int changeStop = sketchOffset+e.getLength();
-   
-          //if the entire contents of the cell is contained in the
-          //range of edit, disconnect the cell: invalidate its code 
-          //marks and close/delete the code window if there is one
-          if ((val.getStartMark() >= sketchOffset) && (val.getStopMark() <= changeStop)) {
+          int changeStop = sketchOffset + e.getLength();
+
+          // if the entire contents of the cell is contained in the
+          // range of edit, disconnect the cell: invalidate its code
+          // marks and close/delete the code window if there is one
+          if ((val.getStartMark() >= sketchOffset)
+              && (val.getStopMark() <= changeStop)) {
             val.invalidateCodeMarks();
-            //TODO figure out how to repaint just one cell
+            // TODO figure out how to repaint just one cell
             kCodeWindow cw = getCodeWindow(cells[i]);
             if (cw != null) {
               cw.setVisible(false);
               codeWindows.remove(cw);
             }
-          }  
-          //if the latter half of the cell range overlaps with the first
-          //half of the range of edit, truncate the tail cell code mark to
-          //the beginning of range of edit
-          else if ((val.getStartMark() < sketchOffset) && (val.getStopMark() > sketchOffset) && (val.getStopMark() <= changeStop)) {
+          }
+          // if the latter half of the cell range overlaps with the first
+          // half of the range of edit, truncate the tail cell code mark to
+          // the beginning of range of edit
+          else if ((val.getStartMark() < sketchOffset)
+                   && (val.getStopMark() > sketchOffset)
+                   && (val.getStopMark() <= changeStop)) {
             val.setStopMark(sketchOffset);
             refreshCodeWindowContent(cells[i]);
           }
-          //if the first half of the cell range overlaps with the latter
-          //half of the range of edit, trim the front cell code mark to
-          //the end of the range of edit
-          else if ((val.getStartMark() >= sketchOffset) && (val.getStartMark() < changeStop) && (val.getStopMark() > changeStop)) {
-            int newLength = val.getStopMark()-changeStop;
+          // if the first half of the cell range overlaps with the latter
+          // half of the range of edit, trim the front cell code mark to
+          // the end of the range of edit
+          else if ((val.getStartMark() >= sketchOffset)
+                   && (val.getStartMark() < changeStop)
+                   && (val.getStopMark() > changeStop)) {
+            int newLength = val.getStopMark() - changeStop;
             val.setStartMark(sketchOffset);
-            val.setStopMark(sketchOffset+newLength);
+            val.setStopMark(sketchOffset + newLength);
             refreshCodeWindowContent(cells[i]);
           }
-          //if the entire contents of the cell is larger than the range 
-          //of edit at both head and tail, then shorten the code marks with
-          //the corresponding number of characters removed
-          else if ((val.getStartMark() < sketchOffset) && (val.getStopMark() > changeStop)) {
-            val.setStopMark(val.getStopMark()-e.getLength());
+          // if the entire contents of the cell is larger than the range
+          // of edit at both head and tail, then shorten the code marks with
+          // the corresponding number of characters removed
+          else if ((val.getStartMark() < sketchOffset)
+                   && (val.getStopMark() > changeStop)) {
+            val.setStopMark(val.getStopMark() - e.getLength());
             refreshCodeWindowContent(cells[i]);
           }
-          //if the entire contents of the cell is located later in the
-          //document, then shift both code marks forward
+          // if the entire contents of the cell is located later in the
+          // document, then shift both code marks forward
           else if (val.getStartMark() > changeStop) {
-            val.shiftCodeMarks(0-e.getLength());
+            val.shiftCodeMarks(0 - e.getLength());
             refreshCodeWindowContent(cells[i]);
           }
         }
       }
-    
+
   }
-  
+
   /**
-   * Listens for edits inside all code windows. If the source code window has the
-   * UI focus, then this drawArea will fire a kEvent.CODE_WINDOW_DOCUMENT_CHANGE
-   * which will notify the editor to mirror the change in the main textarea.
+   * Listens for edits inside all code windows. If the source code window has
+   * the UI focus, then this drawArea will fire a
+   * kEvent.CODE_WINDOW_DOCUMENT_CHANGE which will notify the editor to mirror
+   * the change in the main textarea.
    */
   public class CodeWindowDocListener implements DocumentListener {
 
     public void insertUpdate(DocumentEvent e) {
-        handleUpdate(e);
+      handleUpdate(e);
     }
-    
+
     public void removeUpdate(DocumentEvent e) {
-        handleUpdate(e);
+      handleUpdate(e);
     }
 
     public void changedUpdate(DocumentEvent e) {
-      //never called by simple text components
-    }  
-    
+      // never called by simple text components
+    }
+
     private void handleUpdate(DocumentEvent e) {
-      javax.swing.text.Document document = (javax.swing.text.Document) e.getDocument();
+      javax.swing.text.Document document = (javax.swing.text.Document) e
+          .getDocument();
       kCodeWindow codeWindow = getCodeWindowOfDocument(document);
       // TODO dunno why but the first time this DocListener is added it
       // executes/handles update, which means it finds a null codeWindow (when
       // initially refreshing content?)
       // System.out.println("drawArea.CodeWindowDocListener >> codeWindow="+codeWindow);
-      
-//      System.out.println("drawarea.handleUpdate >> "+e+" cw.id="+((codeWindow != null)? codeWindow.getId() : codeWindow));
-      
-      if (codeWindow != null && codeWindow.getTextArea().isFocusOwner()) { 
 
-        kCellValue val = (kCellValue) ((mxICell) getCell(codeWindow.getId())).getValue();
+      // System.out.println("drawarea.handleUpdate >> "+e+" cw.id="+((codeWindow
+      // != null)? codeWindow.getId() : codeWindow));
+
+      if (codeWindow != null && codeWindow.getTextArea().isFocusOwner()) {
+
+        kCellValue val = (kCellValue) ((mxICell) getCell(codeWindow.getId()))
+            .getValue();
         int sketchInd = val.getCodeIndex();
         int sketchOffset = val.getStartMark() + e.getOffset();
         String change;
         if (e.getType() == EventType.INSERT)
           try {
             change = document.getText(e.getOffset(), e.getLength());
-//            System.out.println("drawarea.handleUpdate >> string change="+change);
+            // System.out.println("drawarea.handleUpdate >> string change="+change);
           } catch (BadLocationException e1) {
             e1.printStackTrace();
             change = null;
           }
         else
           change = null;
-        
-        //update codemarks here
-        val.setStopMark(val.getStartMark()+document.getLength());
-        
+
+        // update codemarks here
+        val.setStopMark(val.getStartMark() + document.getLength());
+
         System.out
             .println("drawArea.CodeWindowDocListener >> fire kEvent.CODE_WINDOW_DOCUMENT_CHANGE sketchInd="
-                     + sketchInd+" sketchOffset="+sketchOffset+" event="+e+" change="+change);
+                     + sketchInd
+                     + " sketchOffset="
+                     + sketchOffset
+                     + " event="
+                     + e + " change=" + change);
         eventSource.fireEvent(new mxEventObject(
             kEvent.CODE_WINDOW_DOCUMENT_CHANGE, "sketchInd", sketchInd,
             "sketchOffset", sketchOffset, "event", e, "change", change));
       }
-        
+
     }
   }
 
@@ -1078,9 +1139,9 @@ public class DrawingArea extends JDesktopPane {
    * @see com.mxgraph.view.mxGraph#isCellsLocked()
    */
   public void lockSelected() {
-//    System.out.println("drawarea >> locking selected");
+    // System.out.println("drawarea >> locking selected");
     if (lockEnabled) {
-      lockCells(null);
+      lockCells(null, true);
     }
   }
 
@@ -1090,89 +1151,111 @@ public class DrawingArea extends JDesktopPane {
    * @see com.mxgraph.view.mxGraph#isCellsLocked()
    */
   public void unlockSelected() {
-//    System.out.println("drawarea >> UN-locking selected");
+    // System.out.println("drawarea >> UN-locking selected");
     if (lockEnabled) {
-      unlockCells(null);
+      lockCells(null, false);
     }
   }
-  
 
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
   /*
    * Linking business
    */
-  
+
   /**
    * Links the specified cells by setting the code marks and updating the label
    * object, as well as synchronizing the style state to the state of the code
    * marks. If no cells are given, then the selection cells are changed.
    */
   public Object[] linkCells(Object[] cells, int start, int stop, int ind) {
+
+    // System.out.println("drawarea.linkCells >>");
+
     if (cells == null) {
       cells = graphComponent.getGraph().getSelectionCells();
     }
-    
-//    System.out.println("drawarea.linkCells >>");
+
+    graphComponent.getGraph().getModel().beginUpdate();
 
     for (int i = 0; i < cells.length; i++)
       if (cells[i] instanceof mxICell
           && ((mxICell) cells[i]).getValue() instanceof kCellValue) {
 
-        ((kCellValue) ((mxICell) cells[i]).getValue()).setCodeMark(start, stop,
-                                                                   ind);
-        graphComponent.labelChanged(cells[i], ((mxICell) cells[i]).getValue(),
-                                    null);
+        kCellValue old = ((kCellValue) ((mxICell) cells[i]).getValue());
+        kCellValue newVal = new kCellValue(old.getLabel(), old.getNotes(), ind,
+            start, stop);
+        graphComponent.labelChanged(cells[i], newVal, null);
+        /*
+         * use mxValueChange mxStyleChange execute them (I guess we can
+         * completely sidetrack the graphmodel parts although should probably
+         * fire being & end update nonetheless since painting probably depends
+         * on them) and add all these changes to a kUndoableEdit called edit
+         * then fireEvent(new mxEventObject(mxEvent.UNDO, "edit", edit));
+         * 
+         * finally double-check to make sure code windows are being
+         * cleared/deleted in a way that isn't affected, or rather will update
+         * live with undo and redo of this
+         */
+        // I could just put a beginUpdate+endUpdate clause around these to make
+        // them all one big mxUndoableEdit, the only problem is that the name
+        // will be wrong
+        // after each kUndo, gotta repaint the main textarea
+        // TODO should I also fire a kEvent somewhere to indicate that a kEdit
+        // has occurred and the textarea needs to be repainted?
 
-        String value = ((kCellValue) ((mxICell) cells[i]).getValue())
-            .hasValidCodeMarks() ? "true" : "false";
+        String value = newVal.hasValidCodeMarks() ? "true" : "false";
         graphComponent.getGraph().setCellStyles(kConstants.STYLE_LINKED, value,
-                                                new Object[] {cells[i]});
+                                                new Object[] { cells[i] });
       }
+
+    if (graphComponent.getGraph().getModel() instanceof kGraphModel)
+      ((kGraphModel) graphComponent.getGraph().getModel())
+          .endUpdate("code-visual link");
+    // ^---- I guess this name works for both linking and unlinking
 
     return cells;
   }
-  
+
   /**
    * Disconnects the link of the given cells by using linkCells to set all code
    * marks to invalid marks.
+   * 
    * @param cells
    * @return
    */
   public Object[] unlinkCells(Object[] cells) {
-//    System.out.println("drawarea.unlinkCells >>");
+    // System.out.println("drawarea.unlinkCells >>");
     return linkCells(cells, -1, -1, -1);
   }
-  
+
   /**
-   * "Locks" given cells by setting their styles to locked, which will draw them
-   * in that way. Based on the implementation in mxGraph.setCellStyles, if no
-   * cells are given, then the selection cells are changed.
+   * Locks or unlocks given cells by setting their styles, which will draw them
+   * in that way. Based on the implementation in mxGraph.setCellStyles; i.e. if
+   * no cells are given, then the selection cells are changed.
    * 
    * @param cells
+   * @param lock
+   *          : set to true to lock the cells, false to unlock
    * @return
    */
-  public Object[] lockCells(Object[] cells) {
-    System.out.println("drawarea.lockCells >>");
-    return graphComponent.getGraph().setCellStyles(kConstants.STYLE_LOCKED,
-                                                   "true", cells);
+  protected Object[] lockCells(Object[] cells, boolean lock) {
+
+    System.out.println("drawarea.lockCells "+lock+" >>");
+    
+    graphComponent.getGraph().getModel().beginUpdate();
+
+    Object[] result = graphComponent.getGraph()
+        .setCellStyles(kConstants.STYLE_LOCKED, (lock) ? "true" : "false",
+                       cells);
+
+    if (graphComponent.getGraph().getModel() instanceof kGraphModel)
+      ((kGraphModel) graphComponent.getGraph().getModel())
+          .endUpdate("drawing lock");
+
+    return result;
   }
-  
-  /**
-   * "Locks" given cells by setting their locked styles to false, which will
-   * draw them in that way. Based on the implementation in
-   * mxGraph.setCellStyles, if no cells are given, then the selection cells are
-   * changed.
-   * 
-   * @param cells
-   * @return
-   */
-  public Object[] unlockCells(Object[] cells) {
-    System.out.println("drawarea.unlockCells >>");
-    return graphComponent.getGraph().setCellStyles(kConstants.STYLE_LOCKED,
-                                                   "false", cells);
-  }
-  
+
   /**
    * Returns whether or not any of the selected cells is connected to code
    */
@@ -1183,7 +1266,7 @@ public class DrawingArea extends JDesktopPane {
         return true;
     return false;
   }
-  
+
   /**
    * Selects all cells that have codemarks that intersect with the specified
    * code range of the given code index.
@@ -1191,50 +1274,51 @@ public class DrawingArea extends JDesktopPane {
   public void selectCellsIntersectCode(int start, int stop) {
     int ind = editor.getSketch().getCurrentCodeIndex();
     graphComponent.getGraph().getSelectionModel().clear();
-    graphComponent.getGraph().getSelectionModel().setCells(getCellsIntersectCode(start,stop,ind));
-    
-//    if (graphComponent.getGraph().getSelectionCount()>0)
-//    System.out
-//    .println("drawarea >> selectCellsIntersectCode selection.length="
-//             + graphComponent.getGraph().getSelectionCount()+" val="+((kCellValue) ((mxICell) graphComponent.getGraph().getSelectionCell()).getValue()).toPrettyString());
+    graphComponent.getGraph().getSelectionModel()
+        .setCells(getCellsIntersectCode(start, stop, ind));
+
+    // if (graphComponent.getGraph().getSelectionCount()>0)
+    // System.out
+    // .println("drawarea >> selectCellsIntersectCode selection.length="
+    // + graphComponent.getGraph().getSelectionCount()+" val="+((kCellValue)
+    // ((mxICell)
+    // graphComponent.getGraph().getSelectionCell()).getValue()).toPrettyString());
   }
 
   /**
    * Selects all cells that have codemarks that intersect with the specified
-   * code range of the given code index.
-   * This method assumes that parameters start is always < stop
+   * code range of the given code index. This method assumes that parameters
+   * start is always < stop
    */
   protected Object[] getCellsIntersectCode(int start, int stop, int ind) {
-    
-    //get all cells of the model
+
+    // get all cells of the model
     Object[] cells = mxGraphModel.getChildren(graphComponent.getGraph()
         .getModel(), graphComponent.getGraph().getDefaultParent());
     ArrayList<Object> result = new ArrayList<Object>();
 
-    //add valid & intersecting cells to result bag
+    // add valid & intersecting cells to result bag
     for (int i = 0; i < cells.length; i++)
       if (cells[i] instanceof mxICell
-          && ((mxICell) cells[i]).getValue() instanceof kCellValue)
-      {
+          && ((mxICell) cells[i]).getValue() instanceof kCellValue) {
         kCellValue val = ((kCellValue) ((mxICell) cells[i]).getValue());
         if (val.hasValidCodeMarks()
             && val.getCodeIndex() == ind
             && ((start > val.getStartMark() && start < val.getStopMark())
                 || (stop > val.getStartMark() && stop < val.getStopMark())
-                || (start <= val.getStartMark() && stop >= val.getStopMark())
-                || (start > val.getStartMark() && stop < val.getStopMark())))
+                || (start <= val.getStartMark() && stop >= val.getStopMark()) || (start > val
+                .getStartMark() && stop < val.getStopMark())))
           result.add(cells[i]);
       }
-    
-//    System.out.println("drawarea >> getCellsIntersectCode start="+start+" stop="+stop +" result.count="+result.size());
-    
+
+    // System.out.println("drawarea >> getCellsIntersectCode start="+start+" stop="+stop
+    // +" result.count="+result.size());
 
     return result.toArray();
   }
-  
 
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  
+
   /**
    * Return the fill colors of the cells associated with the code specified by
    * the given code marks, used by the kTextAreaPainter for the line marker
@@ -1242,24 +1326,25 @@ public class DrawingArea extends JDesktopPane {
   public Object[] getColorsIntersectCode(int start, int stop) {
     ArrayList<Color> result = new ArrayList<Color>();
     int ind = editor.getSketch().getCurrentCodeIndex();
-    Object[] cells = getCellsIntersectCode(start,stop,ind);
+    Object[] cells = getCellsIntersectCode(start, stop, ind);
     for (int i = 0; i < cells.length; i++) {
 
-      mxCellState state = graphComponent.getGraph().getView().getState(cells[i]);
-//      System.out.println("     "+mxUtils.getColor(state.getStyle(),mxConstants.STYLE_FILLCOLOR));
-      result.add(mxUtils.getColor(state.getStyle(),mxConstants.STYLE_FILLCOLOR));
+      mxCellState state = graphComponent.getGraph().getView()
+          .getState(cells[i]);
+      // System.out.println("     "+mxUtils.getColor(state.getStyle(),mxConstants.STYLE_FILLCOLOR));
+      result.add(mxUtils
+          .getColor(state.getStyle(), mxConstants.STYLE_FILLCOLOR));
     }
-    
-//    System.out
-//    .println("drawarea >> getColorsIntersectCode cells.length="
-//             + result.size());
+
+    // System.out
+    // .println("drawarea >> getColorsIntersectCode cells.length="
+    // + result.size());
     return result.toArray();
-    
+
   }
-  
 
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  
+
   /*
    * Redirected to event source
    */
@@ -1308,13 +1393,12 @@ public class DrawingArea extends JDesktopPane {
     eventSource.removeListener(listener, eventName);
   }
 
-
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
   /*
    * Tool handling classes
    */
-  
+
   /**
    * This class handles drawing shapes and connectors according to
    * mouse-specified position and dimensions. It inherits from mxRubberband for
@@ -1330,6 +1414,7 @@ public class DrawingArea extends JDesktopPane {
      * Reference to the enclosing drawing component.
      */
     DrawingArea drawingArea;
+
     Stroke borderStroke;
 
     /**
@@ -1347,12 +1432,10 @@ public class DrawingArea extends JDesktopPane {
       fillColor = kConstants.SHAPE_PREVIEW_FILL_COLOR; // half-transparent gray
       borderStroke = kConstants.PREVIEW_STROKE;
     }
-    
-    public void paintRubberband(Graphics g)
-    {
+
+    public void paintRubberband(Graphics g) {
       if (first != null && bounds != null
-          && graphComponent.isSignificant(bounds.width, bounds.height))
-      {
+          && graphComponent.isSignificant(bounds.width, bounds.height)) {
         Rectangle rect = new Rectangle(bounds);
         g.setColor(fillColor);
         mxUtils.fillClippedRect(g, rect.x, rect.y, rect.width, rect.height);
@@ -1367,10 +1450,7 @@ public class DrawingArea extends JDesktopPane {
     // TODO minor: implement shiftkey = square boundary
 
     /**
-     * TODO we can tell graphcomponent to set its cursor in beginToolMode (and
-     * reset it in endToolMode)
-     * 
-     * Overriding mouseMoved to ensure we have the right cursor.
+     * Overriding mouseMoved to ensure we always have the right cursor.
      * 
      * @see com.mxgraph.swing.handler.mxRubberband#mouseMoved(java.awt.event.MouseEvent)
      */
@@ -1396,18 +1476,19 @@ public class DrawingArea extends JDesktopPane {
     }
 
     public void mouseReleased(MouseEvent e) {
-//      Rectangle rect = bounds;
+      // Rectangle rect = bounds;
       // super.reset(); //task performed later with this.reset()
       boolean success = false;
       boolean openCellEditor = false;
-      
+
       Rectangle rect = new Rectangle();
-      
+
       if (first != null) {
-        rect.setLocation(((kGraphComponent) graphComponent).getPointForPoint(first).getPoint());
+        rect.setLocation(((kGraphComponent) graphComponent)
+            .getPointForPoint(first).getPoint());
         rect.add(graphComponent.getPointForEvent(e).getPoint());
       }
-      
+
       if (!e.isConsumed() && rect != null && drawingArea.getToolMode() != null
           && graphComponent.isSignificant(rect.width, rect.height)) {
         // System.out.println("is shapetoolband.mouseReleased doing anything?");
@@ -1425,8 +1506,11 @@ public class DrawingArea extends JDesktopPane {
             .toHexString(kUtils
                 .getFontColorFromKey(drawingArea.getCurrentFillColorKey())
                 .getRGB()));
-       
-        //TODO refactor out all this style setting to make my life easier to find
+        style = mxUtils.setStyle(style, mxConstants.STYLE_FONTFAMILY,
+                                 kConstants.DEFAULT_FONTFAMILY);
+
+        // TODO refactor out all this style setting to make my life easier to
+        // find
         if (toolMode.equals(kConstants.SHAPE_KEYS[1])) {
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
                                    mxConstants.SHAPE_ELLIPSE);
@@ -1446,30 +1530,19 @@ public class DrawingArea extends JDesktopPane {
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
                                    kConstants.SHAPE_PERSON);
         } else if (toolMode.equals(kConstants.SHAPE_TEXT)) {
-          // this works because the canvas will draw nothing but the label if we
-          // set style=junk
-          // note this also overrides the earlier assignment of colors
-//          style = kConstants.SHAPE_TEXT;
           style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
                                    kConstants.SHAPE_TEXT);
           style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
               .toHexString(kConstants.SHAPE_TEXT_FONT_COLOR.getRGB()));
           openCellEditor = true;
-        } else if (!toolMode.equals(kConstants.SHAPE_KEYS[0])) // no style should
-                                                               // mean rectangles
+        } else if (!toolMode.equals(kConstants.SHAPE_KEYS[0])) // no style
+                                                               // indicates rectangles
+
         {
           System.err
               .println("Ut oh! You managed to select a tool that doesn't exist! Please report this bug: class=ShapeToolband, toolMode="
                        + toolMode);
         }
-        
-        // set font styles here so we include text areas
-        style = mxUtils.setStyle(style, mxConstants.STYLE_FONTFAMILY,
-                                 kConstants.DEFAULT_FONTFAMILY);
-        // style = mxUtils.setStyle(style, mxConstants.STYLE_ALIGN,
-        // mxConstants.ALIGN_LEFT);
-//        style = mxUtils.setStyle(style, mxConstants.STYLE_OVERFLOW,
-//                                 "fill");
 
         // ----------------
         graphComponent.getGraph()
@@ -1479,27 +1552,19 @@ public class DrawingArea extends JDesktopPane {
                                                 rect.x, rect.y, rect.width,
                                                 rect.height, style));
         if (openCellEditor)
-          graphComponent.startEditingAtCell(graphComponent.getGraph().getSelectionCell());
+          graphComponent.startEditingAtCell(graphComponent.getGraph()
+              .getSelectionCell());
         success = true;
         // ----------------
-    
+
         e.consume();
 
         // reset and stop editing when done
         super.reset();
-//        graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
+//         graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
         drawingArea.endToolMode(success);
       }
     }
-
-//    /**
-//     * the superclass's KeyListener handles escape keystrokes and performs this
-//     */
-//    public void reset() {
-//      super.reset();
-//      graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
-//      drawingArea.endToolMode(false);
-//    }
 
   }
 
@@ -1509,7 +1574,7 @@ public class DrawingArea extends JDesktopPane {
     /**
      * Reference to the enclosing drawing component.
      */
-    DrawingArea drawingArea;
+    DrawingArea drawarea;
 
     /**
      * Reference to the enclosing graph container.
@@ -1520,12 +1585,12 @@ public class DrawingArea extends JDesktopPane {
      * Specifies if the handler is enabled.
      */
     protected boolean enabled = true;
-    
+
     /**
      * A cell marker to highlight then mouseOver cells
      */
     protected mxCellMarker marker;
-    
+
     protected Cursor paintCursor;
 
     /**
@@ -1535,29 +1600,22 @@ public class DrawingArea extends JDesktopPane {
      */
     public ColorToolband(final DrawingArea drawingArea) {
       this.graphComponent = drawingArea.getGraphComponent();
-      this.drawingArea = drawingArea;
+      this.drawarea = drawingArea;
       this.enabled = false;
-      Toolkit toolkit = Toolkit.getDefaultToolkit();
-      Image pb = Base.getThemeImage("paintbucket_cursor.png", drawingArea);
-      paintCursor = toolkit.createCustomCursor(pb, new Point(15,11), "paintCursor");
-      System.out.println("toolkit.bestcursorsize="+toolkit.getBestCursorSize(pb.getWidth(null), pb.getHeight(null)));
-      
+
       marker = new mxCellMarker(drawingArea.getGraphComponent()) {
         /**
-         * Don't mark edges or textareas because we don't want to allow coloring of either
-         * This returns null if cell is not found or cell is an edge.
+         * Don't mark edges or textareas because we don't want to allow coloring
+         * of either This returns null if cell is not found or cell is an edge.
          */
-        protected Object getCell(MouseEvent e)
-        {
-          mxICell cell = (mxICell) graphComponent.getCellAt(e.getX(), e.getY(),
-              swimlaneContentEnabled);
-          return ((cell != null) ? 
-                     ((!cell.isEdge() 
-                         && graphComponent.getGraph() instanceof kGraph 
-                         && !((kGraph) graphComponent.getGraph()).isTextBoxShape(cell)) ?
-                               cell 
-                               : null)
-                     : null);
+        protected Object getCell(MouseEvent e) {
+          mxICell cell = (mxICell) graphComponent
+              .getCellAt(e.getX(), e.getY(), swimlaneContentEnabled);
+          return ((cell != null) ? ((!cell.isEdge()
+                                     && graphComponent.getGraph() instanceof kGraph && !((kGraph) graphComponent
+                                    .getGraph()).isTextBoxShape(cell)) ? cell
+                                                                      : null)
+                                : null);
         }
       };
       marker.setValidColor(kConstants.DEFAULT_VALID_COLOR);
@@ -1566,15 +1624,6 @@ public class DrawingArea extends JDesktopPane {
       // Install ourselves as a listener
       graphComponent.getGraphControl().addMouseListener(this);
       graphComponent.getGraphControl().addMouseMotionListener(this);
-      // Handle escape keystrokes
-//      graphComponent.addKeyListener(new KeyAdapter() {
-//        public void keyPressed(KeyEvent e) {
-//          if (e.getKeyCode() == KeyEvent.VK_ESCAPE
-//              && graphComponent.isEscapeEnabled()) {
-//            reset();
-//          }
-//        }
-//      });
     }
 
     /**
@@ -1599,7 +1648,7 @@ public class DrawingArea extends JDesktopPane {
      */
     public void mouseMoved(MouseEvent e) {
       if (!e.isConsumed() && isEnabled() && !e.isPopupTrigger()) {
-        graphComponent.getGraphControl().setCursor(paintCursor);
+        graphComponent.getGraphControl().setCursor(drawarea.PAINT_CURSOR);
         marker.process(e);
         e.consume();
       }
@@ -1609,7 +1658,7 @@ public class DrawingArea extends JDesktopPane {
       boolean success = false;
 
       if (!e.isConsumed() && isEnabled() && !e.isPopupTrigger()) {
-        graphComponent.getGraphControl().setCursor(paintCursor);
+        graphComponent.getGraphControl().setCursor(drawarea.PAINT_CURSOR);
         // getting cell from the marker ensures that we don't grab edges
         mxCell cell = (mxCell) ((marker.hasValidState()) ? marker
             .getValidState().getCell() : null);
@@ -1618,24 +1667,25 @@ public class DrawingArea extends JDesktopPane {
           String style = cell.getStyle();
           style = mxUtils.setStyle(style, mxConstants.STYLE_FILLCOLOR, Integer
               .toHexString(kUtils
-                  .getFillColorFromKey(drawingArea.getToolMode()).getRGB()));
+                  .getFillColorFromKey(drawarea.getToolMode()).getRGB()));
           style = mxUtils.setStyle(style, mxConstants.STYLE_STROKECOLOR,
                                    Integer.toHexString(kUtils
                                        .getFillColorFromKey(
-                                                            drawingArea
+                                                            drawarea
                                                                 .getToolMode())
                                        .getRGB()));
           style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
               .toHexString(kUtils
-                  .getFontColorFromKey(drawingArea.getToolMode()).getRGB()));
-          
+                  .getFontColorFromKey(drawarea.getToolMode()).getRGB()));
+
           graph.setCellStyle(style, new Object[] { cell });
-          
-          if (drawingArea.hasValidCodeMarks(cell)) {
+
+          if (drawarea.hasValidCodeMarks(cell)) {
             kCellValue val = (kCellValue) ((mxICell) cell).getValue();
-            drawingArea.editor.repaintLinesOfOffset(val.getStartMark(),val.getStopMark());
+            drawarea.editor.repaintLinesOfOffset(val.getStartMark(), val
+                .getStopMark());
           }
-          
+
           success = true;
         }
         e.consume();
@@ -1643,15 +1693,9 @@ public class DrawingArea extends JDesktopPane {
         // end tool when success done
         marker.reset();
 //        graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
-        drawingArea.endToolMode(success);
+        drawarea.endToolMode(success);
       }
     }
-
-//    public void reset() {
-//      marker.reset();
-//      graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
-//      drawingArea.endToolMode(false);
-//    }
 
     public void mouseDragged(MouseEvent e) {
       // do nothing, but need this stub since we implement MouseMotionListener
@@ -1660,10 +1704,9 @@ public class DrawingArea extends JDesktopPane {
   }
 
   /**
-   * Opportunistically stealing mxConnectionHandler and tweaking it to be
-   * our ConnectorTool -- ideally I'd like one that has functionalities of
-   * both but for now mxConnectionHandler is slightly more sophisticated and
-   * less buggy.
+   * Opportunistically stealing mxConnectionHandler and tweaking it to be our
+   * ConnectorTool -- ideally I'd like one that has functionalities of both but
+   * for now mxConnectionHandler is slightly more sophisticated and less buggy.
    */
   public static class kConnectionHandler extends mxConnectionHandler {
 
@@ -1671,9 +1714,10 @@ public class DrawingArea extends JDesktopPane {
      * Reference to the enclosing drawing component.
      */
     DrawingArea drawingArea;
-    
+
     /**
      * Constructor
+     * 
      * @param drawingArea
      */
     public kConnectionHandler(final DrawingArea drawingArea) {
@@ -1683,39 +1727,39 @@ public class DrawingArea extends JDesktopPane {
       getMarker().setValidColor(kConstants.DEFAULT_VALID_COLOR);
       getMarker().setInvalidColor(kConstants.DEFAULT_INVALID_COLOR);
     }
-    
-    //set marker colors+stroke
-    //click on empty space draws disconnected arrows
-    //reset tool(success=true) when done
-    //reset tool(false) when click popupTrigger || escape
-    
-  /**
-  * PREVIEW is the component that draws the dotted line that 
-  * flies around when the mouse is still dragging. The graphics 
-  * are defined in the paint method.  
-  */
- protected JComponent createPreview() {
-   return new JPanel() {
-     private static final long serialVersionUID = -6401041861368362818L;
 
-     public void paint(Graphics g) {
-       super.paint(g);
-       ((Graphics2D) g).setStroke(kConstants.PREVIEW_STROKE);
+    // set marker colors+stroke
+    // click on empty space draws disconnected arrows
+    // reset tool(success=true) when done
+    // reset tool(false) when click popupTrigger || escape
 
-       if (start != null && current != null) {
-         if (marker.hasValidState() || createTarget
-             || graphComponent.getGraph().isAllowDanglingEdges()) {
-           g.setColor(kConstants.DEFAULT_VALID_COLOR);
-         } else {
-           g.setColor(kConstants.DEFAULT_INVALID_COLOR);
-         }
-         g.drawLine(start.x - getX(), start.y - getY(),
-                    current.x - getX(), current.y - getY());
-       }
-     }
-   };
- }
-    
+    /**
+     * PREVIEW is the component that draws the dotted line that flies around
+     * when the mouse is still dragging. The graphics are defined in the paint
+     * method.
+     */
+    protected JComponent createPreview() {
+      return new JPanel() {
+        private static final long serialVersionUID = -6401041861368362818L;
+
+        public void paint(Graphics g) {
+          super.paint(g);
+          ((Graphics2D) g).setStroke(kConstants.PREVIEW_STROKE);
+
+          if (start != null && current != null) {
+            if (marker.hasValidState() || createTarget
+                || graphComponent.getGraph().isAllowDanglingEdges()) {
+              g.setColor(kConstants.DEFAULT_VALID_COLOR);
+            } else {
+              g.setColor(kConstants.DEFAULT_INVALID_COLOR);
+            }
+            g.drawLine(start.x - getX(), start.y - getY(), current.x - getX(),
+                       current.y - getY());
+          }
+        }
+      };
+    }
+
     /**
      * Creates, inserts and returns a new edge using mxGraph.insertEdge.
      * Modified to take connector style from current toolMode in drawingArea
@@ -1748,31 +1792,18 @@ public class DrawingArea extends JDesktopPane {
           .toHexString((kConstants.EDGE_FONT_COLOR).getRGB()));
       style = mxUtils.setStyle(style, mxConstants.STYLE_FONTFAMILY,
                                kConstants.DEFAULT_FONTFAMILY);
-      
 
       return graphComponent.getGraph().insertEdge(parent, id, value, source,
                                                   target, style);
     }
 
     /**
-     * 
-     */
-//    public void reset()
-//    {
-//      super.reset();
-//      graphComponent.getGraphControl().setCursor(Cursor.getDefaultCursor());
-//      //if success didn't already reset the toolmode first
-//      if (drawingArea.getToolMode() != null)
-//        drawingArea.endToolMode(false);
-//    }
-    /**
      * Override to be able to create edges that start with a dangling point
      * rather than a source cell, by adding the store start point as source
      * point in the new edge's geometry (same way a dangling target point is
      * added as edge end). After everything is done reset drawArea.toolMode.
      */
-    protected void connect(Object source, Object target, MouseEvent e)
-    {
+    protected void connect(Object source, Object target, MouseEvent e) {
       mxGraph graph = graphComponent.getGraph();
       mxIGraphModel model = graph.getModel();
 
@@ -1780,41 +1811,30 @@ public class DrawingArea extends JDesktopPane {
       Object edge = null;
       boolean success = false;
 
-      if (target == null && createTarget)
-      {
+      if (target == null && createTarget) {
         newTarget = createTargetVertex(e, source);
         target = newTarget;
       }
 
-      if (target != null || graph.isAllowDanglingEdges())
-      {
+      if (target != null || graph.isAllowDanglingEdges()) {
         model.beginUpdate();
-        try
-        {
-          Object dropTarget = graph.getDropTarget(
-              new Object[] { newTarget }, e.getPoint(),
-              graphComponent.getCellAt(e.getX(), e.getY()));
+        try {
+          Object dropTarget = graph.getDropTarget(new Object[] { newTarget }, e
+              .getPoint(), graphComponent.getCellAt(e.getX(), e.getY()));
 
-          if (newTarget != null)
-          {
+          if (newTarget != null) {
             // Disables edges as drop targets if the target cell was created
-            if (dropTarget == null
-                || !graph.getModel().isEdge(dropTarget))
-            {
-              mxCellState pstate = graph.getView().getState(
-                  dropTarget);
+            if (dropTarget == null || !graph.getModel().isEdge(dropTarget)) {
+              mxCellState pstate = graph.getView().getState(dropTarget);
 
-              if (pstate != null)
-              {
+              if (pstate != null) {
                 mxGeometry geo = model.getGeometry(newTarget);
 
                 mxPoint origin = pstate.getOrigin();
                 geo.setX(geo.getX() - origin.getX());
                 geo.setY(geo.getY() - origin.getY());
               }
-            }
-            else
-            {
+            } else {
               dropTarget = graph.getDefaultParent();
             }
 
@@ -1823,116 +1843,104 @@ public class DrawingArea extends JDesktopPane {
 
           Object parent = graph.getDefaultParent();
 
-          if (model.getParent(source) == model.getParent(target))
-          {
+          if (model.getParent(source) == model.getParent(target)) {
             parent = model.getParent(source);
           }
 
           edge = insertEdge(parent, null, "", source, target);
           success = true;
 
-          if (edge != null)
-          {
+          if (edge != null) {
             // Makes sure the edge has a non-null, relative geometry
             mxGeometry geo = model.getGeometry(edge);
 
-            if (geo == null)
-            {
+            if (geo == null) {
               geo = new mxGeometry();
               geo.setRelative(true);
 
               model.setGeometry(edge, geo);
             }
-            
-            if (source == null)
-            {
-              mxPoint pt = ((kGraphComponent) graphComponent).getPointForPoint(start);
+
+            if (source == null) {
+              mxPoint pt = ((kGraphComponent) graphComponent)
+                  .getPointForPoint(start);
               geo.setSourcePoint(pt);
             }
-            
-            if (target == null)
-            {
+
+            if (target == null) {
               mxPoint pt = graphComponent.getPointForEvent(e);
               geo.setTerminalPoint(pt, false);
             }
           }
 
-        }
-        finally
-        {
+        } finally {
           model.endUpdate();
         }
       }
 
-      if (select)
-      {
+      if (select) {
         graph.setSelectionCell(edge);
       }
-      
+
       // end tool when success done
       drawingArea.endToolMode(success);
     }
+
     /**
-     * Overriding just to make sure that the cursor is in tool mode (i.e. crosshair)
+     * Overriding just to make sure that the cursor is in tool mode (i.e.
+     * crosshair)
      */
-    public void mouseMoved(MouseEvent e)
-    {
-      if (!e.isConsumed() && graphComponent.isEnabled() && isEnabled())
-      {
+    public void mouseMoved(MouseEvent e) {
+      if (!e.isConsumed() && graphComponent.isEnabled() && isEnabled()) {
         graphComponent.getGraphControl().setCursor(TOOL_CURSOR);
       }
       super.mouseMoved(e);
     }
+
     /**
-     * Override to allow making edges from dangling points as well as source cells
+     * Override to allow making edges from dangling points as well as source
+     * cells
      */
-    public void mousePressed(MouseEvent e)
-    {
-      if (!graphComponent.isForceMarqueeEvent(e) &&
-        !graphComponent.isPanningEvent(e))
-      {
-        if (!e.isConsumed() && !e.isPopupTrigger()) //&& source != null 
+    public void mousePressed(MouseEvent e) {
+      if (!graphComponent.isForceMarqueeEvent(e)
+          && !graphComponent.isPanningEvent(e)) {
+        if (!e.isConsumed() && !e.isPopupTrigger()) // && source != null
         {
-            /* 
-             * the following is the original mxgraph implementation
-             * I don't know what it was trying to constrain
-             * but in the event removing it causes bugs later, we'll
-             * keep it here for reference
-             */
-//          if ((isHighlighting() && marker.hasValidState())
-//              || (!isHighlighting() && getBounds().contains(
-//                  e.getPoint())))
+          /*
+           * the following is the original mxgraph implementation I don't know
+           * what it was trying to constrain but just in case removing it causes
+           * bugs later, we'll keep it here for reference
+           */
+          // if ((isHighlighting() && marker.hasValidState())
+          // || (!isHighlighting() && getBounds().contains(
+          // e.getPoint())))
           {
             start = e.getPoint();
             preview.setOpaque(false);
             preview.setVisible(false);
             graphComponent.getGraphControl().add(preview, 0);
             getParent().setComponentZOrder(this, 0);
-            graphComponent.getGraphControl().setCursor(TOOL_CURSOR); //crosshair
+            graphComponent.getGraphControl().setCursor(TOOL_CURSOR); // crosshair
             marker.reset();
             e.consume();
           }
         }
       }
     }
+
     /**
      * Override to allow making edges from dangling points. If source==null it
-     * is still sent to the connect method anyway, and then the bounds are
-     * set the same way the dangling end (i.e. target==null) is set.
+     * is still sent to the connect method anyway, and then the bounds are set
+     * the same way the dangling end (i.e. target==null) is set.
      */
-    public void mouseReleased(MouseEvent e)
-    {
-      if (!e.isConsumed() && isConnecting())
-      {
+    public void mouseReleased(MouseEvent e) {
+      if (!e.isConsumed() && isConnecting()) {
         // Does not connect if there is an error
-        if (error != null)
-        {
-          if (error.length() > 0)
-          {
+        if (error != null) {
+          if (error.length() > 0) {
             JOptionPane.showMessageDialog(graphComponent, error);
           }
-        }
-        else //if (source != null)
+        } else // if (source != null)
         {
           Object src = (source != null) ? source.getCell() : null;
           Object trg = (marker.hasValidState()) ? marker.getValidState()
@@ -1941,14 +1949,13 @@ public class DrawingArea extends JDesktopPane {
         }
 
         e.consume();
-      }
-      else if (source != null && !e.isPopupTrigger())
-      {
+      } else if (source != null && !e.isPopupTrigger()) {
         graphComponent.selectCellForEvent(source.getCell(), e);
       }
 
       if (isEnabled())
-        reset(); //only do this if enabled otherwise it will fire a TOOL_END event
+        reset(); // only do this if enabled otherwise it will fire a TOOL_END
+                 // event
     }
 
     /**
@@ -1956,15 +1963,13 @@ public class DrawingArea extends JDesktopPane {
      * source==null. SourcePerimeter point calculations are only performed if
      * source==null and ignored if source is a dangling point.
      */
-    public void mouseDragged(MouseEvent e)
-    {
-      if (!e.isConsumed() && start != null) //&& source != null 
+    public void mouseDragged(MouseEvent e) {
+      if (!e.isConsumed() && start != null) // && source != null
       {
         int dx = e.getX() - start.x;
         int dy = e.getY() - start.y;
 
-        if (!preview.isVisible() && graphComponent.isSignificant(dx, dy))
-        {
+        if (!preview.isVisible() && graphComponent.isSignificant(dx, dy)) {
           preview.setVisible(true);
           marker.reset();
         }
@@ -1975,20 +1980,19 @@ public class DrawingArea extends JDesktopPane {
         double scale = view.getScale();
         mxPoint trans = view.getTranslate();
 
-        current.x = (int) Math.round((graph.snap(current.x / scale
-            - trans.getX()) + trans.getX())
-            * scale);
-        current.y = (int) Math.round((graph.snap(current.y / scale
-            - trans.getY()) + trans.getY())
-            * scale);
+        current.x = (int) Math
+            .round((graph.snap(current.x / scale - trans.getX()) + trans.getX())
+                   * scale);
+        current.y = (int) Math
+            .round((graph.snap(current.y / scale - trans.getY()) + trans.getY())
+                   * scale);
 
         marker.process(e);
 
         // Checks if a color was used to highlight the state
         mxCellState state = marker.getValidState();
 
-        if (state != null)
-        {
+        if (state != null) {
           current.x = (int) state.getCenterX();
           current.y = (int) state.getCenterY();
 
@@ -1996,46 +2000,42 @@ public class DrawingArea extends JDesktopPane {
           mxPerimeterFunction targetPerimeter = view
               .getPerimeterFunction(state);
 
-          if (targetPerimeter != null)
-          {
+          if (targetPerimeter != null) {
             mxPoint next;
             if (source != null)
-              next = new mxPoint(source.getCenterX(), source
-                  .getCenterY());
+              next = new mxPoint(source.getCenterX(), source.getCenterY());
             else
               next = new mxPoint(start);
-            
-            mxPoint tmp = targetPerimeter.apply(view
-                .getPerimeterBounds(state, null, false), null,
-                state, false, next);
 
-            if (tmp != null)
-            {
+            mxPoint tmp = targetPerimeter.apply(view.getPerimeterBounds(state,
+                                                                        null,
+                                                                        false),
+                                                null, state, false, next);
+
+            if (tmp != null) {
               current = tmp.getPoint();
             }
           }
         }
-          
+
         if (source != null) {
           // Computes the source perimeter point
           mxPerimeterFunction sourcePerimeter = view
               .getPerimeterFunction(source);
-  
-          if (sourcePerimeter != null)
-          {
-            mxPoint pt = sourcePerimeter.apply(view.getPerimeterBounds(
-                source, null, true), null, source, true, new mxPoint(
-                current));
-  
-            if (pt != null)
-            {
+
+          if (sourcePerimeter != null) {
+            mxPoint pt = sourcePerimeter.apply(view.getPerimeterBounds(source,
+                                                                       null,
+                                                                       true),
+                                               null, source, true, new mxPoint(
+                                                   current));
+
+            if (pt != null) {
               start = pt.getPoint();
             }
-          }
-          else
-          {
-            start = new Point((int) Math.round(source.getCenterX()),
-                (int) Math.round(source.getCenterY()));
+          } else {
+            start = new Point((int) Math.round(source.getCenterX()), (int) Math
+                .round(source.getCenterY()));
           }
         }
 
@@ -2051,11 +2051,11 @@ public class DrawingArea extends JDesktopPane {
         e.consume();
       }
     }
-    
+
   }
 
   public final void setRightClickPopup(JPopupMenu popup) {
-    this.popupMenu = popup;    
+    this.popupMenu = popup;
   }
 
 }

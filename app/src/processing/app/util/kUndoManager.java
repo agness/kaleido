@@ -241,7 +241,12 @@ public class kUndoManager extends mxEventSource {
   public synchronized String getUndoPresentationName() {
       if (canUndo()) {
         Object e = history.get(indexOfNextAdd-1);
-        if (e instanceof mxUndoableEdit)  //case of mxUndoableEdit
+        
+        if (e instanceof kUndoableEdit)  //case of kaleido link edit
+        {
+          return ((kUndoableEdit) e).getUndoPresentationName();
+        }
+        else if (e instanceof mxUndoableEdit)  //case of mxUndoableEdit
         {
           List<mxUndoableChange> changes = ((mxUndoableEdit) e).getChanges();
           String changeDescription = "generic";
@@ -298,7 +303,12 @@ public class kUndoManager extends mxEventSource {
   public synchronized String getRedoPresentationName() {
     if (canRedo()) {
       Object e = history.get(indexOfNextAdd);
-      if (e instanceof mxUndoableEdit)  //case of mxUndoableEdit
+      
+      if (e instanceof kUndoableEdit)  //case of kaleido link edit
+      {
+        return ((kUndoableEdit) e).getRedoPresentationName();
+      }
+      else if (e instanceof mxUndoableEdit)  //case of mxUndoableEdit
       {
         List<mxUndoableChange> changes = ((mxUndoableEdit) e).getChanges();
         String changeDescription = "generic";
