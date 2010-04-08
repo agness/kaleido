@@ -337,10 +337,8 @@ public class kCellEditor extends mxCellEditor {
   public Object getFieldValues(Object cell)
   {
     if (isKCellValue()) {
-      kCellValue val = (kCellValue) ((mxICell) editingCell).getValue();
-      val.setLabel(labelField.getText());
-      val.setNotes(notesField.getText());
-      return val;
+      kCellValue old = (kCellValue) ((mxICell) editingCell).getValue(); 
+      return new kCellValue(labelField.getText(), notesField.getText(), old.getCodeIndex(), old.getStartMark(), old.getStopMark());
     } else {
       return notesField.getText();
     }

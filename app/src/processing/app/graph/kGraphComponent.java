@@ -8,6 +8,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.Stroke;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -20,6 +21,7 @@ import javax.swing.TransferHandler;
 
 import processing.app.Base;
 import processing.app.DrawingArea;
+import processing.app.Editor;
 import processing.app.Theme;
 import processing.app.util.kConstants;
 
@@ -33,6 +35,7 @@ import com.mxgraph.swing.handler.mxEdgeHandler;
 import com.mxgraph.swing.handler.mxElbowEdgeHandler;
 import com.mxgraph.swing.handler.mxGraphHandler;
 import com.mxgraph.swing.handler.mxGraphTransferHandler;
+import com.mxgraph.swing.handler.mxPanningHandler;
 import com.mxgraph.swing.handler.mxVertexHandler;
 import com.mxgraph.swing.view.mxInteractiveCanvas;
 import com.mxgraph.util.mxCellRenderer;
@@ -63,13 +66,12 @@ public class kGraphComponent extends mxGraphComponent {
     //Use Kaleido cell editor
     setCellEditor(new kCellEditor(this));
     
-    //Set the background
+    //Set the background of the view (not to be confused with setBackground() see below)
     getViewport().setBorder(null);
     getViewport().setBackground(kConstants.UI_COLOR_CANVAS);
     setBorder(null);
-    // redundant with setting the viewport background since it's not visible
-    // under an opaque viewport, but just to make sure references
-    setBackground(kConstants.UI_COLOR_CANVAS);
+    //Set the background of the scrollpane, which affects only color of the scroll bars
+    setBackground(kConstants.DRAWAREA_SCROLL_CORNER_COLOR);
     // the following setting doesn't affect the graphComponent, but affects the
     // graphOutline background color; we're using the same color as the
     // background color of inactive buttons
@@ -104,9 +106,11 @@ public class kGraphComponent extends mxGraphComponent {
    */
   public boolean isEditEvent(MouseEvent e)
   {
-//    return (e != null) ? (e.getClickCount() == 1 && getGraph().getSelectionModel().isSelected(getCellAt(e.getX(), e.getY(), false))) : false;
     return false;
   }
+  /**
+   * Defines the mouse event (double-click) to trigger show code window
+   */
   public boolean isCodeWindowEvent(MouseEvent e)
   {
     return (e != null) ? e.getClickCount() == 2 : false;
@@ -121,10 +125,19 @@ public class kGraphComponent extends mxGraphComponent {
    */
   public boolean isConstrainedEvent(MouseEvent event)
   {
-//    System.out.println("testing isConstrainedEvent? returning="+((event != null) ? event.isShiftDown() : false));
+//    System.out.println("testing isConstrainedEvent? returning="+((event != null) ? event.isShiftDown() : false)+" isShiftDown="+event.isShiftDown());
     return (event != null) ? event.isShiftDown() : false;
   }
-  
+  /**
+	 * Modified from original to use cross-platform key mask definitions
+	 * Original: event.isShiftDown() && event.isControlDown()
+	 */
+	public boolean isPanningEvent(MouseEvent event)
+	{
+    return (event != null) ? ((event.getModifiers() & Editor.SHORTCUT_SHIFT_KEY_MASK) == Editor.SHORTCUT_SHIFT_KEY_MASK)
+                          : false;
+	}
+
   /**
    * Overridden to use our custom canvas.
    * @see com.mxgraph.swing.mxGraphComponent#createCanvas

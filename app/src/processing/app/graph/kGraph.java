@@ -30,6 +30,21 @@ import com.mxgraph.view.mxStylesheet;
  * @author achang
  */
 public class kGraph extends mxGraph {
+
+  /**
+   * Returns true if the given cell is selectable. The original mxGraph
+   * implementation returns whether or not the global setting is true. This
+   * Kaleido implementation additionally checks if the cell exists in this
+   * graph.
+   * 
+   * @param cell
+   *          <mxCell> whose selectable state should be returned.
+   * @return Returns true if the given cell is selectable.
+   */
+  public boolean isCellSelectable(Object cell)
+  {
+    return (isCellsSelectable() && getModel().contains(cell));
+  }
   
   /**
    * Returns whether or not the given cell is styled as a text box

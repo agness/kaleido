@@ -103,7 +103,7 @@ public class kConstants
   private static Color UI_COLOR_ACTIVE = new Color(0xffcc00);//p5 yellow highlight
   private static Color UI_COLOR_ROLLOVER = Color.white;
   private static Color UI_COLOR_ACTIVETAB = new Color(0xd3d3d3); //the color of selected text tab, light gray
-  private static Color UI_COLOR_OFFWHITE = new Color(0xeeeeee); //very nearly white
+  private static Color UI_COLOR_SWINGGRAY = new Color(0xe8e8e8); //very nearly white, the color of java swing borders
   private static Color UI_COLOR_BUTTONBAR = new Color(0x686868); //equals Theme.getColor(buttons.bgcolor)
   public static Color UI_COLOR_HEADERBKGD = new Color(0x989898); //equals Theme.getColor(header.bgcolor)
   private static Stroke UI_DOTTED_STROKE = new BasicStroke(1,
@@ -170,12 +170,12 @@ public class kConstants
   /**
    * The uniform font color of all connector labels
    */
-  public static final Color EDGE_FONT_COLOR = UI_COLOR_OFFWHITE;
+  public static final Color EDGE_FONT_COLOR = UI_COLOR_SWINGGRAY;
   
   /**
    * The font color of text areas (should be decided upon depending on color of canvas)
    */
-  public static final Color SHAPE_TEXT_FONT_COLOR = UI_COLOR_OFFWHITE;
+  public static final Color SHAPE_TEXT_FONT_COLOR = UI_COLOR_SWINGGRAY;
   
   /**
    * The color of triangles and text area of code windows (no control over
@@ -193,12 +193,30 @@ public class kConstants
    */
   public static final int OUTLINE_BORDER_WIDTH = 3;
   
+  /**
+   * Color of padding between graph outline image and the component
+   * (i.e. color of container background)
+   */
+  public static final Color OUTLINE_BORDER_COLOR = UI_COLOR_BUTTONFILL;
+  
+  /**
+   * Color of drop shadow of shapes
+   */
   public static final Color SHADOW_COLOR = Color.black;
 
+  /**
+   * Dimensions of drop shadow of shapes
+   */
   public static final int SHADOW_OFFSETX = 3;
 
   public static final int SHADOW_OFFSETY = 4;
 
+  /**
+   * Color of graphComponent "background" that has ramifications
+   * only on the little corner square in between scroll bars
+   */
+  public static final Color DRAWAREA_SCROLL_CORNER_COLOR = UI_COLOR_SWINGGRAY;
+  
   /**
    * Amount of padding between cells dropped into other cells (swimlanes)
    */
@@ -279,6 +297,8 @@ public class kConstants
   public static final Color LINK_MARKER_BACKGROUND_COLOR = Color.white;
 
   public static final int LINK_MARKER_WIDTH = 10;
+
+
 
 
 

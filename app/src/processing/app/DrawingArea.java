@@ -15,6 +15,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
+import java.beans.PropertyVetoException;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -25,12 +26,16 @@ import javax.swing.JDesktopPane;
 import javax.swing.JInternalFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.DocumentEvent.EventType;
 import javax.swing.text.BadLocationException;
 
+import processing.app.Editor.DrawAreaPopup;
 import processing.app.graph.kCellValue;
 import processing.app.graph.kCodeWindow;
 import processing.app.graph.kGraph;
@@ -119,10 +124,17 @@ public class DrawingArea extends JDesktopPane {
    * Code window document listener, used to mirror edits between code windows and main textarea
    */
   CodeWindowDocListener codeWindowDocListener;
+  
+  /**
+   * 
+   * @param editor
+   */
+  JPopupMenu popupMenu;
 
   public DrawingArea(Editor editor) {
     super();
     this.editor = editor;
+    codeWindows = new ArrayList<kCodeWindow>();
     mxGraph graph = new kGraph();
     graph.setEdgeLabelsMovable(false); //vertexLabels are by default not movable
 //    graph.setVertexLabelsMovable(true);//DEBUGGING
@@ -181,8 +193,34 @@ public class DrawingArea extends JDesktopPane {
         }
       }
     });
-    // key listener
-    installEscapeKeyListener();
+    // mouse listener for right-click to open popup menu on the graph component
+    graphComponent.getGraphControl().addMouseListener(new MouseAdapter()
+    {
+      public void mousePressed(MouseEvent e)
+      {
+        // Handles context menu on the Mac where the trigger is on mousepressed
+        mouseReleased(e);
+      }
+      public void mouseReleased(MouseEvent e)
+      {
+        if (e.isPopupTrigger()) { //right-click
+          Point pt = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(),
+              graphComponent);
+          popupMenu.show(graphComponent, pt.x, pt.y);
+        }
+      }
+    });
+    // escape key listener
+    graphComponent.addKeyListener(new KeyAdapter() {
+      public void keyPressed(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_ESCAPE
+            && graphComponent.isEscapeEnabled()) {
+          System.out.println("drawarea >> i hear escape pressed");
+          if (getToolMode() != null)
+            endToolMode(false);
+        }
+      }
+    });
     // part of the system to synchronize codewindows-textarea
     codeWindowDocListener = new CodeWindowDocListener();
     
@@ -217,17 +255,22 @@ public class DrawingArea extends JDesktopPane {
     // compose the swing components
     graphPanel = new JInternalFrame("Graph", false, // resizable
         false, // not closable
-        false, // not maximizable
+        true, // not maximizable
         false); // not iconifiable
     graphPanel.setContentPane(graphComponent);
     graphPanel.pack();
     graphPanel.setVisible(true);
     graphPanel.setLayer(0);
     graphPanel.setBorder(null);
-    graphPanel.setSize(3000, 3000); // TODO: be able to resize with the rest of
-                                    // them
+
     add(graphPanel);
     setVisible(true);
+    setBackground(kConstants.UI_COLOR_CANVAS); //so we don't see ugly residue when resizing
+    try {
+      graphPanel.setMaximum(true);
+    } catch (PropertyVetoException e1) {
+      e1.printStackTrace();
+    }
   }
 
   /**
@@ -447,19 +490,6 @@ public class DrawingArea extends JDesktopPane {
     this.currentFillColor = currentFillColor;
   }
   
-  public void installEscapeKeyListener() {
-    graphComponent.addKeyListener(new KeyAdapter() {
-      public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_ESCAPE
-            && graphComponent.isEscapeEnabled()) {
-          System.out.println("drawarea >> i hear escape pressed");
-          if (getToolMode() != null)
-            endToolMode(false);
-        }
-      }
-    });
-  }
-  
   /**
    * Fires TOOL_BEGIN event, sets the cursor, and enables toolband mouse drawing
    * instead of rubberband selection.
@@ -575,7 +605,7 @@ public class DrawingArea extends JDesktopPane {
    */
   protected void repaintCodeWindows() {
     if (codeWindows != null) {
-      System.out.println("drawarea >> repainting code windows");
+//      System.out.println("drawarea >> repainting code windows");
       Iterator it = codeWindows.iterator();
       while (it.hasNext())
       {
@@ -727,12 +757,6 @@ public class DrawingArea extends JDesktopPane {
   protected kCodeWindow addCodeWindow(Object cell) {
     kCodeWindow newWindow = new kCodeWindow(((mxICell) cell), this);
 //    System.out.println("drawarea >> addCodeWindow id="+cell.getId()+" val="+cell.getValue()+" textarea="+newWindow.getTextArea().getClass().getName() + '@' + Integer.toHexString(hashCode()));
-    
-    if (codeWindows == null) {
-      codeWindows = new ArrayList<kCodeWindow>();
-//      System.out
-//          .println("drawarea >> addCodeWindow >> added new code windows ArrayList");
-    }
     codeWindows.add(newWindow);
     newWindow.getTextArea().getDocument().addDocumentListener(codeWindowDocListener);
     return newWindow;
@@ -774,15 +798,43 @@ public class DrawingArea extends JDesktopPane {
   }
 
   /**
-   * Returns if a given cell's code window exists and is open
-   * 
-   * @return if any code window is open
+   * Returns if any of the selected cells' code window exists and is open
    */
   public boolean isCodeWindowOpenOnSelected() {
     if (codeWindowsEnabled) {
       Object[] selected = graphComponent.getGraph().getSelectionCells();
       for (int i = 0; i < selected.length; i++)
         if (isCodeWindowOpen(selected[i]))
+          return true;
+    }
+    return false;
+  }
+  
+  /**
+   * Returns if any of the cells' code window exists and is open
+   */
+  public boolean isCodeWindowOpenOnAny() {
+    if (codeWindowsEnabled) {
+      Iterator it = codeWindows.iterator();
+      while (it.hasNext())
+      {
+        kCodeWindow next = (kCodeWindow) it.next();
+        if (next.isVisible())
+          return true;
+      }
+    }
+    return false;
+  }
+  
+  /**
+   * Returns if of the selected cells have valid code marks and therefore
+   * may have code windows
+   */
+  public boolean isCodeWindowValidOnSelected() {
+    if (codeWindowsEnabled) {
+      Object[] selected = graphComponent.getGraph().getSelectionCells();
+      for (int i = 0; i < selected.length; i++)
+        if (hasValidCodeMarks(selected[i]))
           return true;
     }
     return false;
@@ -870,7 +922,8 @@ public class DrawingArea extends JDesktopPane {
       if (cells[i] instanceof mxICell
           && ((mxICell) cells[i]).getValue() instanceof kCellValue
           && ((kCellValue) ((mxICell) cells[i]).getValue()).hasValidCodeMarks()
-          && ((kCellValue) ((mxICell) cells[i]).getValue()).getCodeIndex() == sketchInd) {
+          && ((kCellValue) ((mxICell) cells[i]).getValue()).getCodeIndex() == sketchInd
+          && getCodeWindow(cells[i]).getTextArea().getDocument() != e.getDocument()) {
         
         kCellValue val = ((kCellValue) ((mxICell) cells[i]).getValue());
         
@@ -1025,7 +1078,7 @@ public class DrawingArea extends JDesktopPane {
    * @see com.mxgraph.view.mxGraph#isCellsLocked()
    */
   public void lockSelected() {
-    System.out.println("drawarea >> locking selected");
+//    System.out.println("drawarea >> locking selected");
     if (lockEnabled) {
       lockCells(null);
     }
@@ -1037,7 +1090,7 @@ public class DrawingArea extends JDesktopPane {
    * @see com.mxgraph.view.mxGraph#isCellsLocked()
    */
   public void unlockSelected() {
-    System.out.println("drawarea >> UN-locking selected");
+//    System.out.println("drawarea >> UN-locking selected");
     if (lockEnabled) {
       unlockCells(null);
     }
@@ -1060,7 +1113,7 @@ public class DrawingArea extends JDesktopPane {
       cells = graphComponent.getGraph().getSelectionCells();
     }
     
-    System.out.println("drawarea.linkCells >>");
+//    System.out.println("drawarea.linkCells >>");
 
     for (int i = 0; i < cells.length; i++)
       if (cells[i] instanceof mxICell
@@ -1087,7 +1140,7 @@ public class DrawingArea extends JDesktopPane {
    * @return
    */
   public Object[] unlinkCells(Object[] cells) {
-    System.out.println("drawarea.unlinkCells >>");
+//    System.out.println("drawarea.unlinkCells >>");
     return linkCells(cells, -1, -1, -1);
   }
   
@@ -1992,6 +2045,10 @@ public class DrawingArea extends JDesktopPane {
       }
     }
     
+  }
+
+  public final void setRightClickPopup(JPopupMenu popup) {
+    this.popupMenu = popup;    
   }
 
 }

@@ -21,6 +21,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.geom.AffineTransform;
 import java.util.Enumeration;
 import java.util.HashMap;
 
@@ -398,6 +399,54 @@ public class EditorDrawingHeader extends JSplitPane {
       {
         outlineBorder = kConstants.OUTLINE_BORDER_WIDTH;
         return super.updateScaleAndTranslate();
+      }
+      /**
+       * Paints the background.
+       */
+      protected void paintBackground(Graphics g)
+      {
+        if (graphComponent != null)
+        {
+          Graphics2D g2 = (Graphics2D) g;
+          AffineTransform tx = g2.getTransform();
+
+          try
+          {
+            // Draws the background of the outline if a graph exists 
+            g.setColor(kConstants.OUTLINE_BORDER_COLOR); //<---kEdit: color change
+            mxUtils.fillClippedRect(g, 0, 0, getWidth(), getHeight());
+
+            g2.translate(translate.x, translate.y);
+            g2.scale(scale, scale);
+
+//            // Draws the scaled page background //<---kEdit: our page is never visible
+//            if (!graphComponent.isPageVisible())
+//            {
+              g.setColor(kConstants.UI_COLOR_CANVAS); //<---kEdit: color change
+              Dimension size = graphComponent.getGraphControl().getSize();
+
+              // Paints the background of the drawing surface
+              mxUtils.fillClippedRect(g, 0, 0, size.width, size.height);
+              g.setColor(g.getColor().darker().darker());
+              g.drawRect(0, 0, size.width, size.height);
+//            }
+//            else
+//            {
+//              // Paints the page background using the graphics scaling
+//              graphComponent.paintBackgroundPage(g);
+//            }
+          }
+          finally
+          {
+            g2.setTransform(tx);
+          }
+        }
+        else
+        {
+          // Draws the background of the outline if no graph exists 
+          g.setColor(getBackground());
+          mxUtils.fillClippedRect(g, 0, 0, getWidth(), getHeight());
+        }
       }
     };
     graphOutline.setPreferredSize(new Dimension(GRAPH_OUTLINE_WIDTH, HEADER_HEIGHT));

@@ -40,15 +40,35 @@ public class kCellValue implements Serializable {
   /*
    * Constructors
    */
+  /**
+   * Default constructor with null-equivalent values for all members
+   */
   public kCellValue() {
     this("","",-1,-1,-1);
   }
+  /**
+   * 
+   * @param label
+   */
   public kCellValue(String label) {
     this(label,"",-1,-1,-1);
   }
+  /**
+   * 
+   * @param label
+   * @param notes
+   */
   public kCellValue(String label, String notes) {
     this(label, notes,-1,-1,-1);
   }
+  /**
+   * 
+   * @param label
+   * @param notes
+   * @param index
+   * @param start
+   * @param stop
+   */
   public kCellValue(String label, String notes, int index, int start, int stop) {
     this.label = label;
     this.notes = notes;

@@ -22,44 +22,100 @@
 
 package processing.app;
 
-import processing.app.debug.*;
-import processing.app.graph.kCellValue;
-import processing.app.graph.kGraphComponent;
-import processing.app.syntax.*;
-import processing.app.tools.*;
-import processing.app.util.kConstants;
-import processing.app.util.kEvent;
-import processing.app.util.kUtils;
-import processing.core.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Transferable;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ComponentEvent;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.awt.print.PageFormat;
+import java.awt.print.PrinterException;
+import java.awt.print.PrinterJob;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.event.*;
-import java.awt.print.*;
-import java.io.*;
-import java.net.*;
-import java.util.*;
-import java.util.zip.*;
-
-import javax.swing.*;
-import javax.swing.event.*;
+import javax.swing.AbstractAction;
+import javax.swing.Action;
+import javax.swing.Box;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JSplitPane;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
+import javax.swing.TransferHandler;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.UndoableEditEvent;
+import javax.swing.event.UndoableEditListener;
 import javax.swing.event.DocumentEvent.EventType;
-import javax.swing.text.*;
-import javax.swing.undo.*;
+import javax.swing.text.BadLocationException;
+import javax.swing.undo.CannotRedoException;
+import javax.swing.undo.CannotUndoException;
+import javax.swing.undo.CompoundEdit;
+import javax.swing.undo.UndoManager;
+import javax.swing.undo.UndoableEdit;
 
 import org.w3c.dom.Document;
 
+import processing.app.debug.Runner;
+import processing.app.debug.RunnerException;
+import processing.app.debug.RunnerListener;
+import processing.app.graph.kCellValue;
+import processing.app.graph.kGraphComponent;
+import processing.app.syntax.JEditTextArea;
+import processing.app.syntax.PdeKeywords;
+import processing.app.syntax.PdeTextAreaDefaults;
+import processing.app.syntax.SyntaxDocument;
+import processing.app.syntax.TextAreaPainter;
+import processing.app.tools.DiscourseFormat;
+import processing.app.tools.Tool;
+import processing.app.util.kConstants;
+import processing.app.util.kEvent;
+import processing.app.util.kUndoManager;
+import processing.app.util.kUtils;
+import processing.core.PApplet;
+
 import com.mxgraph.io.mxCodec;
-import com.mxgraph.model.mxCell;
-import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
+import com.mxgraph.swing.mxGraphComponent;
+import com.mxgraph.swing.util.mxGraphActions;
 import com.mxgraph.util.mxEvent;
 import com.mxgraph.util.mxEventObject;
-import com.mxgraph.util.mxEventSource;
+import com.mxgraph.util.mxUndoableEdit;
 import com.mxgraph.util.mxUtils;
 import com.mxgraph.util.mxEventSource.mxIEventListener;
+import com.mxgraph.util.mxUndoableEdit.mxUndoableChange;
 import com.mxgraph.view.mxGraph;
-import com.mxgraph.view.mxGraphSelectionModel;
 
 /**
  * Main editor panel for the Processing Development Environment.
@@ -78,13 +134,16 @@ public class Editor extends JFrame implements RunnerListener {
     "                                                                     ";
 
   /** Command on Mac OS X, Ctrl on Windows and Linux */
-  static final int SHORTCUT_KEY_MASK =
+  public static final int SHORTCUT_KEY_MASK =
     Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
   /** Command-W on Mac OS X, Ctrl-W on Windows and Linux */
-  static final KeyStroke WINDOW_CLOSE_KEYSTROKE =
+  public static final KeyStroke WINDOW_CLOSE_KEYSTROKE =
     KeyStroke.getKeyStroke('W', SHORTCUT_KEY_MASK);
+  /** Command-Shift on Mac OS X, Ctrl-Shift on Windows and Linux */
+  public static final int SHORTCUT_SHIFT_KEY_MASK = ActionEvent.SHIFT_MASK |
+  Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
   /** Command-Option on Mac OS X, Ctrl-Alt on Windows and Linux */
-  static final int SHORTCUT_ALT_KEY_MASK = ActionEvent.ALT_MASK |
+  public static final int SHORTCUT_ALT_KEY_MASK = ActionEvent.ALT_MASK |
     Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
 
   /**
@@ -144,7 +203,7 @@ public class Editor extends JFrame implements RunnerListener {
   JMenuItem undoItem, redoItem;
   protected UndoAction undoAction;
   protected RedoAction redoAction;
-  UndoManager undo;
+  kUndoManager undoManager;
   CompoundEdit compoundEdit;
 
   // find replace
@@ -208,6 +267,7 @@ public class Editor extends JFrame implements RunnerListener {
     
     // DRAWEDITOR BOX holds the draw tool bar and draw area (needs to be constructed before textarea)
     drawarea = new DrawingArea(this);
+    drawarea.setRightClickPopup(new DrawAreaPopup());
     drawingHeader = new EditorDrawingHeader(drawarea);
     Box drawEditorBox = Box.createVerticalBox();
     drawEditorBox.add(drawingHeader);
@@ -292,14 +352,48 @@ public class Editor extends JFrame implements RunnerListener {
     installDocumentSyncListeners();
 
     
-    // SET KEY/MOUSE/WHATEVER LISTENERS
-    // get shift down/up events so we can show the alt version of toolbar buttons
+    // SET TEXTAREA LISTENERS
+    // key/mouse/whatever: get shift down/up events so we can show the alt version of toolbar buttons
     textarea.addKeyListener(toolbar);
-
+    // transfer handler: defines general copy-cut-paste
+    textarea.setTransferHandler(new FileDropHandler()); //TODO needs testing
+    // change tracker: updates the modified flag if anything in the text
+    // area document changes; saves us a number of "setModified" lines from the
+    // original P5 implementation
+    textarea.addListener(kEvent.TEXTAREA_DOCUMENT_CHANGE, new mxIEventListener() {
+      public void invoke(Object source, mxEventObject evt) {
+        sketch.setModified(true);
+      }
+    });
     
-    // SET TRANSFER HANDLERS
-//    textarea.setTransferHandler(new FileDropHandler()); //TODO needs testing
-
+    // UNDO MANAGEMENT: a.k.a. command history
+    undoManager = new kUndoManager();
+    mxIEventListener graphUndoHandler = new mxIEventListener() {
+      public void invoke(Object source, mxEventObject evt)
+      {
+        undoManager.undoableEditHappened((mxUndoableEdit) evt
+            .getProperty("edit"));
+        undoAction.updateUndoState();
+        redoAction.updateRedoState();
+      }
+    };
+    // Adds the command history to the model and view (although I'm not sure that we use the view at all)
+    drawarea.getGraphComponent().getGraph().getModel().addListener(mxEvent.UNDO, graphUndoHandler);
+    drawarea.getGraphComponent().getGraph().getView().addListener(mxEvent.UNDO, graphUndoHandler);    
+    // Keeps the selection in sync with the command history
+    mxIEventListener undoSelectionSyncHandler = new mxIEventListener() {
+      public void invoke(Object source, mxEventObject evt) 
+      {
+        List<mxUndoableChange> changes = ((mxUndoableEdit) evt
+            .getProperty("edit")).getChanges();
+        drawarea.getGraphComponent().getGraph()
+            .setSelectionCells(
+                               drawarea.getGraphComponent().getGraph()
+                                   .getSelectionCellsForChanges(changes));
+      }
+    };
+    undoManager.addListener(mxEvent.UNDO, undoSelectionSyncHandler);
+    undoManager.addListener(mxEvent.REDO, undoSelectionSyncHandler);
 
     // ADD TO THIS JFRAME
     setContentPane(editConsoleSplitPane);
@@ -327,19 +421,11 @@ public class Editor extends JFrame implements RunnerListener {
     if (!loaded) sketch = null;
   }
 
-  //TEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMPTEMP
-  public Action bind(String name, final Action action, String iconUrl)
-  {
-    return new AbstractAction(name, (iconUrl != null) ? new ImageIcon(
-        Editor.class.getResource(iconUrl)) : null)
-    {
-      public void actionPerformed(ActionEvent e)
-      {
-        System.out.println(e.getActionCommand());
-      }
-    };
-  }
 
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+  
   /**
    * Handles files dragged & dropped from the desktop and into the editor
    * window. Dragging files into the editor window is the same as using
@@ -353,12 +439,14 @@ public class Editor extends JFrame implements RunnerListener {
     @SuppressWarnings("unchecked")
     public boolean importData(JComponent src, Transferable transferable) {
       int successful = 0;
+      String type = "";
 
       try {
         DataFlavor uriListFlavor =
           new DataFlavor("text/uri-list;class=java.lang.String");
 
         if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+          type = "file";
           java.util.List list = (java.util.List)
             transferable.getTransferData(DataFlavor.javaFileListFlavor);
           for (int i = 0; i < list.size(); i++) {
@@ -370,6 +458,7 @@ public class Editor extends JFrame implements RunnerListener {
         } else if (transferable.isDataFlavorSupported(uriListFlavor)) {
           // Some platforms (Mac OS X and Linux, when this began) preferred
           // this method of moving files.
+          type = "file";
           String data = (String)transferable.getTransferData(uriListFlavor);
           String[] pieces = PApplet.splitTokens(data, "\r\n");
           for (int i = 0; i < pieces.length; i++) {
@@ -385,22 +474,84 @@ public class Editor extends JFrame implements RunnerListener {
               successful++;
             }
           }
+        } else if (transferable.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+          type = "string";
+          // support drag and drop of plain text to and from external applications
+//          System.out.println("transfer: string data flavor supported");
+          String str = (String) transferable.getTransferData(DataFlavor.stringFlavor);
+          textarea.setSelectedText(str);
+          //TODO look at jEdit's current version with addDropTargetListener()
+          sketch.setModified(true);
+          successful++;
         }
       } catch (Exception e) {
         e.printStackTrace();
         return false;
       }
 
-      if (successful == 0) {
-        statusError("No files were added to the sketch.");
-
-      } else if (successful == 1) {
-        statusNotice("One file added to the sketch.");
-
-      } else {
-        statusNotice(successful + " files added to the sketch.");
+      // print out appropriate transfer failure statements
+      if (type.equals("file")) 
+      {
+        if (successful == 0) {
+          statusError("No files were added to the sketch.");
+        } else if (successful == 1) {
+          statusNotice("One file added to the sketch.");
+        } else {
+          statusNotice(successful+ " files added to the sketch.");
+        }
+      }
+      else if (type.equals("string")) 
+      {
+        if (successful != 1)
+        {
+          statusNotice("Invalid string data.");
+        }
       }
       return true;
+    }
+    
+    //Create a Transferable implementation that contains the
+    //selected text.
+    protected Transferable createTransferable(JComponent src) {
+      if (src instanceof JEditTextArea)
+      {
+        System.out.println("transfer.createTransferable: source is instance of JEditTextArea");
+        JEditTextArea source = (JEditTextArea) src;
+        String data = "";
+        if (source.getSelectionStart() == source.getSelectionStop()) {
+            return null;
+        }
+        try {
+          data = source.getSelectedText();
+        } catch (Exception e) {
+          System.out.println("Can't create position - unable to remove text from source.");
+        }
+        return new StringSelection(data);
+      }
+      else
+      {
+        return null;
+      }
+    }
+    
+    public int getSourceActions(JComponent c) {
+        return COPY_OR_MOVE;
+    }
+    
+    //Remove the old text if the action is a MOVE.
+    //However, we do not allow dropping on top of the selected text,
+    //so in that case do nothing.
+    protected void exportDone(JComponent src, Transferable data, int action) {
+      if (src instanceof JEditTextArea)
+      {
+        System.out.println("transfer.export: source is instance of JEditTextArea");
+        JEditTextArea source = (JEditTextArea) src;
+        if (action == MOVE) {
+          textarea.setSelectedText("");
+          sketch.setModified(true);
+        }
+      }
+      System.out.println("transfer: export done");
     }
   }
 
@@ -990,7 +1141,6 @@ public class Editor extends JFrame implements RunnerListener {
     return menu;
   }
 
-
   protected JMenu buildEditMenu() {
     JMenu menu = new JMenu("Edit");
     JMenuItem item;
@@ -1010,7 +1160,10 @@ public class Editor extends JFrame implements RunnerListener {
     item = newJMenuItem("Cut", 'X');
     item.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          handleCut();
+          if (getFocusOwner() instanceof JEditTextArea)
+            ((JEditTextArea) getFocusOwner()).cut(); //this works for code windows
+          else if (getFocusOwner() instanceof mxGraphComponent)
+            TransferHandler.getCutAction().actionPerformed(new ActionEvent(getFocusOwner(), e.getID(), e.getActionCommand()));
         }
       });
     menu.add(item);
@@ -1018,11 +1171,15 @@ public class Editor extends JFrame implements RunnerListener {
     item = newJMenuItem("Copy", 'C');
     item.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          textarea.copy();
+          if (getFocusOwner() instanceof JEditTextArea)
+            ((JEditTextArea) getFocusOwner()).copy(); //this works for code windows
+          else if (getFocusOwner() instanceof mxGraphComponent)
+            TransferHandler.getCutAction().actionPerformed(new ActionEvent(getFocusOwner(), e.getID(), e.getActionCommand()));
         }
       });
     menu.add(item);
 
+    //TODO disable this for code windows
     item = newJMenuItemShift("Copy for Discourse", 'C');
     item.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
@@ -1038,8 +1195,10 @@ public class Editor extends JFrame implements RunnerListener {
     item = newJMenuItem("Paste", 'V');
     item.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          textarea.paste();
-          sketch.setModified(true);
+          if (getFocusOwner() instanceof JEditTextArea)
+            ((JEditTextArea) getFocusOwner()).paste(); //this works for code windows
+          else if (getFocusOwner() instanceof mxGraphComponent)
+            TransferHandler.getCutAction().actionPerformed(new ActionEvent(getFocusOwner(), e.getID(), e.getActionCommand()));
         }
       });
     menu.add(item);
@@ -1047,17 +1206,22 @@ public class Editor extends JFrame implements RunnerListener {
     item = newJMenuItem("Select All", 'A');
     item.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          textarea.selectAll();
+          if (getFocusOwner() instanceof JEditTextArea)
+            ((JEditTextArea) getFocusOwner()).selectAll(); //this works for code windows
+          else if (getFocusOwner() instanceof mxGraphComponent)
+            mxGraphActions.getSelectAllAction().actionPerformed(new ActionEvent(getFocusOwner(), e.getID(), e.getActionCommand()));
         }
       });
     menu.add(item);
 
     menu.addSeparator();
 
+    //TODO comment/uncomment etc. should work for code windows as well; alas if only it was so easy
     item = newJMenuItem("Comment/Uncomment", '/');
     item.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          handleCommentUncomment();
+          if (getFocusOwner() == textarea)
+            handleCommentUncomment();
         }
     });
     menu.add(item);
@@ -1065,7 +1229,8 @@ public class Editor extends JFrame implements RunnerListener {
     item = newJMenuItem("Increase Indent", ']');
     item.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          handleIndentOutdent(true);
+          if (getFocusOwner() == textarea)
+            handleIndentOutdent(true);
         }
     });
     menu.add(item);
@@ -1073,13 +1238,50 @@ public class Editor extends JFrame implements RunnerListener {
     item = newJMenuItem("Decrease Indent", '[');
     item.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          handleIndentOutdent(false);
+          if (getFocusOwner() == textarea)
+            handleIndentOutdent(false);
         }
     });
     menu.add(item);
 
     menu.addSeparator();
-
+    
+    item = newJMenuItem("Open Code Window", 'T');
+    item.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          drawarea.showCodeWindowOnSelected();
+        }
+    });
+    menu.add(item);
+    
+    item = newJMenuItemShift("Close All Code Windows", 'T');
+    item.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          drawarea.hideAllCodeWindows();
+        }
+    });
+    menu.add(item);
+    
+    item = newJMenuItem("Zoom In", '=');
+    item.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e)
+      {
+        drawarea.getGraphComponent().zoomIn();
+      }
+    });
+    menu.add(item);
+    
+    item = newJMenuItem("Zoom Out", '-');
+    item.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e)
+      {
+        drawarea.getGraphComponent().zoomOut();
+      }
+    });
+    menu.add(item);
+    
+    menu.addSeparator();
+    
     item = newJMenuItem("Find...", 'F');
     item.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
@@ -1161,7 +1363,7 @@ public class Editor extends JFrame implements RunnerListener {
 
     public void actionPerformed(ActionEvent e) {
       try {
-        undo.undo();
+        undoManager.undo();
       } catch (CannotUndoException ex) {
         //System.out.println("Unable to undo: " + ex);
         //ex.printStackTrace();
@@ -1171,11 +1373,11 @@ public class Editor extends JFrame implements RunnerListener {
     }
 
     protected void updateUndoState() {
-      if (undo.canUndo()) {
+      if (undoManager.canUndo()) {
         this.setEnabled(true);
         undoItem.setEnabled(true);
-        undoItem.setText(undo.getUndoPresentationName());
-        putValue(Action.NAME, undo.getUndoPresentationName());
+        undoItem.setText(undoManager.getUndoPresentationName());
+        putValue(Action.NAME, undoManager.getUndoPresentationName());
         if (sketch != null) {
           sketch.setModified(true);  // 0107
         }
@@ -1200,7 +1402,7 @@ public class Editor extends JFrame implements RunnerListener {
 
     public void actionPerformed(ActionEvent e) {
       try {
-        undo.redo();
+        undoManager.redo();
       } catch (CannotRedoException ex) {
         //System.out.println("Unable to redo: " + ex);
         //ex.printStackTrace();
@@ -1210,10 +1412,10 @@ public class Editor extends JFrame implements RunnerListener {
     }
 
     protected void updateRedoState() {
-      if (undo.canRedo()) {
+      if (undoManager.canRedo()) {
         redoItem.setEnabled(true);
-        redoItem.setText(undo.getRedoPresentationName());
-        putValue(Action.NAME, undo.getRedoPresentationName());
+        redoItem.setText(undoManager.getRedoPresentationName());
+        putValue(Action.NAME, undoManager.getRedoPresentationName());
       } else {
         this.setEnabled(false);
         redoItem.setEnabled(false);
@@ -1440,7 +1642,7 @@ public class Editor extends JFrame implements RunnerListener {
    */
   public void stopCompoundEdit() {
     compoundEdit.end();
-    undo.addEdit(compoundEdit);
+    undoManager.undoableEditHappened(compoundEdit);
     undoAction.updateUndoState();
     redoAction.updateRedoState();
     compoundEdit = null;
@@ -1485,8 +1687,8 @@ public class Editor extends JFrame implements RunnerListener {
             if (compoundEdit != null) {
               compoundEdit.addEdit(e.getEdit());
 
-            } else if (undo != null) {
-              undo.addEdit(e.getEdit());
+            } else if (undoManager != null) {
+              undoManager.undoableEditHappened(e.getEdit());
               undoAction.updateUndoState();
               redoAction.updateRedoState();
             }
@@ -1501,7 +1703,10 @@ public class Editor extends JFrame implements RunnerListener {
 
     textarea.requestFocus();  // get the caret blinking
 
-    this.undo = code.getUndo();
+    // P5's original setup is that each code keeps a separate undo manager;
+    // however, since the drawarea potentially maintains connections to each
+    // code, we have to keep just one centralized undoManager for Kaleido
+//    this.undoManager = code.getUndo();
     undoAction.updateUndoState();
     redoAction.updateRedoState();
   }
@@ -2144,7 +2349,7 @@ public class Editor extends JFrame implements RunnerListener {
       if (sketch.save()) {
         // If sketch saved successfully, then get the pde folderpath and save the graph file inside.
         writeGraphToFile();
-//        undoManager.resetCounter(); //TODO undoManager
+        undoManager.resetCounter();
         statusNotice("Done Saving.");
       } else {
         statusEmpty();
@@ -2183,7 +2388,7 @@ public class Editor extends JFrame implements RunnerListener {
       if (sketch.saveAs()) {
         // If sketch saved successfully, then get the pde folderpath and save the graph file inside.
         writeGraphToFile();
-//        undoManager.resetCounter(); TODO implement undo system
+        undoManager.resetCounter();
         statusNotice("Done Saving.");
         // Disabling this for 0125, instead rebuild the menu inside
         // the Save As method of the Sketch object, since that's the
@@ -2225,7 +2430,7 @@ public class Editor extends JFrame implements RunnerListener {
     mxCodec codec = new mxCodec();
     String xml = mxUtils.getXml(codec.encode(drawarea.getGraphComponent().getGraph().getModel()));
     mxUtils.writeFile(xml, filepath);
-    System.out.println("Editor >> wrote graph to file");
+//    System.out.println("Editor >> wrote graph to file");
   }
   
   
@@ -2384,7 +2589,9 @@ public class Editor extends JFrame implements RunnerListener {
 
 
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-
+  /*
+   * Status bar
+   */
 
   /**
    * Show an error int the status bar.
@@ -2468,7 +2675,9 @@ public class Editor extends JFrame implements RunnerListener {
 
 
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-
+  /*
+   * Popup menus construction
+   */
 
   /**
    * Returns the edit popup menu.
@@ -2484,6 +2693,12 @@ public class Editor extends JFrame implements RunnerListener {
 
 
     public TextAreaPopup() {
+      
+//      add(bindToTextComponent("Cut", TransferHandler.getCutAction()));    
+//      add(bindToTextComponent("Copy", TransferHandler.getCopyAction()));    
+//      add(bindToTextComponent("Paste", TransferHandler.getPasteAction()));      
+//      addSeparator();
+      
       JMenuItem item;
 
       cutItem = new JMenuItem("Cut");
@@ -2583,10 +2798,177 @@ public class Editor extends JFrame implements RunnerListener {
       super.show(component, x, y);
     }
   }  
- 
-  
-  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
 
+  
+  class DrawAreaPopup extends JPopupMenu {
+    
+    JMenuItem editItem;
+    JMenuItem deleteItem;
+    
+    JMenuItem openCodeItem;
+    JMenuItem openCodesItem;
+    JMenuItem closeAllCodesItem;
+
+    
+    public DrawAreaPopup() {
+           
+//      add(bindToGraphComponent("Edit", mxGraphActions.getEditAction()));
+//      add(bindToGraphComponent("Delete", mxGraphActions.getDeleteAction()));
+      
+      editItem = new JMenuItem("Edit");
+      editItem.addActionListener(new ActionListener () {
+        public void actionPerformed(ActionEvent e)
+        {
+          drawarea.getGraphComponent().startEditing();
+        }
+      });
+      add(editItem);
+      
+      deleteItem = new JMenuItem("Delete");
+      deleteItem.addActionListener(new ActionListener () {
+        public void actionPerformed(ActionEvent e)
+        {
+          drawarea.getGraphComponent().getGraph().removeCells();
+        }
+      });
+      add(deleteItem);
+      
+      if (drawarea.isCodeWindowsEnabled())
+      {
+        openCodeItem = new JMenuItem("Open Code Window");
+        openCodeItem.addActionListener(new ActionListener() {
+          public void actionPerformed(ActionEvent e)
+          {
+            drawarea.showCodeWindowOnSelected();
+          }
+        });
+        add(openCodeItem);
+        
+        openCodesItem = new JMenuItem("Open Code Windows");
+        openCodesItem.addActionListener(new ActionListener() {
+          public void actionPerformed(ActionEvent e)
+          {
+            drawarea.showCodeWindowOnSelected();
+          }
+        });
+        add(openCodesItem);
+        
+        
+        closeAllCodesItem = new JMenuItem("Close All Code Windows");
+        closeAllCodesItem.addActionListener(new ActionListener() {
+          public void actionPerformed(ActionEvent e)
+          {
+            drawarea.hideAllCodeWindows();
+          }
+        });
+        add(closeAllCodesItem);
+      }
+      
+      addSeparator();
+      
+      add(bindToGraphComponent("Cut", TransferHandler.getCutAction()));    
+      add(bindToGraphComponent("Copy", TransferHandler.getCopyAction()));    
+      add(bindToGraphComponent("Paste", TransferHandler.getPasteAction()));    
+      add(bindToGraphComponent("Select All", mxGraphActions.getSelectAllAction()));
+      
+      addSeparator();
+           
+      JMenuItem menuItem = new JMenuItem("Zoom In");
+      menuItem.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e)
+        {
+          drawarea.getGraphComponent().zoomIn();
+        }
+      });
+      add(menuItem);
+      
+      menuItem = new JMenuItem("Zoom Out");
+      menuItem.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e)
+        {
+          drawarea.getGraphComponent().zoomOut();
+        }
+      });
+      add(menuItem);
+
+    }
+    
+    public void show(Component component, int x, int y) {
+      
+      int selectionCount = drawarea.getGraphComponent().getGraph().getSelectionCount(); //used again for "make parent/child"
+      if (selectionCount < 1)
+      {
+        editItem.setEnabled(false);
+        deleteItem.setEnabled(false);
+      }
+      else
+      {
+        editItem.setEnabled(true);
+        deleteItem.setEnabled(true);
+      }
+      
+      if (drawarea.isCodeWindowsEnabled())
+      {
+        closeAllCodesItem.setEnabled(drawarea.isCodeWindowOpenOnAny());
+
+        // note: code window actions are ignored for objects without valid code marks
+        if (drawarea.getGraphComponent().getGraph().getSelectionCount() == 1)
+        {
+          openCodeItem.setEnabled(drawarea.isCodeWindowValidOnSelected());
+          openCodeItem.setVisible(true);
+          openCodesItem.setVisible(false);
+        }
+        else if (drawarea.getGraphComponent().getGraph().getSelectionCount() > 1)
+        {
+          openCodesItem.setEnabled(drawarea.isCodeWindowValidOnSelected());
+          openCodeItem.setVisible(false);
+          openCodesItem.setVisible(true);
+        }
+        else
+        { //selectionCount equals zero
+          openCodeItem.setVisible(true);
+          openCodesItem.setVisible(false);
+          openCodeItem.setEnabled(false);
+        }
+      }
+      
+      super.show(component, x, y);
+    }
+  }
+ 
+  /**
+   * Binds actions to the graphComponent (used to bind abstracted Transfer Actions).
+   * Implementation modified from mxgraph example editor.
+   */
+  public Action bindToGraphComponent(String name, final Action action)
+  {
+    return new AbstractAction(name)
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        action.actionPerformed(new ActionEvent(drawarea.getGraphComponent(), e.getID(), e.getActionCommand()));
+      }
+    };
+  }
+  /**
+   * Binds actions to the text area (used to bind abstracted Transfer Actions).
+   * Implementation modified from mxgraph example editor.
+   */
+  public Action bindToTextComponent(String name, final Action action)
+  {
+    return new AbstractAction(name)
+    {
+      public void actionPerformed(ActionEvent e)
+      {
+        action.actionPerformed(new ActionEvent(textarea, e.getID(), e.getActionCommand()));
+      }
+    };
+  }
+
+  // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  /*
+   * Focus handling
+   */
   
   /**
    * Receives focus events so we can do repaints (otherwise events like
@@ -2597,10 +2979,10 @@ public class Editor extends JFrame implements RunnerListener {
   {
     public void focusGained(FocusEvent e) {
    
-      System.out.println("Focus Gained >> source= " + e.getSource().getClass().getName());
+//      System.out.println("Focus Gained >> source= " + e.getSource().getClass().getName());
       
       if (drawingHeader.getLinkButton().isLinkActiveMode()) {
-        System.out.println("selectionSync >> we're in linking mode so not sync-ing");
+//        System.out.println("selectionSync >> we're in linking mode so not sync-ing");
       } else
         if (e.getSource() instanceof JEditTextArea)
         {
@@ -2624,7 +3006,7 @@ public class Editor extends JFrame implements RunnerListener {
     
     public void focusLost(FocusEvent e) {
           
-      System.out.println("Focus Lost >> source= " + e.getSource().getClass().getName());
+//      System.out.println("Focus Lost >> source= " + e.getSource().getClass().getName());
       
       if (e.getSource() instanceof JEditTextArea)
       {
@@ -2642,7 +3024,10 @@ public class Editor extends JFrame implements RunnerListener {
   
 
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-
+  /*
+   * Selection sync
+   */
+  
   /**
    * Declares and installs graph listeners for synchronizing selection with
    * textarea
@@ -2735,26 +3120,26 @@ public class Editor extends JFrame implements RunnerListener {
   public void updateLinkButton() {
     if (textarea.isFocusOwner())
       if (textarea.getSelectedText() == null) {
-      System.out.println("updateLinkButton >> selected text == null so disabling linkbutton");
+//      System.out.println("updateLinkButton >> selected text == null so disabling linkbutton");
         drawingHeader.getLinkButton().setEnabled(false);
       } else {
-        System.out.println("updateLinkButton >> text selection eligible for linking");
+//        System.out.println("updateLinkButton >> text selection eligible for linking");
         drawingHeader.getLinkButton().setLinkMode();
       }
     // CASE 4  
     else if (drawarea.getGraphComponent().isFocusOwner())
       if (drawarea.isSelectionLinked()) {
-        System.out.println("updateLinkButton >> graph selection has link, changing buttons");
+//        System.out.println("updateLinkButton >> graph selection has link, changing buttons");
         drawingHeader.getLinkButton().setUnlinkMode();
       } else if (!drawarea.isSelectionContainEdge() && drawarea.getGraphComponent().getGraph().getSelectionCount() > 0) {
-        System.out.println("updateLinkButton >> graph selection doesn't have link");
+//        System.out.println("updateLinkButton >> graph selection doesn't have link");
         drawingHeader.getLinkButton().setLinkMode();
       } else { //case where selection is null
-        System.out.println("updateLinkButton >> nothing selected");
+//        System.out.println("updateLinkButton >> nothing selected");
         drawingHeader.getLinkButton().setEnabled(false);
       }
     else { // case where drawHeader is focus owner
-      System.out.println("updateLinkButton >> not-text-not-graph is focus owner");
+//      System.out.println("updateLinkButton >> not-text-not-graph is focus owner");
       drawingHeader.getLinkButton().setLinkMode();
       drawingHeader.getLinkButton().setEnabled(false);
     }
@@ -2768,13 +3153,15 @@ public class Editor extends JFrame implements RunnerListener {
    * @param stopMark
    */
   public void repaintLinesOfOffset(int startMark, int stopMark) {
-    System.out.println("editor >> repainting lines of offset");
+//    System.out.println("editor >> repainting lines of offset");
     textarea.getPainter().invalidateLineRange(textarea.getLineOfOffset(startMark), textarea.getLineOfOffset(stopMark));
   }
   
   
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-
+  /*
+   * Document sync
+   */
   
   /**
    * Declares and installs document listeners for synchronizing edits between
@@ -2784,6 +3171,18 @@ public class Editor extends JFrame implements RunnerListener {
     drawarea.addListener(kEvent.CODE_WINDOW_DOCUMENT_CHANGE, new mxIEventListener() {
       public void invoke(Object sender, mxEventObject evt) {
         textareaMirrorDocEdit(
+                              ((Integer) evt
+                                  .getProperty("sketchInd"))
+                                  .intValue(),
+                              ((Integer) evt
+                                  .getProperty("sketchOffset"))
+                                  .intValue(),
+                              ((DocumentEvent) evt
+                                  .getProperty("event")),
+                              (String) evt
+                                  .getProperty("change"));
+        // make sure the same change is also mirrored in other code windows
+        drawarea.mirrorDocEdit(
                               ((Integer) evt
                                   .getProperty("sketchInd"))
                                   .intValue(),
@@ -2863,8 +3262,13 @@ public class Editor extends JFrame implements RunnerListener {
     textHeader.repaint();
   }
 
+  
+  
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-
+  /*
+   * Linking
+   */
+  
   /**
    * Declares and installs graph & textarea listeners for handling linking
    * between code and visual. Also handles setting the various states of the
@@ -2879,7 +3283,7 @@ public class Editor extends JFrame implements RunnerListener {
         // vertex is always the graph current selection
         if (drawingHeader.getLinkButton().isLinkActiveMode())
           if ((Boolean) evt.getProperty("success")) {
-            System.out.println("link >> link active and shape successful, so connect them");
+//            System.out.println("link >> link active and shape successful, so connect them");
             codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
           } else {
             // user must have cancelled out of linking so reset the link button
@@ -2894,7 +3298,7 @@ public class Editor extends JFrame implements RunnerListener {
         if (kUtils.arrayLinearSearch(kConstants.SHAPE_KEYS, toolMode) >= 0
             && textarea.getSelectedText() != null) {
           //user select some text and clicks to create a new shape
-          System.out.println("link >> user selected text and now to create new shape so set link button active");
+//          System.out.println("link >> user selected text and now to create new shape so set link button active");
           drawingHeader.getLinkButton().setLinkActiveMode();
           // TODO beginCompoundEdit();
         }
@@ -2908,7 +3312,7 @@ public class Editor extends JFrame implements RunnerListener {
             // CASE 2
             if (drawingHeader.getLinkButton().isLinkActiveMode() && textarea.getSelectedText() != null) {
               //user has selected some text and clicked the link button, and now selected the cells
-              System.out.println("link >> link active, text selected, now graph selected");
+//              System.out.println("link >> link active, text selected, now graph selected");
               codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
             }
           }
@@ -2919,11 +3323,11 @@ public class Editor extends JFrame implements RunnerListener {
 
         if (drawingHeader.getLinkButton().isLinkActiveMode() && drawarea.getGraphComponent().getGraph().getSelectionCount() > 0) {
           //user has selected some cells and clicked the link button, and now selected text
-          System.out.println("link >> link active, cells selected, now text selected");
+//          System.out.println("link >> link active, cells selected, now text selected");
           //if user only clicked somewhere and didn't select an area of text, reset the link tool
           if (((Integer) evt.getProperty("newStart")).equals((Integer) evt.getProperty("newEnd")))
           {
-            System.out.println("link >> didn't properly select body of text");
+//            System.out.println("link >> didn't properly select body of text");
             statusNotice("Code-visual link canceled.");
             drawingHeader.getLinkButton().setLinkMode();
           }
@@ -2937,7 +3341,7 @@ public class Editor extends JFrame implements RunnerListener {
       public void keyPressed(KeyEvent e) {
         // if while in linking mode user hits escape, cancel out of it
         if (drawingHeader.getLinkButton().isLinkActiveMode() && e.getKeyCode() == KeyEvent.VK_ESCAPE)
-          System.out.println("link >> user hit escape, cancelling link active mode");
+//          System.out.println("link >> user hit escape, cancelling link active mode");
           drawingHeader.getLinkButton().setLinkMode();
       }
     });
@@ -2948,18 +3352,18 @@ public class Editor extends JFrame implements RunnerListener {
    * Called directly by the linkButton on click in connect mode
    */
   public void linkAction() {
-    System.out.println("link >> linkAction >> isFocusOwner textarea=" + textarea.isFocusOwner()
-                       + " drawarea=" + drawarea.isFocusOwner() + " drawingheader="+ drawingHeader.isFocusOwner());
+//    System.out.println("link >> linkAction >> isFocusOwner textarea=" + textarea.isFocusOwner()
+//                       + " drawarea=" + drawarea.isFocusOwner() + " drawingheader="+ drawingHeader.isFocusOwner());
     //actually textarea would be the previous focus owner, the current focus owner would be drawingHeader
     if (textarea.getSelectedText() != null) {
       // since I can't enable/disable the listeners, i'll jsut ahve them act
       // only when linkbutton is in some sort of active mode
-      System.out.println("link >> only text is selected and link button clicked, so set active mode");
+//      System.out.println("link >> only text is selected and link button clicked, so set active mode");
       drawingHeader.getLinkButton().setLinkActiveMode();
     } else if (drawarea.getGraphComponent().getGraph().getSelectionCount() > 0) {
       // enable graphSelection change listener on action performed codeDrawLink
       drawingHeader.getLinkButton().setLinkActiveMode();
-      System.out.println("link >> only cell is selected and link button clicked, so set active mode");
+//      System.out.println("link >> only cell is selected and link button clicked, so set active mode");
     }
   }
   
@@ -2968,7 +3372,7 @@ public class Editor extends JFrame implements RunnerListener {
    * Called directly by the linkButton on click in disconnect mode
    */
   public void disconnectAction() {
-    System.out.println("link >> disconnect action (disconnecting directly)");
+//    System.out.println("link >> disconnect action (disconnecting directly)");
     //since we only have one case to handle we can just call the disconnector...
     codeDrawDisconnect(drawarea.getGraphComponent().getGraph().getSelectionCells());
   }
@@ -2978,12 +3382,8 @@ public class Editor extends JFrame implements RunnerListener {
    * selected codemark-bearing cells
    */
   private void codeDrawLink(Object[] cells, int start, int stop) {
-    System.out.println("editor >> codeDrawLink start=" + start + " stop="
-                       + stop);
-//    for (int i = 0; i < cells.length; i++)
-//      if (cells[i] instanceof mxICell
-//          && ((mxICell) cells[i]).getValue() instanceof kCellValue)
-//        ((kCellValue) ((mxICell) cells[i]).getValue()).setCodeMark(start, stop, sketch.getCurrentCodeIndex());
+//    System.out.println("editor >> codeDrawLink start=" + start + " stop="
+//                       + stop);
     drawarea.linkCells(cells, start, stop, sketch.getCurrentCodeIndex());
     drawingHeader.getLinkButton().setLinkMode();
     statusNotice("Code-visual link established.");
@@ -2997,15 +3397,15 @@ public class Editor extends JFrame implements RunnerListener {
    * selected cells that have codemarks
    */
   private void codeDrawDisconnect(Object[] cells) {
-    System.out.println("editor >> codeDrawDisconnect cells.length="
-                       + cells.length);
-//    for (int i = 0; i < cells.length; i++)
-//      if (cells[i] instanceof mxICell
-//          && ((mxICell) cells[i]).getValue() instanceof kCellValue)
-//        ((kCellValue) ((mxICell) cells[i]).getValue()).invalidateCodeMarks();
+//    System.out.println("editor >> codeDrawDisconnect cells.length="
+//                       + cells.length);
     drawarea.unlinkCells(cells);
     drawingHeader.getLinkButton().setLinkMode();
     statusNotice("Code-visual link disconnected.");
+    // this makes the selection active again and forces the selection sync
+    // listener to repaint the link markers in textarea
+    drawarea.getGraphComponent().requestFocusInWindow();
+    drawarea.getGraphComponent().getGraph().setSelectionCells(cells);
   }
 
 }
