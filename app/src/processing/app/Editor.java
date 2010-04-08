@@ -3391,7 +3391,7 @@ public class Editor extends JFrame implements RunnerListener {
 //                       + stop);
     drawarea.linkCells(cells, start, stop, sketch.getCurrentCodeIndex());
     drawingHeader.getLinkButton().setLinkMode();
-    statusNotice("Code-visual link established.");
+    statusNotice("Code-visual link established."); 
     //TODO figure out when to empty the status; maybe after a time delay?
     //could hack it by putting a "counter" at top, which counts # of user select actions (2 or 3)
     //before clearing.  This would avoid the immediate selection problem
