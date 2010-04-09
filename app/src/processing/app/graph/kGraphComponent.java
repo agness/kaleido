@@ -21,9 +21,9 @@ import javax.swing.TransferHandler;
 
 import processing.app.Base;
 import processing.app.DrawingArea;
-import processing.app.Editor;
 import processing.app.Theme;
 import processing.app.util.kConstants;
+import processing.app.util.kDrawingKeyboardHandler;
 
 import com.mxgraph.canvas.mxICanvas;
 import com.mxgraph.model.mxICell;
@@ -82,7 +82,8 @@ public class kGraphComponent extends mxGraphComponent {
     {
       public void mouseClicked(MouseEvent e)
       {
-        if (!e.isConsumed() && !isCodeWindowEvent(e))
+        // make sure is it a simple left-click: no shift/ctrl/alt keys, or right-click button
+        if (!e.isConsumed() && !isCodeWindowEvent(e) && (e.getModifiersEx() == 0) && !e.isPopupTrigger())
         {
           Object cell = getCellAt(e.getX(), e.getY(), false);
 
@@ -100,10 +101,12 @@ public class kGraphComponent extends mxGraphComponent {
       }
     });
   }
-  
+
   /**
    * This is the only way to disable the anonymous mouseListener in the
-   * superclass constructor
+   * superclass constructor. The difference between that and the one we have
+   * above is "mouseReleased" vs. "mouseClicked", and
+   * "cell must already be selected"
    */
   public boolean isEditEvent(MouseEvent e)
   {
@@ -116,6 +119,16 @@ public class kGraphComponent extends mxGraphComponent {
   public boolean isCodeWindowEvent(MouseEvent e)
   {
     return (e != null) ? e.getClickCount() == 2 : false;
+  }
+  
+  /**
+   * Override to enable the key as CTRL for Linux/Windows but CMD for Mac
+   * @param event
+   * @return Returns true if the given event should toggle selected cells.
+   */
+  public boolean isToggleEvent(MouseEvent event)
+  {
+    return (event != null) ? ((event.getModifiers() & kDrawingKeyboardHandler.SHORTCUT_KEY_MASK) == kDrawingKeyboardHandler.SHORTCUT_KEY_MASK) : false;
   }
   
   /**
@@ -138,7 +151,7 @@ public class kGraphComponent extends mxGraphComponent {
 	 */
 	public boolean isPanningEvent(MouseEvent event)
 	{
-    return (event != null) ? ((event.getModifiers() & Editor.SHORTCUT_SHIFT_KEY_MASK) == Editor.SHORTCUT_SHIFT_KEY_MASK)
+    return (event != null) ? ((event.getModifiers() & kDrawingKeyboardHandler.SHORTCUT_SHIFT_KEY_MASK) == kDrawingKeyboardHandler.SHORTCUT_SHIFT_KEY_MASK)
                           : false;
 	}
 	

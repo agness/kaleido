@@ -99,6 +99,7 @@ import processing.app.syntax.TextAreaPainter;
 import processing.app.tools.DiscourseFormat;
 import processing.app.tools.Tool;
 import processing.app.util.kConstants;
+import processing.app.util.kDrawingKeyboardHandler;
 import processing.app.util.kEvent;
 import processing.app.util.kUndoManager;
 import processing.app.util.kUndoableEdit;
@@ -123,8 +124,6 @@ import com.mxgraph.view.mxGraph;
  */
 public class Editor extends JFrame implements RunnerListener {
 
-
-
   Base base;
 
   // otherwise, if the window is resized with the message label
@@ -133,19 +132,6 @@ public class Editor extends JFrame implements RunnerListener {
     "                                                                     " +
     "                                                                     " +
     "                                                                     ";
-
-  /** Command on Mac OS X, Ctrl on Windows and Linux */
-  public static final int SHORTCUT_KEY_MASK =
-    Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
-  /** Command-W on Mac OS X, Ctrl-W on Windows and Linux */
-  public static final KeyStroke WINDOW_CLOSE_KEYSTROKE =
-    KeyStroke.getKeyStroke('W', SHORTCUT_KEY_MASK);
-  /** Command-Shift on Mac OS X, Ctrl-Shift on Windows and Linux */
-  public static final int SHORTCUT_SHIFT_KEY_MASK = ActionEvent.SHIFT_MASK |
-  Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
-  /** Command-Option on Mac OS X, Ctrl-Alt on Windows and Linux */
-  public static final int SHORTCUT_ALT_KEY_MASK = ActionEvent.ALT_MASK |
-    Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
 
   /**
    * true if this file has not yet been given a name by the user
@@ -204,6 +190,7 @@ public class Editor extends JFrame implements RunnerListener {
   // event handling
   TextAreaListener listener;
   FocusHandler focusHandler = new FocusHandler();
+  kDrawingKeyboardHandler keyboardHandler;
   
   // runtime information and window placement
   Point sketchWindowLocation;
@@ -354,9 +341,10 @@ public class Editor extends JFrame implements RunnerListener {
     // SET FOCUS LISTENERS
     drawarea.getGraphComponent().addFocusListener(focusHandler);
     textarea.addFocusListener(focusHandler);
-    // hopefully these are no longer needed w/ swing
-    // (har har har.. that was wishful thinking)
+    // textarea key input handler
     listener = new TextAreaListener(this, textarea);
+    // drawarea hotkey handler
+    keyboardHandler = new kDrawingKeyboardHandler(drawarea.getGraphComponent());
     installCodeDrawLinkListeners();
     installSelectionSyncListeners();
     installDocumentSyncListeners();
@@ -1393,7 +1381,7 @@ public class Editor extends JFrame implements RunnerListener {
     JMenuItem menuItem = new JMenuItem(title);
     //int modifiers = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
     //menuItem.setAccelerator(KeyStroke.getKeyStroke(what, modifiers));
-    menuItem.setAccelerator(KeyStroke.getKeyStroke(what, SHORTCUT_ALT_KEY_MASK));
+    menuItem.setAccelerator(KeyStroke.getKeyStroke(what, kDrawingKeyboardHandler.SHORTCUT_ALT_KEY_MASK));
     return menuItem;
   }
 

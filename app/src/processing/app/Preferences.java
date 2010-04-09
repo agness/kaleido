@@ -31,6 +31,7 @@ import java.util.*;
 import javax.swing.*;
 
 import processing.app.syntax.*;
+import processing.app.util.kDrawingKeyboardHandler;
 import processing.core.*;
 
 
@@ -456,7 +457,7 @@ public class Preferences {
     pain.addKeyListener(new KeyAdapter() {
         public void keyPressed(KeyEvent e) {
           //System.out.println(e);
-          KeyStroke wc = Editor.WINDOW_CLOSE_KEYSTROKE;
+          KeyStroke wc = kDrawingKeyboardHandler.WINDOW_CLOSE_KEYSTROKE;
           if ((e.getKeyCode() == KeyEvent.VK_ESCAPE) ||
               (KeyStroke.getKeyStrokeForEvent(e).equals(wc))) {
             disposeFrame();

@@ -29,6 +29,7 @@ import java.awt.event.*;
 import javax.swing.*;
 
 import processing.app.util.kConstants;
+import processing.app.util.kDrawingKeyboardHandler;
 
 
 /**
@@ -326,7 +327,7 @@ public class EditorTextHeader extends JComponent {
 
     item = new JMenuItem("Previous Tab");
     KeyStroke ctrlAltLeft =
-      KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, Editor.SHORTCUT_ALT_KEY_MASK);
+      KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, kDrawingKeyboardHandler.SHORTCUT_ALT_KEY_MASK);
     item.setAccelerator(ctrlAltLeft);
     // this didn't want to work consistently
     /*
@@ -340,7 +341,7 @@ public class EditorTextHeader extends JComponent {
 
     item = new JMenuItem("Next Tab");
     KeyStroke ctrlAltRight =
-      KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, Editor.SHORTCUT_ALT_KEY_MASK);
+      KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, kDrawingKeyboardHandler.SHORTCUT_ALT_KEY_MASK);
     item.setAccelerator(ctrlAltRight);
     /*
     item.addActionListener(new ActionListener() {
