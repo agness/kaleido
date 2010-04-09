@@ -13,6 +13,7 @@ import com.mxgraph.util.mxUndoableEdit;
 public class kUndoableEdit extends mxUndoableEdit {
 
   protected String presentationName = "kaleido edit";
+  protected mxUndoableEdit origEdit;
   
   public kUndoableEdit(Object source, boolean significant) {
     super(source, significant);
@@ -28,6 +29,7 @@ public class kUndoableEdit extends mxUndoableEdit {
     this.undone = origEdit.isUndone();
     this.redone = origEdit.isRedone();
     this.presentationName = name;
+    this.origEdit = origEdit; //used for calling dispatch
   }
   /**
    * Provides a localized, human readable description of this edit
@@ -53,5 +55,10 @@ public class kUndoableEdit extends mxUndoableEdit {
    */
   public String getRedoPresentationName() {
     return "Redo "+getPresentationName();
+  }
+  
+  public void dispatch() {
+    if (origEdit != null)
+      origEdit.dispatch();
   }
 }

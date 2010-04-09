@@ -169,6 +169,8 @@ public class DrawingArea extends JDesktopPane {
     // cells moved, resized, deleted) then update the codeWindows
     graph.addListener(mxEvent.REPAINT, new mxIEventListener() {
       public void invoke(Object source, mxEventObject evt) {
+        System.out.println("drawarea >> event.REPAINT heard");
+        
         //Repaint all code windows associated with any cells located in the repainted area
         if (evt.getProperty("region") != null && evt.getProperty("region") instanceof mxRectangle)
         {
@@ -987,6 +989,7 @@ public class DrawingArea extends JDesktopPane {
           && ((mxICell) cells[i]).getValue() instanceof kCellValue
           && ((kCellValue) ((mxICell) cells[i]).getValue()).isValidCodeMarks()
           && ((kCellValue) ((mxICell) cells[i]).getValue()).getCodeIndex() == sketchInd
+          && getCodeWindow(cells[i]) != null
           && getCodeWindow(cells[i]).getTextArea().getDocument() != e
               .getDocument()) {
 

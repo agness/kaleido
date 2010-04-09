@@ -555,7 +555,7 @@ public class kCodeWindow {
    * @see processing.app.Editor#handleCommentUncomment
    * @author fry
    */
-  protected void handleCommentUncomment() {
+  public void handleCommentUncomment() {
     //TODO startCompoundEdit();
 
     int startLine = textarea.getSelectionStartLine();
@@ -620,7 +620,7 @@ public class kCodeWindow {
    * @see processing.app.Editor#handleIndentOutdent
    * @author fry
    */
-  protected void handleIndentOutdent(boolean indent) {
+  public void handleIndentOutdent(boolean indent) {
     int tabSize = Preferences.getInteger("editor.tabs.size");
     String tabString = "                        ".substring(0, tabSize);
 
