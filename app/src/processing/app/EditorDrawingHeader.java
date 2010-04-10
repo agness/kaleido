@@ -174,7 +174,7 @@ public class EditorDrawingHeader extends JSplitPane {
         // event, but it's easier to code
         //TODO something else is turning this off???? only SOMETIMES?
 //        spitButtonStates();
-        System.out.println("drawHeader >> set tool button selected");
+//        System.out.println("drawHeader >> set tool button selected");
       }
     };
     
@@ -182,7 +182,7 @@ public class EditorDrawingHeader extends JSplitPane {
     addKeyListener(new KeyAdapter() {
       public void keyPressed(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
-          System.out.println("drawHeader >> i hear escape pressed");
+//          System.out.println("drawHeader >> i hear escape pressed");
 
         closeButtonTrays();
         
@@ -618,9 +618,9 @@ public class EditorDrawingHeader extends JSplitPane {
       setBorderPainted(false);
       addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          System.out.println("link >> "
-                             + ((AbstractButton) e.getSource()).getModel()
-                                 .getActionCommand() + " button pressed");
+//          System.out.println("link >> "
+//                             + ((AbstractButton) e.getSource()).getModel()
+//                                 .getActionCommand() + " button pressed");
           String command = ((AbstractButton) e.getSource()).getModel()
               .getActionCommand();
           if (command.equals("link")) {
@@ -670,7 +670,7 @@ public class EditorDrawingHeader extends JSplitPane {
       // something not null so we have to do this every time
       setBorder(null);
       setEnabled(true);
-      System.out.println("unlink button.border=" + getBorder());
+//      System.out.println("drawHeader >> unlink button.border=" + getBorder());
     }
 
     /**

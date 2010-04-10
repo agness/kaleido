@@ -78,7 +78,7 @@ public class kUndoManager extends mxEventSource {
    */
   public void clear()
   {
-    System.out.println("undoMan >> clear");
+//    System.out.println("undoMan >> clear");
     
     history = new ArrayList<Object>(size);
     indexOfNextAdd = 0;
@@ -105,7 +105,7 @@ public class kUndoManager extends mxEventSource {
       Object e = history.get(--indexOfNextAdd);
       counter--;
       
-      System.out.println("undoMan >> UNDO edit="+e+" indexOfNextAdd="+indexOfNextAdd + " counter="+counter);
+//      System.out.println("undoMan >> UNDO edit="+e+" indexOfNextAdd="+indexOfNextAdd + " counter="+counter);
       
       if (e instanceof mxUndoableEdit)  //case of mxUndoableEdit
       {
@@ -147,7 +147,7 @@ public class kUndoManager extends mxEventSource {
       Object e = history.get(indexOfNextAdd++);
       counter++;
       
-      System.out.println("undoMan >> REDO edit="+e+" indexOfNextAdd="+indexOfNextAdd + " counter="+counter);
+//      System.out.println("undoMan >> REDO edit="+e+" indexOfNextAdd="+indexOfNextAdd + " counter="+counter);
       
       if (e instanceof mxUndoableEdit)  //case of mxUndoableEdit
       {
@@ -185,7 +185,7 @@ public class kUndoManager extends mxEventSource {
     history.add(undoableEdit);
     indexOfNextAdd = history.size();
     
-    System.out.println("undoMan >> undoableEditHappened edit="+undoableEdit+" indexOfNextAdd="+indexOfNextAdd + " counter="+counter);
+//    System.out.println("undoMan >> undoableEditHappened edit="+undoableEdit+" indexOfNextAdd="+indexOfNextAdd + " counter="+counter);
     
     fireEvent(new mxEventObject(mxEvent.ADD, "edit", undoableEdit));
   }
@@ -198,7 +198,7 @@ public class kUndoManager extends mxEventSource {
   {
     while (history.size() > indexOfNextAdd)
     {
-      System.out.println("undoMan >> trim removing "+indexOfNextAdd);
+//      System.out.println("undoMan >> trim removing "+indexOfNextAdd);
       
       Object e = history.remove(indexOfNextAdd);
       

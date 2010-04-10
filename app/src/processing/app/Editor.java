@@ -111,6 +111,7 @@ import com.mxgraph.model.mxICell;
 import com.mxgraph.model.mxGraphModel.mxValueChange;
 import com.mxgraph.swing.mxGraphComponent;
 import com.mxgraph.swing.util.mxGraphActions;
+import com.mxgraph.swing.util.mxGraphTransferable;
 import com.mxgraph.util.mxEvent;
 import com.mxgraph.util.mxEventObject;
 import com.mxgraph.util.mxUndoableEdit;
@@ -479,6 +480,28 @@ public class Editor extends JFrame implements RunnerListener {
               successful++;
             }
           }
+        } else if (transferable.isDataFlavorSupported(mxGraphTransferable.dataFlavor)) {
+          type = "graph";
+          // support dragging of cells to text; cells act as avatars of the
+          // text specified by the code marks. Inserts code referred to by each
+          // transfered cell, separated by a new line.
+          // @author achang
+          System.out.println("editor filedrophandler >> mxGraphTransferable supported");
+          Object [] cells = ((mxGraphTransferable) transferable.getTransferData(mxGraphTransferable.dataFlavor)).getCells();
+          String s="";
+          String temp;
+          for (int i = 0; i < cells.length; i++)
+          {
+            if (drawarea.hasValidCodeMarks(cells[i]))
+            {
+              temp = getCodeOfCell(cells[i]);
+              if (temp != null)
+                s += ("\n"+temp);
+              successful++;
+            }
+          }
+          if (s.length() > 0)
+            textarea.setSelectedText(s);
         } else if (transferable.isDataFlavorSupported(DataFlavor.stringFlavor)) {
           type = "string";
           // support drag and drop of plain text to and from external applications
@@ -504,6 +527,16 @@ public class Editor extends JFrame implements RunnerListener {
         } else {
           statusNotice(successful+ " files added to the sketch.");
         }
+      }
+      else if (type.equals("graph")) 
+      {
+        System.out.println("editor filedrophandler >> >>>>>>>>>> type GRAPH successful="+successful);
+          if (successful == 0) 
+          {
+            statusError("Drawing elements in clipboard were not associated with any code.");
+          } else {
+            statusNotice("Inserted code associated with drawing elements on clipboard.");
+          }
       }
       else if (type.equals("string")) 
       {
@@ -560,6 +593,39 @@ public class Editor extends JFrame implements RunnerListener {
     }
   }
 
+  /**
+   * Used in the textarea transfer handler to allow copying of code via its
+   * linked drawn element Returns null if no code is linked.
+   * 
+   * @param cell
+   * @return String of code linked to by the given cell
+   * @author achang
+   */
+  public String getCodeOfCell(Object cell) {
+
+    if (cell instanceof mxICell
+        && ((mxICell) cell).getValue() instanceof kCellValue
+        && ((kCellValue) ((mxICell) cell).getValue()).isValidCodeMarks())
+    {
+      kCellValue val = (kCellValue) ((mxICell) cell).getValue();
+      String result = "";
+      
+      try
+      {
+        result = sketch
+            .getCode(val.getCodeIndex())
+            .getDocument()
+            .getText(val.getStartMark(), val.getStopMark() - val.getStartMark());
+      }
+      catch(BadLocationException bl)
+      {
+        bl.printStackTrace();
+        return null;
+      }
+      return result;
+    }
+    return null;
+  }
 
   protected void setPlacement(int[] location) {
     setBounds(location[0], location[1], location[2], location[3]);
@@ -1222,8 +1288,12 @@ public class Editor extends JFrame implements RunnerListener {
     item = newJMenuItem("Paste", 'V');
     item.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          if (getFocusOwner() instanceof JEditTextArea)
-            ((JEditTextArea) getFocusOwner()).paste(); //this works for code windows
+          //if main textarea, use the transferHandler so we can paste codeOfCells
+          if (getFocusOwner() == textarea)
+            TransferHandler.getPasteAction().actionPerformed(new ActionEvent(getFocusOwner(), e.getID(), e.getActionCommand()));
+          //else regular code window paste
+          else if (getFocusOwner() instanceof JEditTextArea)
+            ((JEditTextArea) getFocusOwner()).paste();
           else if (getFocusOwner() instanceof mxGraphComponent)
             TransferHandler.getPasteAction().actionPerformed(new ActionEvent(getFocusOwner(), e.getID(), e.getActionCommand()));
         }
@@ -3035,8 +3105,14 @@ public class Editor extends JFrame implements RunnerListener {
           drawingHeader.updateGraphButtons();
         }
       
-      updateLinkButton(); // call this every time there's a focus swap
-      updateEditMenuState(); //TODO ideally we only ever call this function before the user opens the JMenu
+      // call this every time there's a focus swap
+      updateLinkButton();
+      
+      //TODO ideally we only ever call this function before the user opens the JMenu
+      updateEditMenuState();
+      
+      // clear the status bar whenever the focus is swapped, since we have no better opportunity to do this
+      statusEmpty();
     }
     
     public void focusLost(FocusEvent e) {
@@ -3141,9 +3217,9 @@ public class Editor extends JFrame implements RunnerListener {
           kCellValue val = (kCellValue) ((mxICell) cell).getValue();
           sketch.setCurrentCode(val.getCodeIndex());
           setSelection(val.getStartMark(), val.getStopMark());
-          System.out.println("editor >> graph listener selection sync "
-                             + ((kCellValue) ((mxICell) cell).getValue())
-                                 .toPrettyString());
+//          System.out.println("editor >> graph listener selection sync "
+//                             + ((kCellValue) ((mxICell) cell).getValue())
+//                                 .toPrettyString());
         }
         else { // cell does not or cannot have a valid link
           textarea.selectNone();

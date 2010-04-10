@@ -10,6 +10,8 @@ import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Stroke;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -37,6 +39,7 @@ import com.mxgraph.swing.handler.mxGraphHandler;
 import com.mxgraph.swing.handler.mxGraphTransferHandler;
 import com.mxgraph.swing.handler.mxPanningHandler;
 import com.mxgraph.swing.handler.mxVertexHandler;
+import com.mxgraph.swing.util.mxGraphTransferable;
 import com.mxgraph.swing.view.mxInteractiveCanvas;
 import com.mxgraph.util.mxCellRenderer;
 import com.mxgraph.util.mxConstants;
@@ -179,6 +182,99 @@ public class kGraphComponent extends mxGraphComponent {
    */
   public mxInteractiveCanvas createCanvas() {
     return new kCanvas();        
+  }
+  
+  /**
+   * Override to override the mxGraphTransferHandler to accept string imports as
+   * text area shapes
+   */
+  protected TransferHandler createTransferHandler()
+  {
+    return new mxGraphTransferHandler() {
+      /**
+       * Accept string-type data
+       */
+      public boolean canImport(JComponent comp, DataFlavor[] flavors)
+      {
+        for (int i = 0; i < flavors.length; i++)
+        {
+          if (flavors[i] != null
+              && (flavors[i].equals(mxGraphTransferable.dataFlavor)
+                  || flavors[i].equals(DataFlavor.stringFlavor))) // <----kEdit
+          {
+            return true;
+          }
+        }
+
+        return false;
+      }
+      /**
+       * Take string-type data and put it in a new text area shape
+       */
+      public boolean importData(JComponent c, Transferable t)
+      {
+        boolean result = false;
+
+        if (isLocalDrag())
+        {
+          // Enables visual feedback on the Mac
+          result = true;
+        }
+        else
+        {
+          try
+          {
+            if (c instanceof mxGraphComponent)
+            {
+              mxGraphComponent graphComponent = (mxGraphComponent) c;
+
+              if (graphComponent.isEnabled()
+                  && t
+                      .isDataFlavorSupported(mxGraphTransferable.dataFlavor))
+              {
+                mxGraphTransferable gt = (mxGraphTransferable) t
+                    .getTransferData(mxGraphTransferable.dataFlavor);
+
+                if (gt.getCells() != null)
+                {
+                  result = importCells(graphComponent, gt.getCells(),
+                      gt.getBounds());
+                }
+
+              }
+              // kEdits ---->
+              else if (t.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+
+                System.out.println("kGComp createTransferHandler >> stringFlavor supported");
+
+                String strData = (String) t.getTransferData(DataFlavor.stringFlavor);
+                Rectangle rect = new Rectangle();
+                rect.setLocation(((kGraphComponent) graphComponent)
+                    .getPointForPoint(new Point(30, 30)).getPoint());
+                rect.add(((kGraphComponent) graphComponent)
+                    .getPointForPoint(new Point(100, 100)).getPoint());
+                String style = DrawingArea.ShapeToolband.constructTextShapeStyle();
+                
+                graphComponent.getGraph()
+                .setSelectionCell(
+                                  graphComponent.getGraph()
+                                      .insertVertex(null, null, strData,
+                                                    rect.x, rect.y, rect.width,
+                                                    rect.height, style));
+                
+              }
+              // <---- kEdits
+            }
+          }
+          catch (Exception ex)
+          {
+            ex.printStackTrace();
+          }
+        }
+
+        return result;
+      }
+    };
   }
   
   /**

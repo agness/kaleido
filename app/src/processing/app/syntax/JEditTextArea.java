@@ -1826,7 +1826,7 @@ public class JEditTextArea extends JComponent
     documentChanged(evt, evt.getOffset());
     
     if (this.isFocusOwner() && isEventsEnabled()) {
-      System.out.println("textarea is focus owner && eventEnabled");
+//      System.out.println("textarea is focus owner && eventEnabled");
       
       // we don't know which sketch is current; editor will know and can fill in this info before forwarding to drawarea
       int sketchOffset = evt.getOffset();

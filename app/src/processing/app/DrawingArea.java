@@ -333,44 +333,44 @@ public class DrawingArea extends JDesktopPane {
 
     graph.getSelectionModel().addListener(mxEvent.CHANGE,
                                           new mxIEventListener() {
-                                            public void invoke(Object sender,
-                                                               mxEventObject evt) {
-                                              Object[] cells = ((mxGraphSelectionModel) sender)
-                                                  .getCells();
-                                              for (int i = 0; i < cells.length; i++) {
+      public void invoke(Object sender,
+                         mxEventObject evt) {
+        Object[] cells = ((mxGraphSelectionModel) sender)
+        .getCells();
+        for (int i = 0; i < cells.length; i++) {
 
-                                                // testing for whether cells are
-                                                // locked/lockable...
-                                                // System.out.println("drawarea >> graph selection changed: isCellLocked="+graphComponent.getGraph().isCellLocked(cells[i]));
-                                                // System.out.println("drawarea >> graph selection changed: isCellLinked="+((kGraph)
-                                                // graphComponent.getGraph()).isCellLinked(cells[i]));
-                                                System.out
-                                                    .println("drawingArea >> graph selection changed: cellCenter="
-                                                             + graphComponent
-                                                                 .getGraph()
-                                                                 .getView()
-                                                                 .getState(
-                                                                           cells[i])
-                                                                 .getCenterX()
-                                                             + ","
-                                                             + graphComponent
-                                                                 .getGraph()
-                                                                 .getView()
-                                                                 .getState(
-                                                                           cells[i])
-                                                                 .getCenterY());
+          // testing for whether cells are
+          // locked/lockable...
+          // System.out.println("drawarea >> graph selection changed: isCellLocked="+graphComponent.getGraph().isCellLocked(cells[i]));
+          // System.out.println("drawarea >> graph selection changed: isCellLinked="+((kGraph)
+          // graphComponent.getGraph()).isCellLinked(cells[i]));
+//          System.out
+//          .println("drawarea >> graph selection changed: cellCenter="
+//                   + graphComponent
+//                   .getGraph()
+//                   .getView()
+//                   .getState(
+//                             cells[i])
+//                             .getCenterX()
+//                             + ","
+//                             + graphComponent
+//                             .getGraph()
+//                             .getView()
+//                             .getState(
+//                                       cells[i])
+//                                       .getCenterY());
 
-                                                if (cells[i] instanceof mxICell
-                                                    && ((mxICell) cells[i])
-                                                        .getValue() instanceof kCellValue) {
-                                                  // System.out.println("drawarea >> graph selection changed: "+((kCellValue)
-                                                  // ((mxICell)
-                                                  // cells[i]).getValue()).toPrettyString());
-                                                  // System.out.println("drawarea >> graph selection bounsd: "+graphComponent.getGraph().getCellBounds(cells[i]).getRectangle());
-                                                }
-                                              }
-                                            }
-                                          });
+          if (cells[i] instanceof mxICell
+              && ((mxICell) cells[i])
+              .getValue() instanceof kCellValue) {
+            // System.out.println("drawarea >> graph selection changed: "+((kCellValue)
+            // ((mxICell)
+            // cells[i]).getValue()).toPrettyString());
+            // System.out.println("drawarea >> graph selection bounsd: "+graphComponent.getGraph().getCellBounds(cells[i]).getRectangle());
+          }
+        }
+      }
+    });
 
     // final int TRIANGLE_BASE = 25;
     // final int TRIANGLE_DEFAULT_HEIGHT = 12;
@@ -536,7 +536,7 @@ public class DrawingArea extends JDesktopPane {
    * @param toolName
    */
   public void beginToolMode(final String toolName) {
-    System.out.println("BEGINtoolmode " + toolName);
+//    System.out.println("BEGINtoolmode " + toolName);
     eventSource
         .fireEvent(new mxEventObject(kEvent.TOOL_BEGIN, "tool", toolName));
     // disable all other graph mouse events for the time being:
@@ -598,7 +598,7 @@ public class DrawingArea extends JDesktopPane {
     eventSource.fireEvent(new mxEventObject(kEvent.TOOL_END, "tool", toolMode,
         "success", (success ? Boolean.TRUE : Boolean.FALSE)));
     toolMode = null;
-    System.out.println("ENDtoolmode " + toolMode + " >> success=" + success);
+//    System.out.println("ENDtoolmode " + toolMode + " >> success=" + success);
   }
 
   /**
@@ -1413,7 +1413,7 @@ public class DrawingArea extends JDesktopPane {
    * 
    * @author achang
    */
-  protected static class ShapeToolband extends mxRubberband {
+  public static class ShapeToolband extends mxRubberband {
 
     /**
      * Reference to the enclosing drawing component.
@@ -1496,12 +1496,15 @@ public class DrawingArea extends JDesktopPane {
           && graphComponent.isSignificant(rect.width, rect.height)) {
         
         String style = constructShapeStyle(drawarea.getToolMode());
+        
+        // make sure text area shapes only hold notes and not labels
+        Object value = (drawarea.getToolMode().equals(kConstants.SHAPE_TEXT)) ? "" : new kCellValue();
 
         // ----------------
         graphComponent.getGraph()
             .setSelectionCell(
                               graphComponent.getGraph()
-                                  .insertVertex(null, null, new kCellValue(),
+                                  .insertVertex(null, null, value,
                                                 rect.x, rect.y, rect.width,
                                                 rect.height, style));
         
@@ -1520,11 +1523,39 @@ public class DrawingArea extends JDesktopPane {
     }
 
     /**
+     * Factored out as a static method for use by kGraphComponent's transfer
+     * handler to import string data as new text shapes
+     * 
+     * @return
+     */
+    public static String constructTextShapeStyle() {
+      String style = "";
+      
+      style = mxUtils.setStyle(style, mxConstants.STYLE_FONTFAMILY,
+                               kConstants.DEFAULT_FONTFAMILY);
+      style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
+                               kConstants.SHAPE_TEXT);
+      style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
+          .toHexString(kConstants.SHAPE_TEXT_FONT_COLOR.getRGB()));
+      //align text in text area shapes to the top left of the shape bounds
+      style = mxUtils.setStyle(style, mxConstants.STYLE_ALIGN,
+                               mxConstants.ALIGN_LEFT);
+      style = mxUtils.setStyle(style, mxConstants.STYLE_VERTICAL_ALIGN,
+                               mxConstants.ALIGN_TOP);
+      
+      return style;
+    }
+
+    /**
      * Specifies the style of new shapes.
      * @param toolMode
      * @return
      */
-    private String constructShapeStyle(String toolMode) {
+    public String constructShapeStyle(String toolMode) {
+      
+      if (toolMode.equals(kConstants.SHAPE_TEXT))
+        return constructTextShapeStyle();
+      
       String style = "";
 
       style = mxUtils.setStyle(style, mxConstants.STYLE_FILLCOLOR, Integer
@@ -1561,11 +1592,6 @@ public class DrawingArea extends JDesktopPane {
       } else if (toolMode.equals(kConstants.SHAPE_KEYS[6])) {
         style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
                                  kConstants.SHAPE_PERSON);
-      } else if (toolMode.equals(kConstants.SHAPE_TEXT)) {
-        style = mxUtils.setStyle(style, mxConstants.STYLE_SHAPE,
-                                 kConstants.SHAPE_TEXT);
-        style = mxUtils.setStyle(style, mxConstants.STYLE_FONTCOLOR, Integer
-            .toHexString(kConstants.SHAPE_TEXT_FONT_COLOR.getRGB()));
       } else if (!toolMode.equals(kConstants.SHAPE_KEYS[0])) // no style
                                                              // indicates rectangles
       {
