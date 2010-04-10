@@ -28,9 +28,10 @@ public class kConstants
    * This version of Kaleido
    */
   public static final String VERSION_NAME = "001";
-  
+
   /**
    * Which version to compile, for versions of code that are different
+   * (debugging, initial graph & text, etc.)
    */  
   public static final boolean BUILD_FOR_RELEASE = false;
   

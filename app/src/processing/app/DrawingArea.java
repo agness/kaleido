@@ -151,7 +151,8 @@ public class DrawingArea extends JDesktopPane {
     // graph.setVertexLabelsMovable(true);//DEBUGGING
 
     // <!------------- hello world crap TODO remove
-    helloWorld(graph);
+    if (!kConstants.BUILD_FOR_RELEASE)
+      helloWorld(graph);
     // hello world crap -------------<
 
     graphComponent = new kGraphComponent(graph);

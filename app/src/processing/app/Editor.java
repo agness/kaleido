@@ -2298,7 +2298,8 @@ public class Editor extends JFrame implements RunnerListener {
 
     try {
       sketch = new Sketch(this, path);
-      helloWorld();
+      if (!kConstants.BUILD_FOR_RELEASE)
+        helloWorld();
     } catch (IOException e) {
       Base.showWarning("Error", "Could not create the sketch.", e);
       return false;
