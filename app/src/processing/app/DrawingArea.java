@@ -619,7 +619,7 @@ public class DrawingArea extends JDesktopPane {
     // System.out.println("drawArea >> setModified >> oldVal = " + modified
     // + ", newVal = " + state);
     modified = state;
-    // editor.updateTitle();
+    editor.updateTitle();
   }
 
   public boolean isModified() {

@@ -116,7 +116,7 @@ public class kGraph extends mxGraph {
     if (cell != null && (model.getParent(cell) != model.getRoot()))
     {
       mxCellState state = view.getState(cell);
-      if (state != null && !model.isEdge(cell) && !isTextBoxShape(cell))
+      if (state != null && !model.isEdge(cell) && !isTextBoxShape(cell) && !isCellLocked(cell))
       {
         return true;
       }

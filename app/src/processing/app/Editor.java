@@ -724,7 +724,8 @@ public class Editor extends JFrame implements RunnerListener {
     menubar.add(buildEditMenu());
     menubar.add(buildSketchMenu());
     menubar.add(buildToolsMenu());
-    menubar.add(buildHelpMenu());
+    menubar.add(buildProcessingHelpMenu());
+    menubar.add(buildKaleidoHelpMenu());
     setJMenuBar(menubar);
   }
 
@@ -1097,47 +1098,11 @@ public class Editor extends JFrame implements RunnerListener {
   }
 
 
-  protected JMenu buildHelpMenu() {
+  protected JMenu buildProcessingHelpMenu() {
     // To deal with a Mac OS X 10.5 bug, add an extra space after the name
     // so that the OS doesn't try to insert its slow help menu.
-    JMenu menu = new JMenu("Help ");
+    JMenu menu = new JMenu("Processing Help");
     JMenuItem item;
-
-    /*
-    // testing internal web server to serve up docs from a zip file
-    item = new JMenuItem("Web Server Test");
-    item.addActionListener(new ActionListener() {
-        public void actionPerformed(ActionEvent e) {
-          //WebServer ws = new WebServer();
-          SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-              try {
-                int port = WebServer.launch("/Users/fry/coconut/processing/build/shared/reference.zip");
-                Base.openURL("http://127.0.0.1:" + port + "/reference/setup_.html");
-
-              } catch (IOException e1) {
-                e1.printStackTrace();
-              }
-            }
-          });
-        }
-      });
-    menu.add(item);
-    */
-
-    /*
-    item = new JMenuItem("Browser Test");
-    item.addActionListener(new ActionListener() {
-        public void actionPerformed(ActionEvent e) {
-          //Base.openURL("http://processing.org/learning/gettingstarted/");
-          //JFrame browserFrame = new JFrame("Browser");
-          BrowserStartup bs = new BrowserStartup("jar:file:/Users/fry/coconut/processing/build/shared/reference.zip!/reference/setup_.html");
-          bs.initUI();
-          bs.launch();
-        }
-      });
-    menu.add(item);
-    */
 
     item = new JMenuItem("Getting Started");
     item.addActionListener(new ActionListener() {
@@ -1198,9 +1163,82 @@ public class Editor extends JFrame implements RunnerListener {
     menu.add(item);
 
     // macosx already has its own about menu
+//    if (!Base.isMacOS()) {
+//      menu.addSeparator();
+//      item = new JMenuItem("About Processing");
+//      item.addActionListener(new ActionListener() {
+//          public void actionPerformed(ActionEvent e) {
+//            base.handleAbout();
+//          }
+//        });
+//      menu.add(item);
+//    }
+
+    return menu;
+  }
+  
+  /**
+   * A shorter help menu than Processing's, added so we can link to our own getting started guide, troubleshooting, faq, and reference
+   * @author achang
+   */
+  protected JMenu buildKaleidoHelpMenu() {
+    // To deal with a Mac OS X 10.5 bug, add an extra space after the name
+    // so that the OS doesn't try to insert its slow help menu.
+    JMenu menu = new JMenu("Kaleido Help");
+    JMenuItem item;
+
+    item = new JMenuItem("Report Bugs");
+    item.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          Base.openURL("http://kaleido.media.mit.edu/forum/4");
+        }
+      });
+    menu.add(item);
+
+    item = new JMenuItem("Getting Started");
+    item.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          Base.openURL("http://kaleido.media.mit.edu/gettingstarted");
+        }
+      });
+    menu.add(item);
+    
+    item = new JMenuItem("Interface Guide");
+    item.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          Base.openURL("http://kaleido.media.mit.edu/gettingstarted#associations");
+        }
+      });
+    menu.add(item);
+
+    item = new JMenuItem("Hotkeys Reference");
+    item.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          Base.openURL("http://kaleido.media.mit.edu/gettingstarted#hotkeys");
+        }
+      });
+    menu.add(item);
+    
+    item = new JMenuItem("Frequently Asked Questions");
+    item.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          Base.openURL("http://kaleido.media.mit.edu/faq");
+        }
+      });
+    menu.add(item);
+
+    item = new JMenuItem("Visit Kaleido Homepage");
+    item.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          Base.openURL("http://kaleido.media.mit.edu/");
+        }
+      });
+    menu.add(item);
+
+    // macosx already has its own about menu
     if (!Base.isMacOS()) {
       menu.addSeparator();
-      item = new JMenuItem("About Processing");
+      item = new JMenuItem("About Kaleido");
       item.addActionListener(new ActionListener() {
           public void actionPerformed(ActionEvent e) {
             base.handleAbout();
@@ -1310,6 +1348,17 @@ public class Editor extends JFrame implements RunnerListener {
         }
       });
     menu.add(item);
+    
+    item = newJMenuItem("Select None", 'D');
+    item.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          if (getFocusOwner() instanceof JEditTextArea)
+            ((JEditTextArea) getFocusOwner()).selectNone(); //this works for code windows
+          else if (getFocusOwner() instanceof mxGraphComponent)
+            mxGraphActions.getSelectNoneAction().actionPerformed(new ActionEvent(getFocusOwner(), e.getID(), e.getActionCommand()));
+        }
+      });
+    menu.add(item);
 
     menu.addSeparator();
 
@@ -1365,6 +1414,26 @@ public class Editor extends JFrame implements RunnerListener {
     });
     menu.add(editMenuCloseCWItem);
     
+    // TODO should adjust this according to selection too, but I'm too lazy at this point
+    item = newJMenuItem("Lock", 'L');
+    item.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e)
+      {
+        drawarea.lockSelected();
+      }
+    });
+    menu.add(item);
+    
+    // the zoom buttons can be always enabled
+    item = newJMenuItemShift("Unlock", 'L');
+    item.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e)
+      {
+        drawarea.unlockSelected();
+      }
+    });
+    menu.add(item);
+    
     // the zoom buttons can be always enabled
     item = newJMenuItem("Zoom In", '=');
     item.addActionListener(new ActionListener() {
@@ -1380,6 +1449,15 @@ public class Editor extends JFrame implements RunnerListener {
       public void actionPerformed(ActionEvent e)
       {
         drawarea.getGraphComponent().zoomOut();
+      }
+    });
+    menu.add(item);
+    
+    item = newJMenuItem("Actual Size", '0');
+    item.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e)
+      {
+        drawarea.getGraphComponent().zoomActual();
       }
     });
     menu.add(item);
@@ -2455,6 +2533,7 @@ public class Editor extends JFrame implements RunnerListener {
         // If sketch saved successfully, then get the pde folderpath and save the graph file inside.
         writeGraphToFile();
         undoManager.resetCounter();
+        drawarea.setModified(false);
         statusNotice("Done Saving.");
       } else {
         statusEmpty();
@@ -2494,6 +2573,7 @@ public class Editor extends JFrame implements RunnerListener {
         // If sketch saved successfully, then get the pde folderpath and save the graph file inside.
         writeGraphToFile();
         undoManager.resetCounter();
+        drawarea.setModified(false);
         statusNotice("Done Saving.");
         // Disabling this for 0125, instead rebuild the menu inside
         // the Save As method of the Sketch object, since that's the

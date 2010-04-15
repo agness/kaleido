@@ -33,7 +33,7 @@ public class kConstants
    * Which version to compile, for versions of code that are different
    * (debugging, initial graph & text, etc.)
    */  
-  public static final boolean BUILD_FOR_RELEASE = false;
+  public static final boolean BUILD_FOR_RELEASE = true;
   
   
   // . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
@@ -60,7 +60,7 @@ public class kConstants
 
   /**
    * From <a href="http://www.colourlovers.com/palette/1930/cheer_up_emo_kid">
-   * http://www.colourlovers.com/palette/1930/cheer_up_emo_kid</a>
+   * he</a>
    */
   private static Color[][] colorpalette_cheerup = {{ mxUtils.parseColor("#556270"),
     mxUtils.parseColor("#4ECDC4"), 
@@ -87,6 +87,21 @@ public class kConstants
     mxUtils.parseColor("#eeeeee"),
     Color.BLACK, 
     Color.BLACK }};
+  
+  /**
+   * From <a href="http://zeroperzero.com/crs/seoul-.html">
+   * http://zeroperzero.com/crs/seoul-.html</a>
+   */
+  private static Color[][] colorpalette_seoul = {{ mxUtils.parseColor("#EF5A6F"),
+    mxUtils.parseColor("#82469F"),
+    mxUtils.parseColor("#00A1F4"),
+    mxUtils.parseColor("#4FB84E"),
+    mxUtils.parseColor("#A07E46") },
+  { mxUtils.parseColor("#ffffff"),
+    mxUtils.parseColor("#ffffff"),
+    mxUtils.parseColor("#ffffff"),
+    mxUtils.parseColor("#ffffff"), 
+    mxUtils.parseColor("#ffffff") }};
   
   
   /**
@@ -161,7 +176,7 @@ public class kConstants
   /**
    * Pairs of matched fill and font colors for graph elements
    */
-  public static Color[][] FILL_COLORS = colorpalette_cheerup;
+  public static Color[][] FILL_COLORS = colorpalette_seoul;
   
   /**
    * The uniform color of all connectors created in Kaleido
@@ -171,12 +186,12 @@ public class kConstants
   /**
    * The uniform font color of all connector labels
    */
-  public static final Color EDGE_FONT_COLOR = UI_COLOR_SWINGGRAY;
+  public static final Color EDGE_FONT_COLOR = UI_COLOR_ACTIVETAB;
   
   /**
    * The font color of text areas (should be decided upon depending on color of canvas)
    */
-  public static final Color SHAPE_TEXT_FONT_COLOR = UI_COLOR_SWINGGRAY;
+  public static final Color SHAPE_TEXT_FONT_COLOR = EDGE_FONT_COLOR;
   
   /**
    * The color of triangles and text area of code windows (no control over
