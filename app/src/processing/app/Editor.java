@@ -85,6 +85,8 @@ import javax.swing.undo.CannotUndoException;
 import javax.swing.undo.CompoundEdit;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 import processing.app.debug.Runner;
 import processing.app.debug.RunnerException;
@@ -101,12 +103,15 @@ import processing.app.tools.Tool;
 import processing.app.util.kConstants;
 import processing.app.util.kDrawingKeyboardHandler;
 import processing.app.util.kEvent;
+import processing.app.util.kModelCodec;
 import processing.app.util.kUndoManager;
 import processing.app.util.kUndoableEdit;
 import processing.app.util.kUtils;
 import processing.core.PApplet;
 
 import com.mxgraph.io.mxCodec;
+import com.mxgraph.io.mxCodecRegistry;
+import com.mxgraph.io.mxObjectCodec;
 import com.mxgraph.model.mxICell;
 import com.mxgraph.model.mxGraphModel.mxValueChange;
 import com.mxgraph.swing.mxGraphComponent;
@@ -2388,9 +2393,55 @@ public class Editor extends JFrame implements RunnerListener {
       try {
         String filepath = sketch.getFolder() + "/" + getGraphFileName();
         Document document = mxUtils.parse(mxUtils.readFile(filepath));
-        mxCodec codec = new mxCodec(document);
+        mxCodec codec = new mxCodec(document) {          
+          /**
+           * Need to override this to assign the kModelCodec, since I can't
+           * figure out how to register it
+           * 
+           * @see com.mxgraph.io.mxCodec#decode(org.w3c.dom.Node,
+           *      java.lang.Object)
+           */
+          public Object decode(Node node, Object into)
+          {
+            Object obj = null;
+
+            if (node != null && node.getNodeType() == Node.ELEMENT_NODE)
+            {
+              mxObjectCodec codec = (node.getNodeName()
+                  .equals("processing.app.graph.kGraphModel")) ? 
+                         new kModelCodec()
+                         : mxCodecRegistry.getCodec(node.getNodeName());
+              
+//              System.out.println("Editor.decode >> nodeName="+node.getNodeName()+((codec != null) ? " decoder="+codec.getClass().getName() : ""));
+              
+              try
+              {
+                if (codec != null)
+                {
+                  obj = codec.decode(this, node, into);
+                }
+                else
+                {
+                  obj = node.cloneNode(true);
+                  ((Element) obj).removeAttribute("as");
+                }
+              }
+              catch (Exception e)
+              {
+                System.err.println("Cannot decode " + node.getNodeName() + ": "
+                    + e.getMessage());
+                e.printStackTrace();
+              }
+            }
+
+            return obj;
+          }
+        };
+
         mxGraph graph = drawarea.getGraphComponent().getGraph();//just a shorthand
         codec.decode(document.getDocumentElement(), graph.getModel());
+        
+//        System.out.println("Editor.handleOpenInternal >> graph.getChildrenCount="+graph.getChildCells(graph.getDefaultParent()).length);
         
       } catch (IOException e) {
         Base.showWarning("Error", "Could not create the graph.", e);
@@ -2612,7 +2663,46 @@ public class Editor extends JFrame implements RunnerListener {
    */
   private void writeGraphToFile() throws IOException {
     String filepath = sketch.getFolder() + "/" + getGraphFileName();
-    mxCodec codec = new mxCodec();
+    mxCodec codec = new mxCodec() {
+      /**
+       * Need to override this to assign the kModelCodec, since I can't figure
+       * out how to register it
+       * 
+       * @see com.mxgraph.io.mxCodec#encode(java.lang.Object)
+       */
+      public Node encode(Object obj)
+      {
+        Node node = null;
+
+        if (obj != null)
+        {
+          String name = mxCodecRegistry.getName(obj);
+          mxObjectCodec enc = (name.equals("processing.app.graph.kGraphModel")) ? 
+                     new kModelCodec()
+                     : mxCodecRegistry.getCodec(name);
+                     
+//          System.out.println("Editor.encode >> name="+name+((enc != null) ? " encoder="+enc.getClass().getName() : ""));
+          
+          if (enc != null)
+          {
+            node = enc.encode(this, obj);
+          }
+          else
+          {
+            if (obj instanceof Node)
+            {
+              node = ((Node) obj).cloneNode(true);
+            }
+            else
+            {
+              System.err.println("No codec for " + name);
+            }
+          }
+        }
+
+        return node;
+      }
+    };
     String xml = mxUtils.getXml(codec.encode(drawarea.getGraphComponent().getGraph().getModel()));
     mxUtils.writeFile(xml, filepath);
 //    System.out.println("Editor >> wrote graph to file");

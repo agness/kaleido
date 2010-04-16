@@ -855,7 +855,7 @@ public class kCanvas extends mxInteractiveCanvas {
       {
         int dx = 0;
         
-        System.out.println("original line="+lines[i]);
+//        System.out.println("kCanvas.drawPlainText >> original line="+lines[i]);
         
         //if we have NO SPACE to draw any line then just break
         if (y + fm.getHeight() > origY + h)
