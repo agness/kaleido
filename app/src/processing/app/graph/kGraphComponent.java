@@ -365,7 +365,8 @@ public class kGraphComponent extends mxGraphComponent {
         if (isCellDisplayable(cell))
         {
           String label = getDisplayLabelForCell(cell);
-
+          
+          //------> kEdits:
           if (((mxICell) cell).getValue() instanceof kCellValue && graph instanceof kGraph) {
             ((kGraph) graph).drawStateWithNotes(canvas, state, label, ((kGraph) graph).getNotes(cell));
           } 
@@ -373,6 +374,7 @@ public class kGraphComponent extends mxGraphComponent {
           {
             graph.drawStateWithLabel(canvas, state, label);
           }
+          //<------kEdits:
         }
 
         // Handles special ordering for edges (all in foreground
@@ -703,6 +705,7 @@ public class kGraphComponent extends mxGraphComponent {
 
       if (graph.isCellFoldable(cell, !tmp))
       {
+        System.out.println("kGraphComp.getFoldingIcon returning something real");
         return (tmp) ? Base.getImageIcon("folding-collapsed.gif", this) : Base.getImageIcon("folding-expanded.gif", this);
       }
     }

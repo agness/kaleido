@@ -1,6 +1,9 @@
 package processing.app.graph;
 
+import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Composite;
+import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Paint;
 import java.awt.Polygon;
@@ -783,22 +786,21 @@ public class kCanvas extends mxInteractiveCanvas {
     path.closePath();
     drawPath(path, fillColor, fillPaint, penColor, shadow, linked);
   }
-   
+    
   /**
    * Takes the "notes", or description, of the kCell and fits the text within the 
    * boundaries of the kCell. Takes care of multiple lines scenarios. 
-   * @author susiefu
+   * @author achang, susiefu
    * 
-   * @param text HTML markup to be painted.
+   * @param text to be painted.
    * @param x X-coordinate of the text.
    * @param y Y-coordinate of the text.
    * @param w Width of the text.
    * @param h Height of the text.
    * @param style Style to be used for painting the text.
-   * @deprecated
    */
-  protected void drawPlainTextEllipsis(String text, int x, int y, int w, int h,
-      Hashtable style)
+  protected void drawPlainText(String text, int x, int y, int w, int h,
+                                       Map<String, Object> style)
   {
     if (g.hitClip(x, y, w, h))
     {
@@ -844,102 +846,144 @@ public class kCanvas extends mxInteractiveCanvas {
       // Draws the text line by line
       String[] lines = text.split("\n");
 
-      int originaly = y;
+      //<!----------begin susie edits
+      
+      int origY = y; //original y
+      int numformattedlines;
       
       for (int i = 0; i < lines.length; i++)
       {
-        int numlines = 1;
         int dx = 0;
         
-
-        if (align.equals(mxConstants.ALIGN_CENTER))
-        {
-          int sw = fm.stringWidth(lines[i]);
-
-          if (horizontal)
-          {
-            dx = (w - sw) / 2;
-          }
-          else
-          {
-            dx = (h - sw) / 2;
-          }
-        }
-        else if (align.equals(mxConstants.ALIGN_RIGHT))
-        {
-          int sw = fm.stringWidth(lines[i]);
-          dx = ((horizontal) ? w : h) - sw;
-        }
+        System.out.println("original line="+lines[i]);
         
-        //<!----------begin susie edits
+        //if we have NO SPACE to draw any line then just break
+        if (y + fm.getHeight() > origY + h)
+          break;
         
         //if the width of the string is contained within the block
         if (fm.stringWidth(lines[i])<w)
-        { 
-          g.drawString(lines[i], x + dx, y);
+        {
+          numformattedlines = 1;
+          //if this is the LAST LINE, or if the next line does NOT overflow
+          if (i+1 == lines.length || !(y + fm.getHeight() > origY + h - fm.getHeight())) 
+          { 
+            int sw = fm.stringWidth(lines[i]);
+            if (align.equals(mxConstants.ALIGN_CENTER))
+            {
+              if (horizontal)
+              {
+                dx = (w - sw) / 2;
+              }
+              else
+              {
+                dx = (h - sw) / 2;
+              }
+            }
+            else if (align.equals(mxConstants.ALIGN_RIGHT))
+            {
+              dx = ((horizontal) ? w : h) - sw;
+            }
+            g.drawString(lines[i], x + dx, y);
+          }
+          else 
+          { //if the next line DOES overflow, 
+            //draw a substring of the current line and stop drawing the 
+            //rest of the lines
+            String substring = lines[i]
+                .substring(0, lines[i].length() - 4);
+            
+            int sw = fm.stringWidth(substring);
+            if (align.equals(mxConstants.ALIGN_CENTER))
+            {
+              if (horizontal)
+              {
+                dx = (w - sw) / 2;
+              }
+              else
+              {
+                dx = (h - sw) / 2;
+              }
+            }
+            else if (align.equals(mxConstants.ALIGN_RIGHT))
+            {
+              dx = ((horizontal) ? w : h) - sw;
+            }
+            
+            g.drawString(substring, x + dx, y);  
+            g.drawString("...", x+dx+fm.stringWidth(substring), y);
+            break;
+          }
         } 
-        else //width of string not contained within the block
-        { 
+        else //if width of string not contained within the block
+        {
           String cuttext = lines[i];
           String formattedstring = new String(wordwrap((int) Math.round(0.155*w),cuttext));
-          System.out.println(formattedstring);
+          System.out.println("formatted string="+formattedstring);
           
-          //Draws the formatted string into lines
-          
+          //splices the formatted string into lines
           String[] formattedstringlines = formattedstring.split("\n");
-          numlines = formattedstringlines.length;
+          numformattedlines = formattedstringlines.length;
           
           int formaty = y;
           
-          //checks if any of the lines overflow vertically
-          if (formaty + numlines*fm.getHeight() > originaly + h - 11) 
-          { 
-            for (int z = 0; z < formattedstringlines.length-1; z++) {
-              if (!(formaty + (z+2)*fm.getHeight() > originaly + h - 11)) { 
-                //if the next line does NOT overflow
-                g.drawString(formattedstringlines[z], x+dx, formaty);
-                formaty += fm.getHeight() + mxConstants.LINESPACING;   
+          for (int j = 0; j < formattedstringlines.length; j++) 
+          {
+            //if this is the last line of the last line, or if the next line does NOT overflow
+            if ((i+1 == lines.length && j+1 == formattedstringlines.length) || !(formaty + j*fm.getHeight() > origY + h - fm.getHeight())) 
+            { 
+              int sw = fm.stringWidth(formattedstringlines[j]);
+              if (align.equals(mxConstants.ALIGN_CENTER))
+              {
+                if (horizontal)
+                {
+                  dx = (w - sw) / 2;
+                }
+                else
+                {
+                  dx = (h - sw) / 2;
+                }
               }
-              else { //if the next line DOES overflow, 
-                //draw a substring of the current line and stop drawing the 
-                //rest of the lines
-                String substring = formattedstringlines[z]
-                    .substring(0, formattedstringlines[z].length() - 3);
-                g.drawString(substring, x + dx, formaty);  
-                g.drawString("...", x+dx+fm.stringWidth(substring), formaty);
-                //formaty += fm.getHeight() + mxConstants.LINESPACING;   
-                break;
+              else if (align.equals(mxConstants.ALIGN_RIGHT))
+              {
+                dx = ((horizontal) ? w : h) - sw;
               }
+              
+              g.drawString(formattedstringlines[j], x+dx, formaty);
+              formaty += fm.getHeight() + mxConstants.LINESPACING; 
             }
-          } 
-          else { // none of the lines overflow vertically
-            
-            System.out.println("formaty: " + formaty
-                               + ", numlines*fm.getHeight()" + numlines
-                               * fm.getHeight() + ", originaly" + originaly
-                               + ", h" + h);
-            for (int z = 0; z < formattedstringlines.length; z++) {
-              g.drawString(formattedstringlines[z], x + dx, formaty);  
-              formaty += fm.getHeight() + mxConstants.LINESPACING;   
+            else
+            { //if the next line DOES overflow, 
+              //draw a substring of the current line and stop drawing the 
+              //rest of the lines
+              String substring = formattedstringlines[j]
+                  .substring(0, formattedstringlines[j].length() - 4);
+              
+              int sw = fm.stringWidth(substring);
+              if (align.equals(mxConstants.ALIGN_CENTER))
+              {
+                if (horizontal)
+                {
+                  dx = (w - sw) / 2;
+                }
+                else
+                {
+                  dx = (h - sw) / 2;
+                }
+              }
+              else if (align.equals(mxConstants.ALIGN_RIGHT))
+              {
+                dx = ((horizontal) ? w : h) - sw;
+              }
+              
+              g.drawString(substring, x + dx, formaty);  
+              g.drawString("...", x+dx+fm.stringWidth(substring), formaty);
+              break;
             }
           }
         }
         
-        y += numlines*fm.getHeight() + mxConstants.LINESPACING;
-        
-        if (y + fm.getHeight() > originaly + h - 11) {
-          //TODO: FAILED ATTEMPT AT TRYING TO "..." THE LAST LINE IF THERE ARE
-          //MORE LINES AFTERWARDS... THE "..." SEEMS TO OVERLAP THE TEXT! :(
-//          if (i > 0) {
-//            g.drawString("...", x+dx+fm.stringWidth(lines[i-1]), y - numlines*fm.getHeight() - mxConstants.LINESPACING);
-//          } else if (i == 0) {
-//            g.drawString("...", x+dx+fm.stringWidth(lines[i]), y - numlines*fm.getHeight() - mxConstants.LINESPACING);
-//          }
-          break;
-        }
-        
-        //end susie edits---------->
-        
+        y += numformattedlines*fm.getHeight() + mxConstants.LINESPACING;
       }
 
       // Resets the transformation
@@ -948,8 +992,10 @@ public class kCanvas extends mxInteractiveCanvas {
   }
 
   /**
-   * Are we gonna use this?
-   * @deprecated
+   * Inserts a newline character wherever a string should be split to fit the
+   * width (preserves whole words)
+   * 
+   * @author susiefu
    */
   private static String wordwrap(int width,String st) {
     StringBuffer buf = new StringBuffer(st);

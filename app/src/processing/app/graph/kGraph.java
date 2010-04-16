@@ -28,6 +28,7 @@ import com.mxgraph.util.mxEventSource.mxIEventListener;
 import com.mxgraph.util.mxUndoableEdit.mxUndoableChange;
 import com.mxgraph.view.mxCellState;
 import com.mxgraph.view.mxGraph;
+import com.mxgraph.view.mxGraphView;
 import com.mxgraph.view.mxStylesheet;
 
 /**
@@ -105,6 +106,19 @@ public class kGraph extends mxGraph {
       }
     }
     return false;
+  }
+
+  /**
+   * Don't know why the superclass implementation takes an unused parameter, so
+   * overloading to get rid of that and make it less confusing?
+   * 
+   * @param cell
+   *          <mxCell> whose expandable state should be returned.
+   * @return Returns true if the given cell is expandable.
+   */
+  public boolean isCellFoldable(Object cell)
+  {
+    return super.isCellFoldable(cell, false);
   }
 
   /**
@@ -259,9 +273,23 @@ public class kGraph extends mxGraph {
         clip = g.getClip();
         g.setClip(newClip);
       }
-
+      
+      //<!------------Kaleido edits
+      //if is swimlane, forcing label to align to top of shape temporarily
+      if (isCellFoldable(state.getCell())) {
+        state.getStyle().put(mxConstants.STYLE_VERTICAL_ALIGN,
+                             mxConstants.ALIGN_TOP);
+        getView().updateLabelBounds(state); //recalculate label bounds
+      }
+      else if (!model.isEdge(state.getCell())
+               && !isTextBoxShape(state.getCell())) { // (i.e. must be a non-textbox shape)
+        state.getStyle().remove(mxConstants.STYLE_VERTICAL_ALIGN);
+        getView().updateLabelBounds(state); //recalculate label bounds
+      }
+      //kEdits------------>
+           
       mxRectangle bounds = state.getLabelBounds();
-
+      
       if (label != null && bounds != null)
       {
         x = (int) Math.round(bounds.getX());
@@ -270,17 +298,34 @@ public class kGraph extends mxGraph {
         h = (int) Math.round(bounds.getHeight() - y + bounds.getY());
 
         //<!------------Kaleido edits
+        //debuggingggggggg paints cyan label bounds
+//        state.getStyle().put(mxConstants.STYLE_LABEL_BORDERCOLOR,"#00FFFF");
+        
         //forcing the title to be in bold
         state.getStyle().put(mxConstants.STYLE_FONTSTYLE, mxConstants.FONT_BOLD);
+        
+        // if is swimlane, draw one line's height lower so we're not right at
+        // the edge of the shape
+        if (isCellFoldable(state.getCell()))
+          y = (int) Math.round(bounds.getY() + bounds.getHeight());
+        
         lab = canvas.drawLabel(label, x, y, w, h, state.getStyle(),
             isHtmlLabel(cell));
         
         if (notes != null) 
         {
+          mxRectangle geo = ((mxICell) (state.getCell())).getGeometry();
+          x = (int) Math.round(geo.getX());
+          w = (int) Math.round(geo.getWidth());
+          //draw a little lower, and make h the height to the bottom edge of the shape
+          y = (int) Math.round(bounds.getY() + bounds.getHeight());
+          h = (int) Math.round(geo.getY()+geo.getHeight() - y);
           
-          //draw a little lower
-          y = (int) Math.round(bounds.getY()+bounds.getHeight());
-          h = (int) Math.round(bounds.getHeight()*2 - y + bounds.getY());
+          // if is swimlane, draw one line even lower, but adjust the "bottom of the shape"
+          if (isCellFoldable(state.getCell())) {
+            y = (int) Math.round(bounds.getY() + bounds.getHeight()*2);
+            h = (int) Math.round(h - bounds.getHeight());
+          }
           
           state.getStyle().remove(mxConstants.STYLE_FONTSTYLE);
           
