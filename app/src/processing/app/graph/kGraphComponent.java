@@ -705,7 +705,6 @@ public class kGraphComponent extends mxGraphComponent {
 
       if (graph.isCellFoldable(cell, !tmp))
       {
-        System.out.println("kGraphComp.getFoldingIcon returning something real");
         return (tmp) ? Base.getImageIcon("folding-collapsed.gif", this) : Base.getImageIcon("folding-expanded.gif", this);
       }
     }

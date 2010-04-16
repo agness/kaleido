@@ -288,14 +288,14 @@ public class kGraph extends mxGraph {
       }
       //kEdits------------>
            
-      mxRectangle bounds = state.getLabelBounds();
+      mxRectangle labelBounds = state.getLabelBounds();
       
-      if (label != null && bounds != null)
+      if (label != null && labelBounds != null)
       {
-        x = (int) Math.round(bounds.getX());
-        y = (int) Math.round(bounds.getY());
-        w = (int) Math.round(bounds.getWidth() - x + bounds.getX());
-        h = (int) Math.round(bounds.getHeight() - y + bounds.getY());
+        x = (int) Math.round(labelBounds.getX());
+        y = (int) Math.round(labelBounds.getY());
+        w = (int) Math.round(labelBounds.getWidth() - x + labelBounds.getX());
+        h = (int) Math.round(labelBounds.getHeight() - y + labelBounds.getY());
 
         //<!------------Kaleido edits
         //debuggingggggggg paints cyan label bounds
@@ -307,24 +307,25 @@ public class kGraph extends mxGraph {
         // if is swimlane, draw one line's height lower so we're not right at
         // the edge of the shape
         if (isCellFoldable(state.getCell()))
-          y = (int) Math.round(bounds.getY() + bounds.getHeight());
+          y = (int) Math.round(labelBounds.getY() + labelBounds.getHeight());
         
         lab = canvas.drawLabel(label, x, y, w, h, state.getStyle(),
             isHtmlLabel(cell));
         
         if (notes != null) 
         {
-          mxRectangle geo = ((mxICell) (state.getCell())).getGeometry();
-          x = (int) Math.round(geo.getX());
-          w = (int) Math.round(geo.getWidth());
+          //get the cell bounds in the view (takes scale/translates into account)
+          mxRectangle cellBounds = getView().getBounds(new Object[] {state.getCell()});
+          x = (int) Math.round(cellBounds.getX());
+          w = (int) Math.round(cellBounds.getWidth());
           //draw a little lower, and make h the height to the bottom edge of the shape
-          y = (int) Math.round(bounds.getY() + bounds.getHeight());
-          h = (int) Math.round(geo.getY()+geo.getHeight() - y);
+          y = (int) Math.round(labelBounds.getY() + labelBounds.getHeight());
+          h = (int) Math.round(cellBounds.getY()+cellBounds.getHeight() - y);
           
           // if is swimlane, draw one line even lower, but adjust the "bottom of the shape"
           if (isCellFoldable(state.getCell())) {
-            y = (int) Math.round(bounds.getY() + bounds.getHeight()*2);
-            h = (int) Math.round(h - bounds.getHeight());
+            y = (int) Math.round(labelBounds.getY() + labelBounds.getHeight()*2);
+            h = (int) Math.round(h - labelBounds.getHeight());
           }
           
           state.getStyle().remove(mxConstants.STYLE_FONTSTYLE);

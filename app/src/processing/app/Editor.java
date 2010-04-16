@@ -2449,6 +2449,11 @@ public class Editor extends JFrame implements RunnerListener {
       }
     }
     
+    System.out.println("Editor.handleOpenInternal >> drawarea.isModified()="+drawarea.isModified()+" sketch.isModified()="+sketch.isModified());
+    drawarea.setModified(false);
+    sketch.setModified(false);
+    undoManager.clear();
+    
     // Repaint the UI stuff
     textHeader.rebuild();
     updateTitle();

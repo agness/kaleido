@@ -788,8 +788,10 @@ public class kCanvas extends mxInteractiveCanvas {
   }
     
   /**
-   * Takes the "notes", or description, of the kCell and fits the text within the 
-   * boundaries of the kCell. Takes care of multiple lines scenarios. 
+   * Takes the "notes", or description, of the kCell and fits the text within
+   * the boundaries of the kCell and replaces extra text with ELLIPSES. Takes
+   * care of multiple lines scenarios.
+   * 
    * @author achang, susiefu
    * 
    * @param text to be painted.
@@ -890,8 +892,9 @@ public class kCanvas extends mxInteractiveCanvas {
           { //if the next line DOES overflow, 
             //draw a substring of the current line and stop drawing the 
             //rest of the lines
-            String substring = lines[i]
-                .substring(0, lines[i].length() - 4);
+            String substring = (lines[i].length() > 4) ? 
+                   lines[i].substring(0, lines[i].length() - 4)
+                   : "";
             
             int sw = fm.stringWidth(substring);
             if (align.equals(mxConstants.ALIGN_CENTER))
@@ -956,8 +959,9 @@ public class kCanvas extends mxInteractiveCanvas {
             { //if the next line DOES overflow, 
               //draw a substring of the current line and stop drawing the 
               //rest of the lines
-              String substring = formattedstringlines[j]
-                  .substring(0, formattedstringlines[j].length() - 4);
+              String substring = (formattedstringlines[j].length() > 4) ? 
+                     formattedstringlines[j].substring(0, formattedstringlines[j].length() - 4)
+                     : "";
               
               int sw = fm.stringWidth(substring);
               if (align.equals(mxConstants.ALIGN_CENTER))
