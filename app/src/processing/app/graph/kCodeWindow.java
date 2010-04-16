@@ -135,13 +135,12 @@ public class kCodeWindow {
     // make the triangle
     triangleFrame = new JInternalFrame("", false, false, false, false);
     triangleFrame.setOpaque(false);
+    triangleFrame.getRootPane().setBackground(new Color(0,0,0,0)); //needs this to actually do the trick
     triangleFrame.setContentPane(new Triangle("SE", 0, TRIANGLE_BASE,
         TRIANGLE_DEFAULT_HEIGHT, TRIANGLE_BASE));
     triangleFrame.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
     triangleFrame.setSize(TRIANGLE_BASE, TRIANGLE_DEFAULT_HEIGHT);
-    triangleFrame.setBorder(null);
-    triangleFrame.getContentPane().setBackground(new Color(0,0,0,0));
-    triangleFrame.setBackground(new Color(0,0,0,0));
+    triangleFrame.setBorder(null);   
 
     // remove the ability to move the triangle iframe
     MouseMotionListener[] actions = (MouseMotionListener[]) triangleFrame
@@ -172,6 +171,7 @@ public class kCodeWindow {
     buttonFrame = new JInternalFrame("", false, false, false, false);
     buttonFrame.setContentPane(buttonPanel);
     buttonFrame.setOpaque(false);
+    buttonFrame.getRootPane().setBackground(new Color(0,0,0,0));
     buttonFrame.setSize(BUTTON_ICON_WIDTH*2+BUTTON_GAP, BUTTON_ICON_HEIGHT);
     buttonFrame.setBorder(null);
 

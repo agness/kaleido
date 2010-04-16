@@ -729,8 +729,7 @@ public class Editor extends JFrame implements RunnerListener {
     menubar.add(buildEditMenu());
     menubar.add(buildSketchMenu());
     menubar.add(buildToolsMenu());
-    menubar.add(buildProcessingHelpMenu());
-    menubar.add(buildKaleidoHelpMenu());
+    menubar.add(buildHelpMenu());
     setJMenuBar(menubar);
   }
 
@@ -1103,10 +1102,31 @@ public class Editor extends JFrame implements RunnerListener {
   }
 
 
+  protected JMenu buildHelpMenu() {
+    JMenu menu = new JMenu("Help");
+    
+    menu.add(buildKaleidoHelpMenu());
+    menu.add(buildProcessingHelpMenu());
+
+    // macosx already has its own about menu
+    if (!Base.isMacOS()) {
+      menu.addSeparator();
+      JMenuItem item = new JMenuItem("About Kaleido");
+      item.addActionListener(new ActionListener() {
+          public void actionPerformed(ActionEvent e) {
+            base.handleAbout();
+          }
+        });
+      menu.add(item);
+    }
+
+    return menu;
+  }
+  
   protected JMenu buildProcessingHelpMenu() {
     // To deal with a Mac OS X 10.5 bug, add an extra space after the name
     // so that the OS doesn't try to insert its slow help menu.
-    JMenu menu = new JMenu("Processing Help");
+    JMenu menu = new JMenu("Processing");
     JMenuItem item;
 
     item = new JMenuItem("Getting Started");
@@ -1167,29 +1187,19 @@ public class Editor extends JFrame implements RunnerListener {
       });
     menu.add(item);
 
-    // macosx already has its own about menu
-//    if (!Base.isMacOS()) {
-//      menu.addSeparator();
-//      item = new JMenuItem("About Processing");
-//      item.addActionListener(new ActionListener() {
-//          public void actionPerformed(ActionEvent e) {
-//            base.handleAbout();
-//          }
-//        });
-//      menu.add(item);
-//    }
-
     return menu;
   }
-  
+
   /**
-   * A shorter help menu than Processing's, added so we can link to our own getting started guide, troubleshooting, faq, and reference
+   * A shorter help menu than Processing's, added so we can link to our own
+   * getting started guide, troubleshooting, faq, and reference
+   * 
    * @author achang
    */
   protected JMenu buildKaleidoHelpMenu() {
     // To deal with a Mac OS X 10.5 bug, add an extra space after the name
     // so that the OS doesn't try to insert its slow help menu.
-    JMenu menu = new JMenu("Kaleido Help");
+    JMenu menu = new JMenu("Kaleido");
     JMenuItem item;
 
     item = new JMenuItem("Report Bugs");
@@ -1239,18 +1249,6 @@ public class Editor extends JFrame implements RunnerListener {
         }
       });
     menu.add(item);
-
-    // macosx already has its own about menu
-    if (!Base.isMacOS()) {
-      menu.addSeparator();
-      item = new JMenuItem("About Kaleido");
-      item.addActionListener(new ActionListener() {
-          public void actionPerformed(ActionEvent e) {
-            base.handleAbout();
-          }
-        });
-      menu.add(item);
-    }
 
     return menu;
   }
