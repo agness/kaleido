@@ -38,6 +38,7 @@ import javax.swing.text.BadLocationException;
 import processing.app.Editor.DrawAreaPopup;
 import processing.app.graph.kCellValue;
 import processing.app.graph.kCodeWindow;
+import processing.app.graph.kCodeWindowListener;
 import processing.app.graph.kGraph;
 import processing.app.graph.kGraphComponent;
 import processing.app.graph.kGraphModel;
@@ -822,6 +823,8 @@ public class DrawingArea extends JDesktopPane {
     codeWindows.add(newWindow);
     newWindow.getTextArea().getDocument()
         .addDocumentListener(codeWindowDocListener);
+    // Filters key events for tab expansion/indent/newline/etc.
+    kCodeWindowListener keyListener = new kCodeWindowListener(newWindow);
     return newWindow;
   }
 

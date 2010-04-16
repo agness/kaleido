@@ -1,91 +1,25 @@
-/* -*- mode: java; c-basic-offset: 2; indent-tabs-mode: nil -*- */
+package processing.app.graph;
 
-/*
-  Part of the Processing project - http://processing.org
+import java.awt.event.KeyEvent;
 
-  Copyright (c) 2004-08 Ben Fry and Casey Reas
-  Copyright (c) 2001-04 Massachusetts Institute of Technology
-
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software Foundation,
-  Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
-
-package processing.app;
-
-import processing.app.syntax.*;
-
-import java.awt.*;
-import java.awt.event.*;
-
+import processing.app.Editor;
+import processing.app.Sketch;
+import processing.app.TextAreaListener;
+import processing.app.syntax.JEditTextArea;
+import processing.app.util.kDrawingKeyboardHandler;
 
 /**
- * Filters key events for tab expansion/indent/etc.
- * <p/>
- * For version 0099, some changes have been made to make the indents
- * smarter. There are still issues though:
- * + indent happens when it picks up a curly brace on the previous line,
- *   but not if there's a  blank line between them.
- * + It also doesn't handle single indent situations where a brace
- *   isn't used (i.e. an if statement or for loop that's a single line).
- *   It shouldn't actually be using braces.
- * Solving these issues, however, would probably best be done by a
- * smarter parser/formatter, rather than continuing to hack this class.
+ * Modified from superclass just to accommodate code windows.
+ * Only differences from super class is constructor and places marked "kEdit"
  */
-public class TextAreaListener {
-  private Editor editor;
-  protected JEditTextArea textarea;
+public class kCodeWindowListener extends TextAreaListener {
 
-  protected boolean externalEditor;
-  protected boolean tabsExpand;
-  protected boolean tabsIndent;
-  protected int tabSize;
-  protected String tabString;
-  protected boolean autoIndent;
-
-//  private int selectionStart, selectionEnd;
-//  private int position;
-
-  /** ctrl-alt on windows and linux, cmd-alt on mac os x */
-  static final int CTRL_ALT = ActionEvent.ALT_MASK |
-    Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
-
-
-  public TextAreaListener(Editor editor, JEditTextArea textarea) {
-    this.editor = editor;
-    this.textarea = textarea;
-
-    // let him know that i'm leechin'
-    textarea.editorListener = this;
-
-    applyPreferences();
+  private kCodeWindow codeWindow;
+  
+  public kCodeWindowListener(kCodeWindow cw) {
+    super(null, cw.getTextArea());
+    this.codeWindow = cw;
   }
-
-
-  public void applyPreferences() {
-    tabsExpand = Preferences.getBoolean("editor.tabs.expand");
-    //tabsIndent = Preferences.getBoolean("editor.tabs.indent");
-    tabSize = Preferences.getInteger("editor.tabs.size");
-    tabString = Editor.EMPTY.substring(0, tabSize);
-    autoIndent = Preferences.getBoolean("editor.indent");
-    externalEditor = Preferences.getBoolean("editor.external");
-  }
-
-
-  //public void setExternalEditor(boolean externalEditor) {
-  //this.externalEditor = externalEditor;
-  //}
-
 
   /**
    * Intercepts key pressed events for JEditTextArea.
@@ -96,6 +30,9 @@ public class TextAreaListener {
    * @return true if the event has been handled (to remove it from the queue)
    */
   public boolean keyPressed(KeyEvent event) {
+    
+    System.out.println("kCodeWindowListener heard something");
+    
     // don't do things if the textarea isn't editable
     if (externalEditor) return false;
 
@@ -110,30 +47,32 @@ public class TextAreaListener {
     //System.out.println((int)c + " " + code + " " + event);
     //System.out.println();
 
-    Sketch sketch = editor.getSketch();
-
-    if ((event.getModifiers() & CTRL_ALT) == CTRL_ALT) {
-      if (code == KeyEvent.VK_LEFT) {
-        sketch.handlePrevCode();
-        return true;
-      } else if (code == KeyEvent.VK_RIGHT) {
-        sketch.handleNextCode();
-        return true;
-      }
-    }
+    // v----- kEdit: don't need to handle tabbing although I suppose we could
+    // traverse code windows in future releases
+//    Sketch sketch = editor.getSketch();
+//    if ((event.getModifiers() & CTRL_ALT) == CTRL_ALT) {
+//      if (code == KeyEvent.VK_LEFT) {
+//        sketch.handlePrevCode();
+//        return true;
+//      } else if (code == KeyEvent.VK_RIGHT) {
+//        sketch.handleNextCode();
+//        return true;
+//      }
+//    }
 
     if ((event.getModifiers() & KeyEvent.META_MASK) != 0) {
       //event.consume();  // does nothing
       return false;
     }
 
+    //v----- kEdit: the doc listeners will take care of these things
     // TODO i don't like these accessors. clean em up later.
-    if (!editor.getSketch().isModified()) {
-      if ((code == KeyEvent.VK_BACK_SPACE) || (code == KeyEvent.VK_TAB) ||
-          (code == KeyEvent.VK_ENTER) || ((c >= 32) && (c < 128))) {
-        sketch.setModified(true);
-      }
-    }
+//    if (!editor.getSketch().isModified()) {
+//      if ((code == KeyEvent.VK_BACK_SPACE) || (code == KeyEvent.VK_TAB) ||
+//          (code == KeyEvent.VK_ENTER) || ((c >= 32) && (c < 128))) {
+//        sketch.setModified(true);
+//      }
+//    }
 
     if ((code == KeyEvent.VK_UP) &&
         ((event.getModifiers() & KeyEvent.CTRL_MASK) != 0)) {
@@ -215,7 +154,7 @@ public class TextAreaListener {
     case 9:  // TAB
       if (textarea.isSelectionActive()) {
         boolean outdent = (event.getModifiers() & KeyEvent.SHIFT_MASK) != 0;
-        editor.handleIndentOutdent(!outdent);
+        codeWindow.handleIndentOutdent(!outdent); //<---kEdit
 
       } else if (tabsExpand) {  // expand tabs
         textarea.setSelectedText(tabString);
@@ -460,164 +399,4 @@ public class TextAreaListener {
     return false;
   }
   
-  
-//  public boolean keyReleased(KeyEvent event) {
-//    if (code == KeyEvent.VK_SHIFT) {
-//      editor.toolbar.setShiftPressed(false);
-//    }
-//  }
-
-
-  public boolean keyTyped(KeyEvent event) {
-    char c = event.getKeyChar();
-
-    if ((event.getModifiers() & KeyEvent.CTRL_MASK) != 0) {
-      // on linux, ctrl-comma (prefs) being passed through to the editor
-      if (c == KeyEvent.VK_COMMA) {
-        event.consume();
-        return true;
-      }
-    }
-    return false;
-  }
-
-
-
-  /**
-   * Return the index for the first character on this line.
-   */
-  protected int calcLineStart(int index, char contents[]) {
-    // backup from the current caret position to the last newline,
-    // so that we can figure out how far this line was indented
-    /*int spaceCount = 0;*/
-    boolean finished = false;
-    while ((index != -1) && (!finished)) {
-      if ((contents[index] == 10) ||
-          (contents[index] == 13)) {
-        finished = true;
-        //index++; // maybe ?
-      } else {
-        index--;  // new
-      }
-    }
-    // add one because index is either -1 (the start of the document)
-    // or it's the newline character for the previous line
-    return index + 1;
-  }
-
-
-  /**
-   * Calculate the number of spaces on this line.
-   */
-  protected int calcSpaceCount(int index, char contents[]) {
-    index = calcLineStart(index, contents);
-
-    int spaceCount = 0;
-    // now walk forward and figure out how many spaces there are
-    while ((index < contents.length) && (index >= 0) &&
-           (contents[index++] == ' ')) {
-      spaceCount++;
-    }
-    return spaceCount;
-  }
-
-
-  /**
-   * Walk back from 'index' until the brace that seems to be
-   * the beginning of the current block, and return the number of
-   * spaces found on that line.
-   */
-  protected int calcBraceIndent(int index, char contents[]) {
-    // now that we know things are ok to be indented, walk
-    // backwards to the last { to see how far its line is indented.
-    // this isn't perfect cuz it'll pick up commented areas,
-    // but that's not really a big deal and can be fixed when
-    // this is all given a more complete (proper) solution.
-    int braceDepth = 1;
-    boolean finished = false;
-    while ((index != -1) && (!finished)) {
-      if (contents[index] == '}') {
-        // aww crap, this means we're one deeper
-        // and will have to find one more extra {
-        braceDepth++;
-        //if (braceDepth == 0) {
-        //finished = true;
-        //}
-        index--;
-      } else if (contents[index] == '{') {
-        braceDepth--;
-        if (braceDepth == 0) {
-          finished = true;
-        }
-        index--;
-      } else {
-        index--;
-      }
-    }
-    // never found a proper brace, be safe and don't do anything
-    if (!finished) return -1;
-
-    // check how many spaces on the line with the matching open brace
-    //int pairedSpaceCount = calcSpaceCount(index, contents);
-    //System.out.println(pairedSpaceCount);
-    return calcSpaceCount(index, contents);
-  }
-
-
-  /**
-   * Get the character array and blank out the commented areas.
-   * This hasn't yet been tested, the plan was to make auto-indent
-   * less gullible (it gets fooled by braces that are commented out).
-   */
-  protected char[] getCleanedContents() {
-    char c[] = textarea.getText().toCharArray();
-
-    int index = 0;
-    while (index < c.length - 1) {
-      if ((c[index] == '/') && (c[index+1] == '*')) {
-        c[index++] = 0;
-        c[index++] = 0;
-        while ((index < c.length - 1) &&
-               !((c[index] == '*') && (c[index+1] == '/'))) {
-          c[index++] = 0;
-        }
-
-      } else if ((c[index] == '/') && (c[index+1] == '/')) {
-        // clear out until the end of the line
-        while ((index < c.length) && (c[index] != 10)) {
-          c[index++] = 0;
-        }
-        if (index != c.length) {
-          index++;  // skip over the newline
-        }
-      }
-    }
-    return c;
-  }
-
-  /*
-  protected char[] getCleanedContents() {
-    char c[] = textarea.getText().toCharArray();
-    boolean insideMulti;  // multi-line comment
-    boolean insideSingle;  // single line double slash
-
-    //for (int i = 0; i < c.length - 1; i++) {
-    int index = 0;
-    while (index < c.length - 1) {
-      if (insideMulti && (c[index] == '*') && (c[index+1] == '/')) {
-        insideMulti = false;
-        index += 2;
-      } else if ((c[index] == '/') && (c[index+1] == '*')) {
-        insideMulti = true;
-        index += 2;
-      } else if ((c[index] == '/') && (c[index+1] == '/')) {
-        // clear out until the end of the line
-        while (c[index] != 10) {
-          c[index++] = 0;
-        }
-        index++;
-      }
-    }
-  }
-  */
 }

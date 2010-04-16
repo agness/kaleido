@@ -184,9 +184,6 @@ public class kCodeWindow {
       public void keyPressed(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
           setVisible(false);
-        if (e.getKeyCode() == KeyEvent.VK_ENTER) { //HACK force enter key to work (cause i dunno why it doesn't) TODO dun hack.
-          textarea.setSelectedText("\n");
-        }
       }
     });
     // add dragging function of the move button,
