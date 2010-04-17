@@ -1127,7 +1127,7 @@ public class JEditTextArea extends JComponent
   public final void selectAll()
   {
     select(0,getDocumentLength());
-    if (eventSource.isEventsEnabled()) System.out.println("JEditTextArea >> select all >> fire kEvent.TEXT_SELECTION_CHANGE newStart="+selectionStart+" newEnd="+selectionEnd);
+//    if (eventSource.isEventsEnabled()) System.out.println("JEditTextArea >> select all >> fire kEvent.TEXT_SELECTION_CHANGE newStart="+selectionStart+" newEnd="+selectionEnd);
     eventSource.fireEvent(new mxEventObject(kEvent.TEXTAREA_SELECTION_CHANGE,
                                             "newStart", selectionStart, "newEnd", selectionEnd));
   }
@@ -1138,7 +1138,7 @@ public class JEditTextArea extends JComponent
   public final void selectNone()
   {
     select(getCaretPosition(),getCaretPosition());
-    if (eventSource.isEventsEnabled()) System.out.println("JEditTextArea >> select none >> fire kEvent.TEXT_SELECTION_CHANGE newStart="+selectionStart+" newEnd="+selectionEnd);
+//    if (eventSource.isEventsEnabled()) System.out.println("JEditTextArea >> select none >> fire kEvent.TEXT_SELECTION_CHANGE newStart="+selectionStart+" newEnd="+selectionEnd);
     eventSource.fireEvent(new mxEventObject(kEvent.TEXTAREA_SELECTION_CHANGE,
                                             "newStart", selectionStart, "newEnd", selectionEnd));
   }
@@ -1841,8 +1841,8 @@ public class JEditTextArea extends JComponent
       else
         change = null;
       
-      System.out
-      .println("textarea.documentChanged >> fire kEvent.TEXTAREA_DOCUMENT_CHANGE sketchOffset="+sketchOffset+" event="+evt+" change="+change);
+//      System.out
+//      .println("textarea.documentChanged >> fire kEvent.TEXTAREA_DOCUMENT_CHANGE sketchOffset="+sketchOffset+" event="+evt+" change="+change);
   eventSource.fireEvent(new mxEventObject(
       kEvent.TEXTAREA_DOCUMENT_CHANGE,
       "sketchOffset", sketchOffset, "event", evt, "change", change));
@@ -2180,7 +2180,7 @@ public class JEditTextArea extends JComponent
     public void mouseReleased(MouseEvent evt) {
       int newStart = getMarkPosition();
       int newEnd = xyToOffset(evt.getX(),evt.getY()); //using implementation from mouseDragged
-      if (eventSource.isEventsEnabled()) System.out.println("JEditTextArea >> mouseReleased >> fire kEvent.TEXT_SELECTION_CHANGE newStart="+newStart+" newEnd="+newEnd);
+//      if (eventSource.isEventsEnabled()) System.out.println("JEditTextArea >> mouseReleased >> fire kEvent.TEXT_SELECTION_CHANGE newStart="+newStart+" newEnd="+newEnd);
       eventSource.fireEvent(new mxEventObject(kEvent.TEXTAREA_SELECTION_CHANGE,
                                               "newStart", newStart, "newEnd", newEnd));
     }

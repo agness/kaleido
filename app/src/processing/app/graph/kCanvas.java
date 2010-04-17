@@ -283,7 +283,7 @@ public class kCanvas extends mxInteractiveCanvas {
   protected void drawPolygon(Polygon polygon, Color fillColor,
       Paint fillPaint, Color penColor, boolean shadow)
   {
-    System.err.println("kCanvas.drawPoly no linked >> make sure this isn't called");
+//    System.err.println("kCanvas.drawPoly no linked >> make sure this isn't called");
     if (fillColor != null || fillPaint != null)
     {
       if (shadow)
@@ -321,7 +321,7 @@ public class kCanvas extends mxInteractiveCanvas {
   protected void drawPath(GeneralPath path, Color fillColor, Paint fillPaint,
       Color penColor, boolean shadow)
   {
-    System.err.println("kCanvas.drawPath no linked >> make sure this isn't called");
+//    System.err.println("kCanvas.drawPath no linked >> make sure this isn't called");
     if (fillColor != null || fillPaint != null)
     {
       if (shadow)
@@ -359,7 +359,7 @@ public class kCanvas extends mxInteractiveCanvas {
   protected void drawRect(int x, int y, int w, int h, Color fillColor,
       Paint fillPaint, Color penColor, boolean shadow, boolean rounded)
   {
-    System.err.println("kCanvas.drawRect no linked >> make sure this isn't called");
+//    System.err.println("kCanvas.drawRect no linked >> make sure this isn't called");
     int radius = (rounded) ? getArcSize(w, h) : 0;
 
     if (fillColor != null || fillPaint != null)
@@ -429,7 +429,7 @@ public class kCanvas extends mxInteractiveCanvas {
   protected void drawOval(int x, int y, int w, int h, Color fillColor,
       Paint fillPaint, Color penColor, boolean shadow)
   {
-    System.err.println("kCanvas.drawOval no linked >> make sure this isn't called");
+//    System.err.println("kCanvas.drawOval no linked >> make sure this isn't called");
     if (fillColor != null || fillPaint != null)
     {
       if (shadow)
@@ -526,7 +526,7 @@ public class kCanvas extends mxInteractiveCanvas {
       }
       else if (shape.equals(kConstants.SHAPE_TEXT))
       {
-        System.out.println("kCanvas >> shape='text'! let's not draw anything");
+//        System.out.println("kCanvas >> shape='text'! let's not draw anything");
       }
       
       // Begin shapes from superclass that we actually need
@@ -922,7 +922,7 @@ public class kCanvas extends mxInteractiveCanvas {
         {
           String cuttext = lines[i];
           String formattedstring = new String(wordwrap((int) Math.round(0.155*w),cuttext));
-          System.out.println("formatted string="+formattedstring);
+//          System.out.println("kCanvas >> formatted string="+formattedstring);
           
           //splices the formatted string into lines
           String[] formattedstringlines = formattedstring.split("\n");

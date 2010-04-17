@@ -112,6 +112,7 @@ import processing.core.PApplet;
 import com.mxgraph.io.mxCodec;
 import com.mxgraph.io.mxCodecRegistry;
 import com.mxgraph.io.mxObjectCodec;
+import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
 import com.mxgraph.model.mxGraphModel.mxValueChange;
 import com.mxgraph.swing.mxGraphComponent;
@@ -491,7 +492,7 @@ public class Editor extends JFrame implements RunnerListener {
           // text specified by the code marks. Inserts code referred to by each
           // transfered cell, separated by a new line.
           // @author achang
-          System.out.println("editor filedrophandler >> mxGraphTransferable supported");
+//          System.out.println("editor filedrophandler >> mxGraphTransferable supported");
           Object [] cells = ((mxGraphTransferable) transferable.getTransferData(mxGraphTransferable.dataFlavor)).getCells();
           String s="";
           String temp;
@@ -535,7 +536,7 @@ public class Editor extends JFrame implements RunnerListener {
       }
       else if (type.equals("graph")) 
       {
-        System.out.println("editor filedrophandler >> >>>>>>>>>> type GRAPH successful="+successful);
+//        System.out.println("editor filedrophandler >> >>>>>>>>>> type GRAPH successful="+successful);
           if (successful == 0) 
           {
             statusError("Drawing elements in clipboard were not associated with any code.");
@@ -1271,7 +1272,7 @@ public class Editor extends JFrame implements RunnerListener {
         System.out.println("are we called? :(");
         if (b)
         {
-          System.out.println("editor buildEditMenu >> we're showing it, so set states of menuItems");
+//          System.out.println("editor buildEditMenu >> we're showing it, so set states of menuItems");
           updateEditMenuState();
         }
         super.setPopupMenuVisible(b);
@@ -2439,7 +2440,7 @@ public class Editor extends JFrame implements RunnerListener {
         mxGraph graph = drawarea.getGraphComponent().getGraph();//just a shorthand
         codec.decode(document.getDocumentElement(), graph.getModel());
         
-//        System.out.println("Editor.handleOpenInternal >> graph.getChildrenCount="+graph.getChildCells(graph.getDefaultParent()).length);
+//        System.out.println("Editor.handleOpenInternal >> graph.getChildrenCount="+mxGraphModel.getDescendants(graph.getModel(), graph.getDefaultParent()).size());
         
       } catch (IOException e) {
         Base.showWarning("Error", "Could not create the graph.", e);
@@ -2447,7 +2448,7 @@ public class Editor extends JFrame implements RunnerListener {
       }
     }
     
-    System.out.println("Editor.handleOpenInternal >> drawarea.isModified()="+drawarea.isModified()+" sketch.isModified()="+sketch.isModified());
+//    System.out.println("Editor.handleOpenInternal >> drawarea.isModified()="+drawarea.isModified()+" sketch.isModified()="+sketch.isModified());
     drawarea.setModified(false);
     sketch.setModified(false);
     undoManager.clear();
@@ -3443,7 +3444,7 @@ public class Editor extends JFrame implements RunnerListener {
    * @param stopMark
    */
   public void repaintLinesOfOffset(int startMark, int stopMark) {
-    System.out.println("editor >> repainting lines of offset >> "+startMark+" "+stopMark);
+//    System.out.println("editor >> repainting lines of offset >> "+startMark+" "+stopMark);
     textarea.getPainter().invalidateLineRange(textarea.getLineOfOffset(startMark), textarea.getLineOfOffset(stopMark));
   }
 
@@ -3453,27 +3454,27 @@ public class Editor extends JFrame implements RunnerListener {
    */
   public void repaintLinesOfChanges(List<mxUndoableChange> changes) {
 
-    System.out.println("editor >> repainting lines of changes");
+//    System.out.println("editor >> repainting lines of changes");
 
     Iterator<mxUndoableChange> it = changes.iterator();
     while (it.hasNext())
     {
       Object change = it.next();
       
-      System.out.println("editor repaintLinesOfChanges >> changes="+change.toString());
+//      System.out.println("editor repaintLinesOfChanges >> changes="+change.toString());
 
       if (change instanceof mxValueChange)
       {
         // repaint both the old and new lines of code if they are in the current text view
         if (((mxValueChange) change).getValue() instanceof kCellValue) {
           kCellValue val = (kCellValue) ((mxValueChange) change).getValue();
-          System.out.println("editor >> repainting lines of changes >> val="+val.toPrettyString());
+//          System.out.println("editor >> repainting lines of changes >> val="+val.toPrettyString());
           if (val.isValidCodeMarks() && val.getCodeIndex() == sketch.getCurrentCodeIndex())
             repaintLinesOfOffset(val.getStartMark(), val.getStopMark());
         }
         if (((mxValueChange) change).getPrevious() instanceof kCellValue) {
           kCellValue old = (kCellValue) ((mxValueChange) change).getPrevious();
-          System.out.println("editor >> repainting lines of changes >> old="+old.toPrettyString());
+//          System.out.println("editor >> repainting lines of changes >> old="+old.toPrettyString());
           if (old.isValidCodeMarks() && old.getCodeIndex() == sketch.getCurrentCodeIndex())
             repaintLinesOfOffset(old.getStartMark(), old.getStopMark());
         }
@@ -3546,9 +3547,9 @@ public class Editor extends JFrame implements RunnerListener {
    */
   private void textareaMirrorDocEdit(int sketchInd, int sketchOffset, DocumentEvent e, String change) {
 
-    System.out
-    .println("editor.textareaMirrorDocEdit >> make sure we received everything sketchInd="
-             + sketchInd+" sketchOffset="+sketchOffset+" event="+e+" change="+change);
+//    System.out
+//    .println("editor.textareaMirrorDocEdit >> make sure we received everything sketchInd="
+//             + sketchInd+" sketchOffset="+sketchOffset+" event="+e+" change="+change);
     
     EventType type = e.getType();
     

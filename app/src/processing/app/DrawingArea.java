@@ -171,7 +171,7 @@ public class DrawingArea extends JDesktopPane {
     // cells moved, resized, deleted) then update the codeWindows
     graph.addListener(mxEvent.REPAINT, new mxIEventListener() {
       public void invoke(Object source, mxEventObject evt) {
-        System.out.println("drawarea >> event.REPAINT heard");
+//        System.out.println("drawarea >> event.REPAINT heard");
         
         //Repaint all code windows associated with any cells located in the repainted area
         if (evt.getProperty("region") != null && evt.getProperty("region") instanceof mxRectangle)
@@ -192,9 +192,9 @@ public class DrawingArea extends JDesktopPane {
         for (int i = 0; i < cells.length; i++) {
           cw = getCodeWindow(cells[i]);
           if (cw != null) {
-            System.out
-                .println("drawarea >> cell removed, removing code window id="
-                         + cw.getId());
+//            System.out
+//                .println("drawarea >> cell removed, removing code window id="
+//                         + cw.getId());
             cw.setVisible(false);
             codeWindows.remove(cw);
           }
@@ -235,7 +235,7 @@ public class DrawingArea extends JDesktopPane {
       public void keyPressed(KeyEvent e) {
         if (e.getKeyCode() == KeyEvent.VK_ESCAPE
             && graphComponent.isEscapeEnabled()) {
-          System.out.println("drawarea >> i hear escape pressed");
+//          System.out.println("drawarea >> i hear escape pressed");
           if (getToolMode() != null)
             endToolMode(false);
         }
@@ -571,7 +571,7 @@ public class DrawingArea extends JDesktopPane {
     else {
       // update the FillColor
       setCurrentFillColor(toolName);
-      System.out.println("currentFillColor = " + currentFillColor);
+//      System.out.println("drawarea >> currentFillColor = " + currentFillColor);
       // see notes on cursor setting
       setCursor(PAINT_CURSOR);
       graphComponent.getGraphControl().setCursor(PAINT_CURSOR);
@@ -667,7 +667,7 @@ public class DrawingArea extends JDesktopPane {
    * Repaints all currently open code windows of specified cells.
    */
   protected void repaintCodeWindows(Object[] cells) {
-    System.out.println("drawarea >> repainting code windows of a REGION");
+//    System.out.println("drawarea >> repainting code windows of a REGION");
     for (int i = 0; i < cells.length; i++) {
       kCodeWindow next = getCodeWindow(cells[i]);
       if (next != null && next.isVisible())
@@ -974,19 +974,20 @@ public class DrawingArea extends JDesktopPane {
    */
   public void mirrorDocEdit(int sketchInd, int sketchOffset, DocumentEvent e,
                             String change) {
-    System.out
-        .println("drawarea.mirrorDocEdit >> make sure we received everything sketchInd="
-                 + sketchInd
-                 + " sketchOffset="
-                 + sketchOffset
-                 + " event="
-                 + e
-                 + " change=" + change);
+//    System.out
+//        .println("drawarea.mirrorDocEdit >> make sure we received everything sketchInd="
+//                 + sketchInd
+//                 + " sketchOffset="
+//                 + sketchOffset
+//                 + " event="
+//                 + e
+//                 + " change=" + change);
 
     EventType type = e.getType();
 
-    Object[] cells = mxGraphModel.getChildren(graphComponent.getGraph()
-        .getModel(), graphComponent.getGraph().getDefaultParent());
+    //get all cells
+    Object[] cells = mxGraphModel.getDescendants(graphComponent.getGraph()
+        .getModel(), graphComponent.getGraph().getDefaultParent()).toArray();
 
     for (int i = 0; i < cells.length; i++)
       if (cells[i] instanceof mxICell
@@ -1000,7 +1001,7 @@ public class DrawingArea extends JDesktopPane {
         kCellValue val = ((kCellValue) ((mxICell) cells[i]).getValue());
 
         if (type == EventType.INSERT) {
-          System.out.println("drawarea.mirrorDocEdit >> type=INSERT");
+//          System.out.println("drawarea.mirrorDocEdit >> type=INSERT");
 
           // if the insertion point falls into the range of the cell,
           // then expand the code mark range to include the edit
@@ -1117,13 +1118,13 @@ public class DrawingArea extends JDesktopPane {
         // update codemarks here
         val.setStopMark(val.getStartMark() + document.getLength());
 
-        System.out
-            .println("drawArea.CodeWindowDocListener >> fire kEvent.CODE_WINDOW_DOCUMENT_CHANGE sketchInd="
-                     + sketchInd
-                     + " sketchOffset="
-                     + sketchOffset
-                     + " event="
-                     + e + " change=" + change);
+//        System.out
+//            .println("drawArea.CodeWindowDocListener >> fire kEvent.CODE_WINDOW_DOCUMENT_CHANGE sketchInd="
+//                     + sketchInd
+//                     + " sketchOffset="
+//                     + sketchOffset
+//                     + " event="
+//                     + e + " change=" + change);
         eventSource.fireEvent(new mxEventObject(
             kEvent.CODE_WINDOW_DOCUMENT_CHANGE, "sketchInd", sketchInd,
             "sketchOffset", sketchOffset, "event", e, "change", change));
@@ -1250,7 +1251,7 @@ public class DrawingArea extends JDesktopPane {
    */
   protected Object[] lockCells(Object[] cells, boolean lock) {
 
-    System.out.println("drawarea.lockCells "+lock+" >>");
+//    System.out.println("drawarea.lockCells "+lock+" >>");
     
     graphComponent.getGraph().getModel().beginUpdate();
 
@@ -1300,10 +1301,10 @@ public class DrawingArea extends JDesktopPane {
    * start is always < stop
    */
   protected Object[] getCellsIntersectCode(int start, int stop, int ind) {
-
+    
     // get all cells of the model
-    Object[] cells = mxGraphModel.getChildren(graphComponent.getGraph()
-        .getModel(), graphComponent.getGraph().getDefaultParent());
+    Object[] cells = mxGraphModel.getDescendants(graphComponent.getGraph()
+        .getModel(), graphComponent.getGraph().getDefaultParent()).toArray();
     ArrayList<Object> result = new ArrayList<Object>();
 
     // add valid & intersecting cells to result bag

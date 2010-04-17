@@ -30,7 +30,7 @@ public class kTextAreaPainter extends TextAreaPainter {
     super(textArea, defaults);
     this.drawarea = drawarea;
     
-    System.out.println("kTAP >> constructed");
+//    System.out.println("kTAP >> constructed");
   }
   
   protected void paintLine(Graphics gfx, TokenMarker tokenMarker,

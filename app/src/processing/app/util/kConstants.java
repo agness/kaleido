@@ -181,7 +181,7 @@ public class kConstants
   /**
    * The uniform color of all connectors created in Kaleido
    */
-  public static final Color EDGE_STROKE_COLOR = Color.gray;
+  public static final Color EDGE_STROKE_COLOR = UI_COLOR_ACTIVETAB;
 
   /**
    * The uniform font color of all connector labels
