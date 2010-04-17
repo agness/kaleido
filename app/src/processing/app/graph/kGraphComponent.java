@@ -80,6 +80,8 @@ public class kGraphComponent extends mxGraphComponent {
     // graphOutline background color; we're using the same color as the
     // background color of inactive buttons
     setPageBackgroundColor(kConstants.UI_COLOR_BUTTONFILL); 
+    //since by default custom components can't get focus
+    setFocusable(true);
     
     graphControl.addMouseListener(new MouseAdapter()
     {
