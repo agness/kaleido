@@ -5,8 +5,10 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Polygon;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -1074,6 +1076,10 @@ public class kCodeWindow {
     public void paintComponent(Graphics g) {
 
       super.paintComponent(g);
+      
+      // make pretty anti-aliased triangles
+      Graphics2D g2 = (Graphics2D) g;
+      g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
 
       Point p1, p2, p3;
 
@@ -1138,9 +1144,9 @@ public class kCodeWindow {
       int[] xs = { p1.x, p2.x, p3.x };
       int[] ys = { p1.y, p2.y, p3.y };
       Polygon triangle = new Polygon(xs, ys, xs.length);
-      g.setColor(kConstants.CODE_WINDOW_COLOR);
+      g2.setColor(kConstants.CODE_WINDOW_COLOR);
 
-      g.fillPolygon(triangle);
+      g2.fillPolygon(triangle);
 
       // g.setColor(Color.LIGHT_GRAY);
       // g.drawLine(p1.x,p1.y, p2.x, p2.y);
