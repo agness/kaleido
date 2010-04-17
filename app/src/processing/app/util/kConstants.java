@@ -181,12 +181,12 @@ public class kConstants
   /**
    * The uniform color of all connectors created in Kaleido
    */
-  public static final Color EDGE_STROKE_COLOR = UI_COLOR_ACTIVETAB;
+  public static final Color EDGE_STROKE_COLOR = UI_COLOR_BUTTONFILL;
 
   /**
    * The uniform font color of all connector labels
    */
-  public static final Color EDGE_FONT_COLOR = UI_COLOR_ACTIVETAB;
+  public static final Color EDGE_FONT_COLOR = UI_COLOR_BUTTONFILL;
   
   /**
    * The font color of text areas (should be decided upon depending on color of canvas)

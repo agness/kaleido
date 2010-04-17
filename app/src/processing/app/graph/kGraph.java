@@ -198,7 +198,7 @@ public class kGraph extends mxGraph {
     } 
     else
     {
-      drawStateWithLabel(canvas, getView().getState(cell), getLabel(cell));
+      drawStateWithLabel(canvas, getView().getState(cell), getLabel(cell));     
     }
     // Draws the children on top of their parent
     int childCount = model.getChildCount(cell);
@@ -286,19 +286,22 @@ public class kGraph extends mxGraph {
         state.getStyle().remove(mxConstants.STYLE_VERTICAL_ALIGN);
         getView().updateLabelBounds(state); //recalculate label bounds
       }
-      //kEdits------------>
-           
+
+      //original implementation's label bounds
       mxRectangle labelBounds = state.getLabelBounds();
+     
+//      System.out.println("kGraph >> label="+label+" labelBounds="+labelBounds);
       
       if (label != null && labelBounds != null)
       {
         x = (int) Math.round(labelBounds.getX());
         y = (int) Math.round(labelBounds.getY());
-        w = (int) Math.round(labelBounds.getWidth() - x + labelBounds.getX());
-        h = (int) Math.round(labelBounds.getHeight() - y + labelBounds.getY());
+        //make sure the label does not overflow (esp. y-dimension in text boxes)
+        //state is equal to the cell bounds in the view (i.e. takes scale/translates into account)
+        w = (int) Math.min(Math.round(labelBounds.getWidth() - x + labelBounds.getX()), state.getWidth());
+        h = (int) Math.min(Math.round(labelBounds.getHeight() - y + labelBounds.getY()), state.getHeight());
 
-        //<!------------Kaleido edits
-        //debuggingggggggg paints cyan label bounds
+        //DEBUGGINGGGGGGGG paints cyan label bounds
 //        state.getStyle().put(mxConstants.STYLE_LABEL_BORDERCOLOR,"#00FFFF");
         
         //forcing the title to be in bold
@@ -314,13 +317,11 @@ public class kGraph extends mxGraph {
         
         if (notes != null) 
         {
-          //get the cell bounds in the view (takes scale/translates into account)
-          mxRectangle cellBounds = getView().getBounds(new Object[] {state.getCell()});
-          x = (int) Math.round(cellBounds.getX());
-          w = (int) Math.round(cellBounds.getWidth());
+          x = (int) Math.round(state.getX());
+          w = (int) Math.round(state.getWidth());
           //draw a little lower, and make h the height to the bottom edge of the shape
           y = (int) Math.round(labelBounds.getY() + labelBounds.getHeight());
-          h = (int) Math.round(cellBounds.getY()+cellBounds.getHeight() - y);
+          h = (int) Math.round(state.getY()+state.getHeight() - y);
           
           // if is swimlane, draw one line even lower, but adjust the "bottom of the shape"
           if (isCellFoldable(state.getCell())) {

@@ -298,8 +298,8 @@ public class EditorDrawingHeader extends JSplitPane {
     lockButton.setBorderPainted(false);
     lockButton.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
-        System.out.println("lockButton isSelected "
-                           + ((AbstractButton) e.getSource()).isSelected());
+//        System.out.println("drawHeader >> lockButton isSelected "
+//                           + ((AbstractButton) e.getSource()).isSelected());
         AbstractButton source = (AbstractButton) e.getSource();
         if (source.isSelected())
           drawarea.unlockSelected();

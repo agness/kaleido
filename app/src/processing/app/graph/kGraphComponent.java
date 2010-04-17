@@ -183,10 +183,14 @@ public class kGraphComponent extends mxGraphComponent {
   public mxInteractiveCanvas createCanvas() {
     return new kCanvas();        
   }
-  
+
   /**
    * Override to override the mxGraphTransferHandler to accept string imports as
    * text area shapes
+   * 
+   * TODO create export object that stores both the graph object and actual code
+   * (not just codemarks referred to, so that you can copy-paste across
+   * different instances of Kaleido)
    */
   protected TransferHandler createTransferHandler()
   {
@@ -211,7 +215,7 @@ public class kGraphComponent extends mxGraphComponent {
       /**
        * Take string-type data and put it in a new text area shape
        */
-      public boolean importData(JComponent c, Transferable t)
+      public boolean importData(JComponent receiver, Transferable t)
       {
         boolean result = false;
 
@@ -224,9 +228,9 @@ public class kGraphComponent extends mxGraphComponent {
         {
           try
           {
-            if (c instanceof mxGraphComponent)
+            if (receiver instanceof mxGraphComponent)
             {
-              mxGraphComponent graphComponent = (mxGraphComponent) c;
+              mxGraphComponent graphComponent = (mxGraphComponent) receiver;
 
               if (graphComponent.isEnabled()
                   && t
@@ -234,10 +238,21 @@ public class kGraphComponent extends mxGraphComponent {
               {
                 mxGraphTransferable gt = (mxGraphTransferable) t
                     .getTransferData(mxGraphTransferable.dataFlavor);
-
+                
                 if (gt.getCells() != null)
                 {
-                  result = importCells(graphComponent, gt.getCells(),
+                  // strip cells of links so if we copy-paste into another
+                  // instance of Kaleido we don't run into bad location
+                  // exceptions
+                  Object[] cells = gt.getCells();
+                  for (int i = 0; i < cells.length; i++)
+                    if (cells[i] instanceof mxICell
+                        && ((mxICell) cells[i]).getValue() instanceof kCellValue) {
+                      ((kCellValue) ((mxICell) cells[i]).getValue()).invalidateCodeMarks();
+                      ((mxICell) cells[i]).setStyle(mxUtils.setStyle(((mxICell) cells[i]).getStyle(), kConstants.STYLE_LINKED, "false"));
+                    }
+                  
+                  result = importCells(graphComponent, cells,
                       gt.getBounds());
                 }
 
@@ -245,7 +260,7 @@ public class kGraphComponent extends mxGraphComponent {
               // kEdits ---->
               else if (t.isDataFlavorSupported(DataFlavor.stringFlavor)) {
 
-                System.out.println("kGComp createTransferHandler >> stringFlavor supported");
+//                System.out.println("kGComp createTransferHandler >> stringFlavor supported");
 
                 String strData = (String) t.getTransferData(DataFlavor.stringFlavor);
                 Rectangle rect = new Rectangle();
@@ -370,8 +385,7 @@ public class kGraphComponent extends mxGraphComponent {
           if (((mxICell) cell).getValue() instanceof kCellValue && graph instanceof kGraph) {
             ((kGraph) graph).drawStateWithNotes(canvas, state, label, ((kGraph) graph).getNotes(cell));
           } 
-          else
-          {
+          else {
             graph.drawStateWithLabel(canvas, state, label);
           }
           //<------kEdits:
@@ -520,10 +534,10 @@ public class kGraphComponent extends mxGraphComponent {
           }
           protected JComponent createPreview()
           {
-            System.out.println("new mxElbowEdgeHandler >> createPreview >> is marker valid?");
+//            System.out.println("new mxElbowEdgeHandler >> createPreview >> is marker valid?");
             marker.setValidColor(kConstants.DEFAULT_VALID_COLOR);
             marker.setInvalidColor(kConstants.DEFAULT_INVALID_COLOR);
-            System.out.println("new mxElbowEdgeHandler >> createPreview >> yes we can set marker colors here");
+//            System.out.println("new mxElbowEdgeHandler >> createPreview >> yes we can set marker colors here");
             JPanel preview = new JPanel()
             {
               private static final long serialVersionUID = -894546588972313020L;
@@ -618,10 +632,10 @@ public class kGraphComponent extends mxGraphComponent {
          */
         protected JComponent createPreview()
         {
-          System.out.println("new mxElbowEdgeHandler >> createPreview >> is marker valid?");
+//          System.out.println("new mxElbowEdgeHandler >> createPreview >> is marker valid?");
           marker.setValidColor(kConstants.DEFAULT_VALID_COLOR);
           marker.setInvalidColor(kConstants.DEFAULT_INVALID_COLOR);
-          System.out.println("new mxElbowEdgeHandler >> createPreview >> yes we can set marker colors here");
+//          System.out.println("new mxElbowEdgeHandler >> createPreview >> yes we can set marker colors here");
           JPanel preview = new JPanel()
           {
             private static final long serialVersionUID = -894546588972313020L;

@@ -1005,14 +1005,14 @@ public class DrawingArea extends JDesktopPane {
 
           // if the insertion point falls into the range of the cell,
           // then expand the code mark range to include the edit
-          if ((val.getStartMark() <= sketchOffset)
+          if ((val.getStartMark() < sketchOffset)
               && (val.getStopMark() > sketchOffset)) {
             val.setStopMark(val.getStopMark() + e.getLength());
             refreshCodeWindowContent(cells[i]);
 
-            // else if the insertion point is before the cell
+            // else if the insertion point is before or at the cell
             // shift both code marks to accommodate the extra characters
-          } else if (val.getStartMark() > sketchOffset) {
+          } else if (val.getStartMark() >= sketchOffset) {
             val.shiftCodeMarks(e.getLength());
             refreshCodeWindowContent(cells[i]);
           }
@@ -1547,6 +1547,8 @@ public class DrawingArea extends JDesktopPane {
                                mxConstants.ALIGN_LEFT);
       style = mxUtils.setStyle(style, mxConstants.STYLE_VERTICAL_ALIGN,
                                mxConstants.ALIGN_TOP);
+      //make sure text does not overflow
+      style = mxUtils.setStyle(style, mxConstants.STYLE_OVERFLOW, "fill");
       
       return style;
     }

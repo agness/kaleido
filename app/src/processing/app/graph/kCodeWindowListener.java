@@ -31,7 +31,7 @@ public class kCodeWindowListener extends TextAreaListener {
    */
   public boolean keyPressed(KeyEvent event) {
     
-    System.out.println("kCodeWindowListener heard something");
+//    System.out.println("kCodeWindowListener heard something");
     
     // don't do things if the textarea isn't editable
     if (externalEditor) return false;

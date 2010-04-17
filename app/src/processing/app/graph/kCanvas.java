@@ -482,6 +482,8 @@ public class kCanvas extends mxInteractiveCanvas {
     boolean linked = mxUtils.isTrue(style, kConstants.STYLE_LINKED,
                                     false);
     
+//    System.out.println("kCanvas >> linked="+linked);
+    
     // Same procedures of preparation as super class
     Color penColor = mxUtils.getColor(style, mxConstants.STYLE_STROKECOLOR);
     float penWidth = mxUtils.getFloat(style, mxConstants.STYLE_STROKEWIDTH, 1);

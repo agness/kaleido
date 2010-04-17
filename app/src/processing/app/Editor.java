@@ -1887,7 +1887,10 @@ public class Editor extends JFrame implements RunnerListener {
                          code.getSelectionStart(), code.getSelectionStop(),
                          code.getScrollPosition());
 
-    textarea.requestFocus();  // get the caret blinking
+    // fix so that in the case of selection sync handling the tab switching that
+    // the graph component doesn't lose focus
+    if (!drawarea.getGraphComponent().isFocusOwner())
+      textarea.requestFocus();  // get the caret blinking
 
     // P5's original setup is that each code keeps a separate undo manager;
     // however, since the drawarea potentially maintains connections to each
@@ -3391,6 +3394,7 @@ public class Editor extends JFrame implements RunnerListener {
         {
           kCellValue val = (kCellValue) ((mxICell) cell).getValue();
           sketch.setCurrentCode(val.getCodeIndex());
+                    
           setSelection(val.getStartMark(), val.getStopMark());
 //          System.out.println("editor >> graph listener selection sync "
 //                             + ((kCellValue) ((mxICell) cell).getValue())
@@ -3401,6 +3405,7 @@ public class Editor extends JFrame implements RunnerListener {
         }
         
         textarea.setEventsEnabled(true);
+
       }
   }
   
