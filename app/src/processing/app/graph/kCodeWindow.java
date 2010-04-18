@@ -508,43 +508,43 @@ public class kCodeWindow {
     ActionMap amap = textarea.getActionMap();
     amap.put(TransferHandler.getCutAction().getValue(Action.NAME), new AbstractAction() {
       public void actionPerformed(ActionEvent e) {
-        System.out.println("kCodeWindow ActionMap >> cut "+e.getSource());
+//        System.out.println("kCodeWindow ActionMap >> cut "+e.getSource());
         ((JEditTextArea) e.getSource()).cut();
       }
     });
     amap.put(TransferHandler.getCopyAction().getValue(Action.NAME), new AbstractAction() {
       public void actionPerformed(ActionEvent e) {
-        System.out.println("kCodeWindow ActionMap >> copy "+e.getSource());
+//        System.out.println("kCodeWindow ActionMap >> copy "+e.getSource());
         ((JEditTextArea) e.getSource()).copy();
       }
     });
     amap.put(TransferHandler.getPasteAction().getValue(Action.NAME), new AbstractAction() {
       public void actionPerformed(ActionEvent e) {
-        System.out.println("kCodeWindow ActionMap >> paste "+e.getSource());
+//        System.out.println("kCodeWindow ActionMap >> paste "+e.getSource());
         ((JEditTextArea) e.getSource()).paste();
       }
     });
     amap.put("selectAll", new AbstractAction() {
       public void actionPerformed(ActionEvent e) {
-        System.out.println("kCodeWindow ActionMap >> select all "+e.getSource());
+//        System.out.println("kCodeWindow ActionMap >> select all "+e.getSource());
         ((JEditTextArea) e.getSource()).selectAll();
       }
     });
     amap.put("commentUncomment", new AbstractAction() {
       public void actionPerformed(ActionEvent e) {
-        System.out.println("kCodeWindow ActionMap >> comment uncomment"+e.getSource());
+//        System.out.println("kCodeWindow ActionMap >> comment uncomment"+e.getSource());
         handleCommentUncomment();
       }
     });
     amap.put("increaseIndent", new AbstractAction() {
       public void actionPerformed(ActionEvent e) {
-        System.out.println("kCodeWindow ActionMap >> increaseIndent"+e.getSource());
+//        System.out.println("kCodeWindow ActionMap >> increaseIndent"+e.getSource());
         handleIndentOutdent(true);
       }
     });
     amap.put("decreaseIndent", new AbstractAction() {
       public void actionPerformed(ActionEvent e) {
-        System.out.println("kCodeWindow ActionMap >> decreaseIndent"+e.getSource());
+//        System.out.println("kCodeWindow ActionMap >> decreaseIndent"+e.getSource());
         handleIndentOutdent(false);
       }
     });
@@ -685,7 +685,7 @@ public class kCodeWindow {
    * @param b
    */
   public void setVisible(boolean b) {
-    System.out.println("kCodeWindow opaque >> editFrame="+editFrame.isOpaque()+ " buttonFrame="+buttonFrame.isOpaque()+" triangleFrame="+triangleFrame.isOpaque());
+//    System.out.println("kCodeWindow opaque >> editFrame="+editFrame.isOpaque()+ " buttonFrame="+buttonFrame.isOpaque()+" triangleFrame="+triangleFrame.isOpaque());
     editFrame.setVisible(b);
     buttonFrame.setVisible(b);
     triangleFrame.setVisible(b);
@@ -745,7 +745,7 @@ public class kCodeWindow {
     int tilt = -1;
     int cellX = getCellCenter().x;
     int cellY = getCellCenter().y;
-    System.out.println("kCW >> updateTriangle >> cellCenter="+getCellCenter());
+//    System.out.println("kCW >> updateTriangle >> cellCenter="+getCellCenter());
     int width, height;
 
     if (editFrameLocation.x + editFrameSize.width / 2 >= cellX
