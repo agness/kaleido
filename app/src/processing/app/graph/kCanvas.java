@@ -695,7 +695,7 @@ public class kCanvas extends mxInteractiveCanvas {
     
     path.closePath();
 
-    System.out.println("draw person?");
+//    System.out.println("draw person?");
     
     drawPath(path, fillColor, fillPaint, penColor, shadow, linked);
   }

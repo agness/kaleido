@@ -112,6 +112,7 @@ import processing.core.PApplet;
 import com.mxgraph.io.mxCodec;
 import com.mxgraph.io.mxCodecRegistry;
 import com.mxgraph.io.mxObjectCodec;
+import com.mxgraph.model.mxCell;
 import com.mxgraph.model.mxGraphModel;
 import com.mxgraph.model.mxICell;
 import com.mxgraph.model.mxGraphModel.mxValueChange;
@@ -2449,6 +2450,14 @@ public class Editor extends JFrame implements RunnerListener {
         Base.showWarning("Error", "Could not create the graph.", e);
         // Don't return false in this case, because it's okay to open Processing projects that don't have a graph yet.
       }
+    }
+    else // no graph found, make a new empty graph
+    {
+      mxGraph graph = drawarea.getGraphComponent().getGraph();
+      // Check modified flag and display save dialog
+      mxCell root = new mxCell();
+      root.insert(new mxCell());
+      graph.getModel().setRoot(root);
     }
     
 //    System.out.println("Editor.handleOpenInternal >> drawarea.isModified()="+drawarea.isModified()+" sketch.isModified()="+sketch.isModified());
