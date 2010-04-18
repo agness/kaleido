@@ -3265,7 +3265,7 @@ public class Editor extends JFrame implements RunnerListener {
       
       if (drawingHeader.getLinkButton().isLinkActiveMode()) {
 //        System.out.println("selectionSync >> we're in linking mode so not sync-ing");
-      } else
+      } else {
         if (e.getSource() instanceof JEditTextArea)
         {
             syncGraphSelectionToText();
@@ -3283,8 +3283,9 @@ public class Editor extends JFrame implements RunnerListener {
           drawingHeader.updateGraphButtons();
         }
       
-      // call this every time there's a focus swap
-      updateLinkButton();
+        // except when in the middle of linking, call this every time there's a focus swap
+        updateLinkButton();
+      }
       
       //TODO ideally we only ever call this function before the user opens the JMenu
       updateEditMenuState();
@@ -3328,24 +3329,24 @@ public class Editor extends JFrame implements RunnerListener {
     drawarea.getGraphComponent().getGraph().getSelectionModel()
         .addListener(mxEvent.CHANGE, new mxIEventListener() {
           public void invoke(Object sender, mxEventObject evt) {
-//            if (drawarea.getToolMode() != null) {
-//              System.out.println("we're in tool mode -- not sync-ing");
-//            } else {
-            syncTextSelectionToGraph();
-            updateLinkButton(); //update the link button for any selection change
-            updateEditMenuState();
-//            }
+            if (drawarea.getToolMode() != null) {
+//              System.out.println("Editor.drawSync >> we're in tool mode -- not sync-ing");
+            } else {
+              syncTextSelectionToGraph();
+              updateLinkButton(); //update the link button for any selection change
+              updateEditMenuState();
+            }
           }
         });
     textarea.addListener(kEvent.TEXTAREA_SELECTION_CHANGE, new mxIEventListener() {
       public void invoke(Object sender, mxEventObject evt) {
-//        if (drawarea.getToolMode() != null) {
-//          System.out.println("we're in tool mode -- not sync-ing");
-//        } else {
-        syncGraphSelectionToText();
-        updateLinkButton(); //update the link button for any selection change
-        updateEditMenuState();
-//        }
+        if (drawarea.getToolMode() != null) {
+//          System.out.println("Editor.textSync >> we're in tool mode -- not sync-ing");
+        } else {
+          syncGraphSelectionToText();
+          updateLinkButton(); //update the link button for any selection change
+          updateEditMenuState();
+        }
       }
     });
   }
@@ -3641,8 +3642,9 @@ public class Editor extends JFrame implements RunnerListener {
           public void invoke(Object sender, mxEventObject evt) {
             
             // CASE 2
-            if (drawingHeader.getLinkButton().isLinkActiveMode() && textarea.getSelectedText() != null) {
+            if (drawingHeader.getLinkButton().isLinkActiveMode() && textarea.getSelectedText() != null && drawarea.getToolMode() == null) {
               //user has selected some text and clicked the link button, and now selected the cells
+              //but make sure we aren't in tool mode, so as not to interfere with CASE 1
 //              System.out.println("link >> link active, text selected, now graph selected");
               codeDrawLink(drawarea.getGraphComponent().getGraph().getSelectionCells(), textarea.getSelectionStart(), textarea.getSelectionStop());
             }
