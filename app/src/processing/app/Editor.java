@@ -1266,18 +1266,18 @@ public class Editor extends JFrame implements RunnerListener {
   }
 
   protected JMenu buildEditMenu() {
-    JMenu menu = new JMenu("Edit") {
-      public void setPopupMenuVisible(boolean b) {
-        //TODO this doesn't seem to work at all -- is it because it's a mac?
-        System.out.println("are we called? :(");
-        if (b)
-        {
-//          System.out.println("editor buildEditMenu >> we're showing it, so set states of menuItems");
-          updateEditMenuState();
-        }
-        super.setPopupMenuVisible(b);
-      }
-    };
+    JMenu menu = new JMenu("Edit");
+//      public void setPopupMenuVisible(boolean b) {
+//        //TODO this doesn't seem to work at all -- is it because it's a mac?
+//        System.out.println("are we called? :(");
+//        if (b)
+//        {
+////          System.out.println("editor buildEditMenu >> we're showing it, so set states of menuItems");
+//          updateEditMenuState();
+//        }
+//        super.setPopupMenuVisible(b);
+//      }
+//    };
     JMenuItem item;
 
     undoItem = newJMenuItem("Undo", 'Z');
