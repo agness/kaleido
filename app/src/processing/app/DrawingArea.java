@@ -994,10 +994,11 @@ public class DrawingArea extends JDesktopPane {
           && ((mxICell) cells[i]).getValue() instanceof kCellValue
           && ((kCellValue) ((mxICell) cells[i]).getValue()).isValidCodeMarks()
           && ((kCellValue) ((mxICell) cells[i]).getValue()).getCodeIndex() == sketchInd
-          && getCodeWindow(cells[i]) != null
-          && getCodeWindow(cells[i]).getTextArea().getDocument() != e
-              .getDocument()) {
-
+          && (getCodeWindow(cells[i]) == null //a code window hasn't been made for it yet
+              || (getCodeWindow(cells[i]) != null  //or it has a code window but...
+                  && getCodeWindow(cells[i]).getTextArea().getDocument() != e 
+                  .getDocument()))) { //which is not the source of the edit
+        
         kCellValue val = ((kCellValue) ((mxICell) cells[i]).getValue());
 
         if (type == EventType.INSERT) {
