@@ -294,11 +294,13 @@ public class kGraph extends mxGraph {
       
       if (label != null && labelBounds != null)
       {
-        x = (int) Math.round(labelBounds.getX());
+//        x = (int) Math.round(labelBounds.getX());
+        x = (int) Math.round(state.getX());
         y = (int) Math.round(labelBounds.getY());
         //make sure the label does not overflow (esp. y-dimension in text boxes)
         //state is equal to the cell bounds in the view (i.e. takes scale/translates into account)
-        w = (int) Math.min(Math.round(labelBounds.getWidth() - x + labelBounds.getX()), state.getWidth());
+//        w = (int) Math.min(Math.round(labelBounds.getWidth() - x + labelBounds.getX()), state.getWidth());
+        w = (int) Math.round(state.getWidth());
         h = (int) Math.min(Math.round(labelBounds.getHeight() - y + labelBounds.getY()), state.getHeight());
 
         //DEBUGGINGGGGGGGG paints cyan label bounds
@@ -314,6 +316,8 @@ public class kGraph extends mxGraph {
         
         lab = canvas.drawLabel(label, x, y, w, h, state.getStyle(),
             isHtmlLabel(cell));
+//        System.out.println("kGraph draw label: x="+x+" y="+y+" w="+w+" h="+h);
+//        System.out.println("labelBounds="+labelBounds.getRectangle());
         
         if (notes != null) 
         {

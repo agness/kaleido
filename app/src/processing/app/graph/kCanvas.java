@@ -853,25 +853,28 @@ public class kCanvas extends mxInteractiveCanvas {
       //<!----------begin susie edits
       
       int origY = y; //original y
-      int numformattedlines;
+      int numFormattedLines;
       
       for (int i = 0; i < lines.length; i++)
       {
         int dx = 0;
         
-//        System.out.println("kCanvas.drawPlainText >> original line="+lines[i]);
+//        System.out.println("kCanvas.drawPlainText >> i="+i+" original line="+lines[i]);
         
         //if we have NO SPACE to draw any line then just break
-        if (y + fm.getHeight() > origY + h)
+        if (y + fm.getHeight() > origY + h) {
+//          System.out.println("kCanvas >> no space to draw any line so just break");
           break;
+        }
         
         //if the width of the string is contained within the block
         if (fm.stringWidth(lines[i])<w)
         {
-          numformattedlines = 1;
-          //if this is the LAST LINE, or if the next line does NOT overflow
-          if (i+1 == lines.length || !(y + fm.getHeight() > origY + h - fm.getHeight())) 
+          numFormattedLines = 1;
+          //if this is the LAST LINE, or if a next line would NOT overflow bounds
+          if (i+1 >= lines.length || !(y + fm.getHeight() > origY + h - fm.getHeight())) 
           { 
+//            System.out.println("kCanvas >> orig line: this is the last line");
             int sw = fm.stringWidth(lines[i]);
             if (align.equals(mxConstants.ALIGN_CENTER))
             {
@@ -891,12 +894,14 @@ public class kCanvas extends mxInteractiveCanvas {
             g.drawString(lines[i], x + dx, y);
           }
           else 
-          { //if the next line DOES overflow, 
+          { //if a next line WOULD overflow bounds,
             //draw a substring of the current line and stop drawing the 
             //rest of the lines
-            String substring = (lines[i].length() > 4) ? 
-                   lines[i].substring(0, lines[i].length() - 4)
+//            System.out.println("kCanvas >> orig line: next line overflows");
+            String substring = (lines[i].length() > 3) ? 
+                   lines[i].substring(0, lines[i].length() - 3)
                    : "";
+            substring += "...";
             
             int sw = fm.stringWidth(substring);
             if (align.equals(mxConstants.ALIGN_CENTER))
@@ -916,28 +921,38 @@ public class kCanvas extends mxInteractiveCanvas {
             }
             
             g.drawString(substring, x + dx, y);  
-            g.drawString("...", x+dx+fm.stringWidth(substring), y);
             break;
           }
         } 
-        else //if width of string not contained within the block
+        else //FORMATTED LOOP if width of string not contained within the block we have to make sub-lines
         {
           String cuttext = lines[i];
-          String formattedstring = new String(wordwrap((int) Math.round(0.155*w),cuttext));
-//          System.out.println("kCanvas >> formatted string="+formattedstring);
+          String formattedString = new String(wordwrap((int) Math.round(0.155*w),cuttext));
+//          System.out.println("kCanvas >> formatted string="+formattedString);
           
           //splices the formatted string into lines
-          String[] formattedstringlines = formattedstring.split("\n");
-          numformattedlines = formattedstringlines.length;
+          String[] formattedLines = formattedString.split("\n");
+          numFormattedLines = formattedLines.length;
           
           int formaty = y;
-          
-          for (int j = 0; j < formattedstringlines.length; j++) 
+                    
+          for (int j = 0; j < formattedLines.length; j++) 
           {
+            dx = 0;
+            
+//            System.out.println("kCanvas >> formatted: j="+j+" formattedline="+formattedLines[j]);
+            
+            //if we have NO SPACE to draw any line then just break
+            if (formaty + fm.getHeight() > origY + h) {
+//              System.out.println("kCanvas >> no space to draw any line so just break");
+              break;
+            }
+            
             //if this is the last line of the last line, or if the next line does NOT overflow
-            if ((i+1 == lines.length && j+1 == formattedstringlines.length) || !(formaty + j*fm.getHeight() > origY + h - fm.getHeight())) 
+            if ((i+1 >= lines.length && j+1 >= formattedLines.length) || !(formaty + fm.getHeight() > origY + h - fm.getHeight())) 
             { 
-              int sw = fm.stringWidth(formattedstringlines[j]);
+//              System.out.println("kCanvas >> formatted: this is the last line of the last line");
+              int sw = fm.stringWidth(formattedLines[j]);
               if (align.equals(mxConstants.ALIGN_CENTER))
               {
                 if (horizontal)
@@ -954,16 +969,19 @@ public class kCanvas extends mxInteractiveCanvas {
                 dx = ((horizontal) ? w : h) - sw;
               }
               
-              g.drawString(formattedstringlines[j], x+dx, formaty);
+              g.drawString(formattedLines[j], x+dx, formaty);
               formaty += fm.getHeight() + mxConstants.LINESPACING; 
             }
             else
             { //if the next line DOES overflow, 
               //draw a substring of the current line and stop drawing the 
               //rest of the lines
-              String substring = (formattedstringlines[j].length() > 4) ? 
-                     formattedstringlines[j].substring(0, formattedstringlines[j].length() - 4)
+//              System.out.println("kCanvas >> formatted: next line overflows");
+              
+              String substring = (formattedLines[j].length() > 3) ? 
+                     formattedLines[j].substring(0, formattedLines[j].length() - 3)
                      : "";
+              substring += "...";
               
               int sw = fm.stringWidth(substring);
               if (align.equals(mxConstants.ALIGN_CENTER))
@@ -983,13 +1001,12 @@ public class kCanvas extends mxInteractiveCanvas {
               }
               
               g.drawString(substring, x + dx, formaty);  
-              g.drawString("...", x+dx+fm.stringWidth(substring), formaty);
               break;
             }
           }
         }
         
-        y += numformattedlines*fm.getHeight() + mxConstants.LINESPACING;
+        y += numFormattedLines*fm.getHeight() + mxConstants.LINESPACING;
       }
 
       // Resets the transformation
