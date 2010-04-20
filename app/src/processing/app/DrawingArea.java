@@ -1603,9 +1603,14 @@ public class DrawingArea extends JDesktopPane {
       } else if (!toolMode.equals(kConstants.SHAPE_KEYS[0])) // no style
                                                              // indicates rectangles
       {
-        System.err
-            .println("Ut oh! You managed to select a tool that doesn't exist! Please report this bug: class=ShapeToolband, toolMode="
-                     + toolMode);
+        // TODO achang 04/19/2010
+        // this has been printing too much, and I don't have time to figure out
+        // how it falls between the cracks and happens but I shouldn't freak out
+        // users by printing this when it wouldn't be helpful even if they
+        // reported everything to me
+//        System.err
+//            .println("Ut oh! You managed to select a tool that doesn't exist! Please report this bug: class=ShapeToolband, toolMode="
+//                     + toolMode);
       }
       return style;
     }
@@ -1829,9 +1834,14 @@ public class DrawingArea extends JDesktopPane {
                                  mxConstants.SHAPE_CONNECTOR);
         style = mxUtils.setStyle(style, mxConstants.STYLE_DASHED, "1");
       } else {
-        System.err
-            .println("Ut oh! You managed to select a tool that doesn't exist! Please report this bug: class=ConnectorToolband, toolMode="
-                     + toolMode);
+        // TODO achang 04/19/2010
+        // this has been printing too much, and I don't have time to figure out
+        // how it falls between the cracks and happens but I shouldn't freak out
+        // users by printing this when it wouldn't be helpful even if they
+        // reported everything to me
+//        System.err
+//            .println("Ut oh! You managed to select a tool that doesn't exist! Please report this bug: class=ConnectorToolband, toolMode="
+//                     + toolMode);
       }
       style = mxUtils.setStyle(style, mxConstants.STYLE_STROKECOLOR, Integer
           .toHexString((kConstants.EDGE_STROKE_COLOR).getRGB()));
