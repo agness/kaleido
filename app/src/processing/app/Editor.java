@@ -76,6 +76,8 @@ import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import javax.swing.TransferHandler;
 import javax.swing.event.DocumentEvent;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import javax.swing.event.UndoableEditEvent;
 import javax.swing.event.UndoableEditListener;
 import javax.swing.event.DocumentEvent.EventType;
@@ -1279,6 +1281,17 @@ public class Editor extends JFrame implements RunnerListener {
 //        super.setPopupMenuVisible(b);
 //      }
 //    };
+    menu.getPopupMenu().addPopupMenuListener(new PopupMenuListener() {
+      public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
+        updateEditMenuState();
+      }
+      public void popupMenuCanceled(PopupMenuEvent e) {
+        // TODO Auto-generated method stub
+      }
+      public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
+        // TODO Auto-generated method stub
+      }
+    });
     JMenuItem item;
 
     undoItem = newJMenuItem("Undo", 'Z');
@@ -2451,14 +2464,15 @@ public class Editor extends JFrame implements RunnerListener {
         // Don't return false in this case, because it's okay to open Processing projects that don't have a graph yet.
       }
     }
-    else // no graph found, make a new empty graph
-    {
-      mxGraph graph = drawarea.getGraphComponent().getGraph();
-      // Check modified flag and display save dialog
-      mxCell root = new mxCell();
-      root.insert(new mxCell());
-      graph.getModel().setRoot(root);
-    }
+    //TODO the following does solve the handleOpenRepl problem but causes saveAs to fail so don't use it!
+//    else // no graph found, make a new empty graph
+//    {
+//      mxGraph graph = drawarea.getGraphComponent().getGraph();
+//      // Check modified flag and display save dialog
+//      mxCell root = new mxCell();
+//      root.insert(new mxCell());
+//      graph.getModel().setRoot(root);
+//    }
     
 //    System.out.println("Editor.handleOpenInternal >> drawarea.isModified()="+drawarea.isModified()+" sketch.isModified()="+sketch.isModified());
     drawarea.setModified(false);
@@ -3296,9 +3310,6 @@ public class Editor extends JFrame implements RunnerListener {
         updateLinkButton();
       }
       
-      //TODO ideally we only ever call this function before the user opens the JMenu
-      updateEditMenuState();
-      
       // clear the status bar whenever the focus is swapped, since we have no better opportunity to do this
       statusEmpty();
     }
@@ -3318,9 +3329,6 @@ public class Editor extends JFrame implements RunnerListener {
         ((kGraphComponent) e.getSource()).getSubHandler().refresh();
         drawingHeader.updateGraphButtons();
       }
-      
-      //update edit menu in case focus just went to a code window
-      updateEditMenuState(); //TODO ideally we only ever call this function before the user opens the JMenu
     }
   }
   
