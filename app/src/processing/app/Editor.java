@@ -1264,8 +1264,11 @@ public class Editor extends JFrame implements RunnerListener {
   /**
    * Enable functions only as they apply, i.e. cut-copy only when something is
    * selected, copy for discourse only when main textarea is selected, etc.
+   * 
+   * Used right before the edit menu popup is shown (and only there).
    */
   protected void updateEditMenuState() {
+//    System.out.println("Editor updateEditMenuState >> focus owner="+getFocusOwner().getClass().getName()+" focusComp="+getFocusedComp().getClass().getName());
     editMenuCutItem.setEnabled((getFocusOwner() == drawarea.getGraphComponent() && drawarea.getGraphComponent().getGraph().getSelectionCount() != 0) || (getFocusOwner() instanceof JEditTextArea && ((JEditTextArea) getFocusOwner()).getSelectedText() != null));
     editMenuCopyItem.setEnabled((getFocusOwner() == drawarea.getGraphComponent() && drawarea.getGraphComponent().getGraph().getSelectionCount() != 0) || (getFocusOwner() instanceof JEditTextArea && ((JEditTextArea) getFocusOwner()).getSelectedText() != null));
     editMenuDiscourseItem.setEnabled(getFocusOwner() == textarea && textarea.getSelectedText() != null);
@@ -1276,6 +1279,29 @@ public class Editor extends JFrame implements RunnerListener {
     editMenuCloseCWItem.setEnabled(drawarea.isCodeWindowOpenOnAny());
     editMenuLockItem.setEnabled(getFocusOwner() == drawarea.getGraphComponent() && drawarea.getGraphComponent().getGraph().getSelectionCount() != 0);
     editMenuUnlockItem.setEnabled(getFocusOwner() == drawarea.getGraphComponent() && drawarea.getGraphComponent().getGraph().getSelectionCount() != 0);
+  }
+
+  /**
+   * Since hotkeys depend on edit menu, the edit menu state actually should
+   * normally (i.e. when the popup's not open) only be enabled depending only on
+   * the focus and not the selection (we could track every single selection
+   * change and update when that happens but that just makes things slower but
+   * yield the same result to the end user)
+   * 
+   * Called by FocusHandler and focus handler only.
+   */
+  protected void enableEditMenuHotkeys() {
+//    System.out.println("Editor enableEditMenuHotkeys >> focus owner="+getFocusOwner().getClass().getName()+" focusComp="+getFocusedComp().getClass().getName());
+    editMenuCutItem.setEnabled(true);
+    editMenuCopyItem.setEnabled(true);
+    editMenuDiscourseItem.setEnabled(getFocusOwner() == textarea);
+    editMenuCommentItem.setEnabled(getFocusOwner() instanceof JEditTextArea);
+    editMenuIndentItem.setEnabled(getFocusOwner() instanceof JEditTextArea);
+    editMenuOutdentItem.setEnabled(getFocusOwner() instanceof JEditTextArea);
+    editMenuOpenCWItem.setEnabled(drawarea.isCodeWindowValidOnSelected());
+    editMenuCloseCWItem.setEnabled(drawarea.isCodeWindowOpenOnAny());
+    editMenuLockItem.setEnabled(getFocusOwner() == drawarea.getGraphComponent());
+    editMenuUnlockItem.setEnabled(getFocusOwner() == drawarea.getGraphComponent());
   }
 
   /**
@@ -1296,6 +1322,11 @@ public class Editor extends JFrame implements RunnerListener {
 
   protected JMenu buildEditMenu() {
     JMenu menu = new JMenu("Edit");
+    
+    //problem is, we don't hear text selection events when user uses arrow keys to select stuff,
+    //so say user clicks textarea, selection==null so cut-copy is disabled
+    // now user uses arrow keys to make selection, they can' use hotkeys because
+    // the menu item was disabled and remains disabled
 
     menu.getPopupMenu().addPopupMenuListener(new PopupMenuListener() {
       public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
@@ -1306,7 +1337,9 @@ public class Editor extends JFrame implements RunnerListener {
         // TODO Auto-generated method stub
       }
       public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
-        // TODO Auto-generated method stub
+        // we don't need to call enableEditMenuHotkeys() here because the focus
+        // will be returned from the popup menu back to the textarea and the
+        // focusHandler will take care of it
       }
     });
     JMenuItem item;
@@ -1347,7 +1380,8 @@ public class Editor extends JFrame implements RunnerListener {
     editMenuDiscourseItem = newJMenuItemShift("Copy for Discourse", 'C');
     editMenuDiscourseItem.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          new DiscourseFormat(Editor.this).show();
+          if (getFocusedComp() == textarea)
+            new DiscourseFormat(Editor.this).show();
         }
       });
     menu.add(editMenuDiscourseItem);
@@ -1358,7 +1392,6 @@ public class Editor extends JFrame implements RunnerListener {
 //          System.out.println("Editor Paste menu item >> focus owner="+getFocusOwner().getClass().getName()+" focusComp="+getFocusedComp().getClass().getName());
           //if main textarea, use the transferHandler so we can paste codeOfCells
           if (getFocusedComp() == textarea) {
-//            System.out.println("Editor Paste menu item >> textarea.TransferHandler.getPasteAction");
             TransferHandler.getPasteAction().actionPerformed(new ActionEvent(getFocusedComp(), e.getID(), e.getActionCommand()));
           }
           //else regular code window paste
@@ -3320,6 +3353,9 @@ public class Editor extends JFrame implements RunnerListener {
       
         // except when in the middle of linking, call this every time there's a focus swap
         updateLinkButton();
+        
+        // enable hotkeys (which means enabling edit menu items)
+        enableEditMenuHotkeys();
       }
     }
     
@@ -3358,23 +3394,23 @@ public class Editor extends JFrame implements RunnerListener {
     drawarea.getGraphComponent().getGraph().getSelectionModel()
         .addListener(mxEvent.CHANGE, new mxIEventListener() {
           public void invoke(Object sender, mxEventObject evt) {
+//            System.out.println("Editor >> drawarea selection change heard");
             if (drawarea.getToolMode() != null) {
 //              System.out.println("Editor.drawSync >> we're in tool mode -- not sync-ing");
             } else {
               syncTextSelectionToGraph();
               updateLinkButton(); //update the link button for any selection change
-              updateEditMenuState();
             }
           }
         });
     textarea.addListener(kEvent.TEXTAREA_SELECTION_CHANGE, new mxIEventListener() {
       public void invoke(Object sender, mxEventObject evt) {
+//        System.out.println("Editor >> textarea selection change heard");
         if (drawarea.getToolMode() != null) {
 //          System.out.println("Editor.textSync >> we're in tool mode -- not sync-ing");
         } else {
           syncGraphSelectionToText();
           updateLinkButton(); //update the link button for any selection change
-          updateEditMenuState();
         }
       }
     });
