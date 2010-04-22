@@ -167,6 +167,8 @@ public class Editor extends JFrame implements RunnerListener {
   JMenuItem editMenuOutdentItem;
   JMenuItem editMenuOpenCWItem;
   JMenuItem editMenuCloseCWItem;
+  JMenuItem editMenuLockItem;
+  JMenuItem editMenuUnlockItem;
   // these menus are shared so that they needn't be rebuilt for all windows
   // each time a sketch is created, renamed, or moved.
   static JMenu toolbarMenu;
@@ -200,6 +202,7 @@ public class Editor extends JFrame implements RunnerListener {
   // event handling
   TextAreaListener listener;
   FocusHandler focusHandler = new FocusHandler();
+  JComponent lastFocusedComponent;
   kDrawingKeyboardHandler keyboardHandler;
   
   // runtime information and window placement
@@ -351,6 +354,7 @@ public class Editor extends JFrame implements RunnerListener {
     // SET FOCUS LISTENERS
     drawarea.getGraphComponent().addFocusListener(focusHandler);
     textarea.addFocusListener(focusHandler);
+    lastFocusedComponent = textarea; //start with textarea by default
     // textarea key input handler
     listener = new TextAreaListener(this, textarea);
     // drawarea hotkey handler
@@ -539,7 +543,7 @@ public class Editor extends JFrame implements RunnerListener {
       }
       else if (type.equals("graph")) 
       {
-//        System.out.println("editor filedrophandler >> >>>>>>>>>> type GRAPH successful="+successful);
+//        System.out.println("editor filedrophandler >> type GRAPH successful="+successful);
           if (successful == 0) 
           {
             statusError("Drawing elements in clipboard were not associated with any code.");
@@ -1256,34 +1260,47 @@ public class Editor extends JFrame implements RunnerListener {
 
     return menu;
   }
-  
+
+  /**
+   * Enable functions only as they apply, i.e. cut-copy only when something is
+   * selected, copy for discourse only when main textarea is selected, etc.
+   */
   protected void updateEditMenuState() {
-    editMenuCutItem.setEnabled(drawarea.getGraphComponent().getGraph().getSelectionCount() != 0 || (getFocusOwner() instanceof JEditTextArea && ((JEditTextArea) getFocusOwner()).getSelectedText() != null));
-    editMenuCopyItem.setEnabled(drawarea.getGraphComponent().getGraph().getSelectionCount() != 0 || (getFocusOwner() instanceof JEditTextArea && ((JEditTextArea) getFocusOwner()).getSelectedText() != null));
-    editMenuDiscourseItem.setEnabled((textarea.getSelectedText() != null));
+    editMenuCutItem.setEnabled((getFocusOwner() == drawarea.getGraphComponent() && drawarea.getGraphComponent().getGraph().getSelectionCount() != 0) || (getFocusOwner() instanceof JEditTextArea && ((JEditTextArea) getFocusOwner()).getSelectedText() != null));
+    editMenuCopyItem.setEnabled((getFocusOwner() == drawarea.getGraphComponent() && drawarea.getGraphComponent().getGraph().getSelectionCount() != 0) || (getFocusOwner() instanceof JEditTextArea && ((JEditTextArea) getFocusOwner()).getSelectedText() != null));
+    editMenuDiscourseItem.setEnabled(getFocusOwner() == textarea && textarea.getSelectedText() != null);
     editMenuCommentItem.setEnabled(getFocusOwner() instanceof JEditTextArea);
     editMenuIndentItem.setEnabled(getFocusOwner() instanceof JEditTextArea);
     editMenuOutdentItem.setEnabled(getFocusOwner() instanceof JEditTextArea);
     editMenuOpenCWItem.setEnabled(drawarea.isCodeWindowValidOnSelected());
     editMenuCloseCWItem.setEnabled(drawarea.isCodeWindowOpenOnAny());
+    editMenuLockItem.setEnabled(getFocusOwner() == drawarea.getGraphComponent() && drawarea.getGraphComponent().getGraph().getSelectionCount() != 0);
+    editMenuUnlockItem.setEnabled(getFocusOwner() == drawarea.getGraphComponent() && drawarea.getGraphComponent().getGraph().getSelectionCount() != 0);
+  }
+
+  /**
+   * When edit menu actions are selected from the edit menu (as opposed to
+   * hotkeys), the focused component is actually the edit menu so we need to
+   * know which component was focused right before the popup menu became
+   * visible, but in case the user uses hot keys then we need the focus owner at
+   * the time
+   * 
+   * @return
+   */
+  protected JComponent getFocusedComp() {
+    if (getFocusOwner() instanceof JEditTextArea || getFocusOwner() instanceof mxGraphComponent)
+      return (JComponent) getFocusOwner();
+    else
+      return lastFocusedComponent;
   }
 
   protected JMenu buildEditMenu() {
     JMenu menu = new JMenu("Edit");
-//      public void setPopupMenuVisible(boolean b) {
-//        //TODO this doesn't seem to work at all -- is it because it's a mac?
-//        System.out.println("are we called? :(");
-//        if (b)
-//        {
-////          System.out.println("editor buildEditMenu >> we're showing it, so set states of menuItems");
-//          updateEditMenuState();
-//        }
-//        super.setPopupMenuVisible(b);
-//      }
-//    };
+
     menu.getPopupMenu().addPopupMenuListener(new PopupMenuListener() {
       public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
         updateEditMenuState();
+        lastFocusedComponent = (JComponent) getFocusedComp();
       }
       public void popupMenuCanceled(PopupMenuEvent e) {
         // TODO Auto-generated method stub
@@ -1304,15 +1321,13 @@ public class Editor extends JFrame implements RunnerListener {
 
     menu.addSeparator();
 
-    // TODO "cut" and "copy" should really only be enabled
-    // if some text is currently selected
     editMenuCutItem = newJMenuItem("Cut", 'X');
     editMenuCutItem.addActionListener(new ActionListener() {
-        public void actionPerformed(ActionEvent e) {
-          if (getFocusOwner() instanceof JEditTextArea)
-            ((JEditTextArea) getFocusOwner()).cut(); //this works for code windows
-          else if (getFocusOwner() instanceof mxGraphComponent)
-            TransferHandler.getCutAction().actionPerformed(new ActionEvent(getFocusOwner(), e.getID(), e.getActionCommand()));
+        public void actionPerformed(ActionEvent e) {          
+          if (getFocusedComp() instanceof JEditTextArea)
+            ((JEditTextArea) getFocusedComp()).cut(); //this works for code windows
+          else if (getFocusedComp() instanceof mxGraphComponent)
+            TransferHandler.getCutAction().actionPerformed(new ActionEvent(getFocusedComp(), e.getID(), e.getActionCommand()));
         }
       });
     menu.add(editMenuCutItem);
@@ -1320,23 +1335,19 @@ public class Editor extends JFrame implements RunnerListener {
     editMenuCopyItem = newJMenuItem("Copy", 'C');
     editMenuCopyItem.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          if (getFocusOwner() instanceof JEditTextArea)
-            ((JEditTextArea) getFocusOwner()).copy(); //this works for code windows
-          else if (getFocusOwner() instanceof mxGraphComponent)
-            TransferHandler.getCopyAction().actionPerformed(new ActionEvent(getFocusOwner(), e.getID(), e.getActionCommand()));
+//          System.out.println("Editor Copy menu item >> focus owner="+getFocusOwner().getClass().getName()+" focusComp="+getFocusedComp().getClass().getName());
+          if (getFocusedComp() instanceof JEditTextArea)
+            ((JEditTextArea) getFocusedComp()).copy(); //this works for code windows
+          else if (getFocusedComp() instanceof mxGraphComponent)
+            TransferHandler.getCopyAction().actionPerformed(new ActionEvent(getFocusedComp(), e.getID(), e.getActionCommand()));
         }
       });
     menu.add(editMenuCopyItem);
 
-    //TODO disable this for code windows
     editMenuDiscourseItem = newJMenuItemShift("Copy for Discourse", 'C');
     editMenuDiscourseItem.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-//          SwingUtilities.invokeLater(new Runnable() {
-//              public void run() {
           new DiscourseFormat(Editor.this).show();
-//              }
-//            });
         }
       });
     menu.add(editMenuDiscourseItem);
@@ -1344,14 +1355,17 @@ public class Editor extends JFrame implements RunnerListener {
     item = newJMenuItem("Paste", 'V');
     item.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
+//          System.out.println("Editor Paste menu item >> focus owner="+getFocusOwner().getClass().getName()+" focusComp="+getFocusedComp().getClass().getName());
           //if main textarea, use the transferHandler so we can paste codeOfCells
-          if (getFocusOwner() == textarea)
-            TransferHandler.getPasteAction().actionPerformed(new ActionEvent(getFocusOwner(), e.getID(), e.getActionCommand()));
+          if (getFocusedComp() == textarea) {
+//            System.out.println("Editor Paste menu item >> textarea.TransferHandler.getPasteAction");
+            TransferHandler.getPasteAction().actionPerformed(new ActionEvent(getFocusedComp(), e.getID(), e.getActionCommand()));
+          }
           //else regular code window paste
-          else if (getFocusOwner() instanceof JEditTextArea)
-            ((JEditTextArea) getFocusOwner()).paste();
-          else if (getFocusOwner() instanceof mxGraphComponent)
-            TransferHandler.getPasteAction().actionPerformed(new ActionEvent(getFocusOwner(), e.getID(), e.getActionCommand()));
+          else if (getFocusedComp() instanceof JEditTextArea)
+            ((JEditTextArea) getFocusedComp()).paste();
+          else if (getFocusedComp() instanceof mxGraphComponent)
+            TransferHandler.getPasteAction().actionPerformed(new ActionEvent(getFocusedComp(), e.getID(), e.getActionCommand()));
         }
       });
     menu.add(item);
@@ -1359,10 +1373,10 @@ public class Editor extends JFrame implements RunnerListener {
     item = newJMenuItem("Select All", 'A');
     item.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          if (getFocusOwner() instanceof JEditTextArea)
-            ((JEditTextArea) getFocusOwner()).selectAll(); //this works for code windows
-          else if (getFocusOwner() instanceof mxGraphComponent)
-            mxGraphActions.getSelectAllAction().actionPerformed(new ActionEvent(getFocusOwner(), e.getID(), e.getActionCommand()));
+          if (getFocusedComp() instanceof JEditTextArea)
+            ((JEditTextArea) getFocusedComp()).selectAll(); //this works for code windows
+          else if (getFocusedComp() instanceof mxGraphComponent)
+            mxGraphActions.getSelectAllAction().actionPerformed(new ActionEvent(getFocusedComp(), e.getID(), e.getActionCommand()));
         }
       });
     menu.add(item);
@@ -1370,24 +1384,23 @@ public class Editor extends JFrame implements RunnerListener {
     item = newJMenuItem("Select None", 'D');
     item.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          if (getFocusOwner() instanceof JEditTextArea)
-            ((JEditTextArea) getFocusOwner()).selectNone(); //this works for code windows
-          else if (getFocusOwner() instanceof mxGraphComponent)
-            mxGraphActions.getSelectNoneAction().actionPerformed(new ActionEvent(getFocusOwner(), e.getID(), e.getActionCommand()));
+          if (getFocusedComp() instanceof JEditTextArea)
+            ((JEditTextArea) getFocusedComp()).selectNone(); //this works for code windows
+          else if (getFocusedComp() instanceof mxGraphComponent)
+            mxGraphActions.getSelectNoneAction().actionPerformed(new ActionEvent(getFocusedComp(), e.getID(), e.getActionCommand()));
         }
       });
     menu.add(item);
 
     menu.addSeparator();
 
-    //TODO comment/uncomment etc. should work for code windows as well; alas if only it was so easy
     editMenuCommentItem = newJMenuItem("Comment/Uncomment", '/');
     editMenuCommentItem.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          if (getFocusOwner() == textarea)
+          if (getFocusedComp() == textarea)
             handleCommentUncomment();
-          else if (getFocusOwner() instanceof JEditTextArea) //it's a code window!
-            drawarea.getCodeWindowOfDocument(((JEditTextArea) getFocusOwner()).getDocument()).handleCommentUncomment();
+          else if (getFocusedComp() instanceof JEditTextArea) //it's a code window!
+            drawarea.getCodeWindowOfDocument(((JEditTextArea) getFocusedComp()).getDocument()).handleCommentUncomment();
         }
     });
     menu.add(editMenuCommentItem);
@@ -1395,10 +1408,10 @@ public class Editor extends JFrame implements RunnerListener {
     editMenuIndentItem = newJMenuItem("Increase Indent", ']');
     editMenuIndentItem.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          if (getFocusOwner() == textarea)
+          if (getFocusedComp() == textarea)
             handleIndentOutdent(true);
-          else if (getFocusOwner() instanceof JEditTextArea) //it's a code window!
-            drawarea.getCodeWindowOfDocument(((JEditTextArea) getFocusOwner()).getDocument()).handleIndentOutdent(true);
+          else if (getFocusedComp() instanceof JEditTextArea) //it's a code window!
+            drawarea.getCodeWindowOfDocument(((JEditTextArea) getFocusedComp()).getDocument()).handleIndentOutdent(true);
         }
     });
     menu.add(editMenuIndentItem);
@@ -1406,10 +1419,10 @@ public class Editor extends JFrame implements RunnerListener {
     editMenuOutdentItem = newJMenuItem("Decrease Indent", '[');
     editMenuOutdentItem.addActionListener(new ActionListener() {
         public void actionPerformed(ActionEvent e) {
-          if (getFocusOwner() == textarea)
+          if (getFocusedComp() == textarea)
             handleIndentOutdent(false);
-          else if (getFocusOwner() instanceof JEditTextArea) //it's a code window!
-            drawarea.getCodeWindowOfDocument(((JEditTextArea) getFocusOwner()).getDocument()).handleIndentOutdent(false);
+          else if (getFocusedComp() instanceof JEditTextArea) //it's a code window!
+            drawarea.getCodeWindowOfDocument(((JEditTextArea) getFocusedComp()).getDocument()).handleIndentOutdent(false);
         }
     });
     menu.add(editMenuOutdentItem);
@@ -1432,25 +1445,24 @@ public class Editor extends JFrame implements RunnerListener {
     });
     menu.add(editMenuCloseCWItem);
     
-    // TODO should adjust this according to selection too, but I'm too lazy at this point
-    item = newJMenuItem("Lock", 'L');
-    item.addActionListener(new ActionListener() {
+    editMenuLockItem = newJMenuItem("Lock", 'L');
+    editMenuLockItem.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e)
       {
         drawarea.lockSelected();
       }
     });
-    menu.add(item);
+    menu.add(editMenuLockItem);
     
     // the zoom buttons can be always enabled
-    item = newJMenuItemShift("Unlock", 'L');
-    item.addActionListener(new ActionListener() {
+    editMenuUnlockItem = newJMenuItemShift("Unlock", 'L');
+    editMenuUnlockItem.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e)
       {
         drawarea.unlockSelected();
       }
     });
-    menu.add(item);
+    menu.add(editMenuUnlockItem);
     
     // the zoom buttons can be always enabled
     item = newJMenuItem("Zoom In", '=');
@@ -1904,7 +1916,7 @@ public class Editor extends JFrame implements RunnerListener {
     // fix so that in the case of selection sync handling the tab switching that
     // the graph component doesn't lose focus
     if (!drawarea.getGraphComponent().isFocusOwner())
-      textarea.requestFocus();  // get the caret blinking
+      textarea.requestFocusInWindow();  // get the caret blinking
 
     // P5's original setup is that each code keeps a separate undo manager;
     // however, since the drawarea potentially maintains connections to each
@@ -3289,7 +3301,7 @@ public class Editor extends JFrame implements RunnerListener {
       if (drawingHeader.getLinkButton().isLinkActiveMode()) {
 //        System.out.println("selectionSync >> we're in linking mode so not sync-ing");
       } else {
-        if (e.getSource() instanceof JEditTextArea)
+        if (e.getSource() == textarea)
         {
             syncGraphSelectionToText();
             
@@ -3297,7 +3309,7 @@ public class Editor extends JFrame implements RunnerListener {
             if (drawarea.getToolMode() != null)
               drawarea.endToolMode(false);
         }
-        else if (e.getSource() instanceof kGraphComponent)
+        else if (e.getSource() == drawarea.getGraphComponent())
         {
           // redraw the cell handles to reflect the focused state since it also
           // listens for mxEvent.CHANGE so it paints before focus is gained
@@ -3309,26 +3321,26 @@ public class Editor extends JFrame implements RunnerListener {
         // except when in the middle of linking, call this every time there's a focus swap
         updateLinkButton();
       }
-      
-      // clear the status bar whenever the focus is swapped, since we have no better opportunity to do this
-      statusEmpty();
     }
     
     public void focusLost(FocusEvent e) {
           
 //      System.out.println("Focus Lost >> source= " + e.getSource().getClass().getName());
       
-      if (e.getSource() instanceof JEditTextArea)
+      if (e.getSource() == textarea)
       {
         // don't need to do anything?
       }
-      else if (e.getSource() instanceof kGraphComponent)
+      else if (e.getSource() == drawarea.getGraphComponent())
       {
         // redraw the cell handles to reflect the focused state since it also
         // listens for mxEvent.CHANGE so it paints before focus is gained
         ((kGraphComponent) e.getSource()).getSubHandler().refresh();
         drawingHeader.updateGraphButtons();
       }
+      
+      // clear the status bar whenever the focus is lost, since we have no better opportunity to do this
+      statusEmpty();
     }
   }
   
