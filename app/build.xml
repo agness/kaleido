@@ -4,10 +4,14 @@
   <classloader taskname="antlr">
     <classpath path="lib/antlr.jar" />
   </classloader>
-  
+<!-- 
+  <classloader taskname="jgraphx">
+    <classpath path="lib/jgraphx.jar" />
+  </classloader>
+-->	
   <target name="clean" description="Clean the build directories">
     <delete dir="bin" />
-    <delete file="pde.jar" />
+    <delete file="kaleido.jar" />
   </target>
 
   <target name="preproc" description="Compile ANTLR grammar">
@@ -52,10 +56,10 @@
 	   excludes="**/tools/format/**" 
 	   encoding="UTF-8"
 	   includeAntRuntime="false"
-	   classpath="../core/core.jar; ${env.JAVA_HOME}/lib/tools.jar; lib/ant.jar; lib/ant-launcher.jar; lib/antlr.jar; lib/apple.jar; lib/ecj.jar; lib/jna.jar" />
+	   classpath="../core/core.jar; ${env.JAVA_HOME}/lib/tools.jar; lib/ant.jar; lib/ant-launcher.jar; lib/antlr.jar; lib/apple.jar; lib/ecj.jar; lib/jna.jar; lib/jgraphx.jar;" />
   </target>
   
-  <target name="build" depends="compile" description="Build PDE">
-    <jar basedir="bin" destfile="pde.jar" />
+  <target name="build" depends="compile" description="Build Kaleido IDE">
+    <jar basedir="bin" destfile="kaleido.jar" />
   </target>
 </project>
