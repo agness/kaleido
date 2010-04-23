@@ -304,7 +304,7 @@ public class Editor extends JFrame implements RunnerListener {
       graphCodeSplitPane.setDividerSize(dividerSize);
     }
     graphCodeSplitPane.setBorder(null);
-    graphCodeSplitPane.setDividerLocation(Preferences.getInteger("default.window.width")/2);
+    graphCodeSplitPane.setDividerLocation(Preferences.getInteger("editor.window.width.default")/2);
     
     
     // EDITING PANEL as distinguished from the consolePanel
